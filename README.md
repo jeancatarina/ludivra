@@ -38,7 +38,7 @@ Electron packages the desktop/Steam application
 - sandboxed Lua 5.4.8 with command-based state mutation;
 - native and WebAssembly runtimes verified with the same state hash;
 - TypeScript presentation through a renderer-agnostic protocol;
-- Three.js renderer isolated from gameplay;
+- Three.js renderer isolated from gameplay, with shadows, cinematic tone mapping, bloom, color grading, vignette, fog, and particles;
 - versioned binary saves and verifiable replays;
 - atomic desktop autosave, backup, and close-time checkpointing;
 - Electron with a sandboxed renderer and contract-generated IPC;
@@ -364,7 +364,7 @@ ludivra/
 
 - APIs and formats remain experimental until 1.0;
 - audio currently uses Web Audio in Browser/Electron; native audio adapters are not implemented;
-- visual feedback currently provides deterministic particle bursts; trails, decals, post-processing presets, and custom effect graphs remain future capabilities;
+- visual feedback provides deterministic particle bursts and a built-in cinematic post-processing pipeline; configurable presets, trails, decals, and custom effect graphs remain future capabilities;
 - Windows and Linux still require tests on native runners;
 - the engine does not sign or notarize packages;
 - updates require a signed package and a controlled HTTPS feed;

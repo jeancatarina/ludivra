@@ -53,6 +53,12 @@ ctx.commands:spawn_effect(10, 1000, x_milli, y_milli, z_milli)
 
 The second argument is fixed-point intensity or volume: `1000` means 100%. Positions are also fixed-point: `1000` means one world unit. Stop a loop with `ctx.commands:stop_audio(10)`.
 
+## 4. Cinematic rendering
+
+`renderer-three` applies color-space correction, ACES tone mapping, directional shadows, bloom, color grading, and vignette as one reusable pipeline. Games continue to use the renderer-agnostic camera, atmosphere, surface, and particle contracts; they must not import Three.js passes or shaders.
+
+Emissive surfaces feed bloom. Matte and metal surfaces cast shadows, while opaque non-emissive surfaces receive them. Use emissive materials only for light-bearing details such as flames, cursed eyes, spell cores, and feedback that must remain legible in fog.
+
 ## Rules
 
 - IDs and `eventId` values must be unique within their collection.

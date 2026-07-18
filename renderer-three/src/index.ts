@@ -7,6 +7,7 @@ import type {
   VisualTransform
 } from "@ludivra/presentation-protocol";
 import {
+  ACESFilmicToneMapping,
   AmbientLight,
   BoxGeometry,
   BufferAttribute,
@@ -24,12 +25,15 @@ import {
   Points,
   PointsMaterial,
   PerspectiveCamera,
+  PCFShadowMap,
   RingGeometry,
   Scene,
   SphereGeometry,
   TorusGeometry,
-  WebGLRenderer
+  WebGLRenderer,
+  SRGBColorSpace
 } from "three";
+import { createCinematicPipeline } from "./cinematic-pipeline.js";
 
 interface ActiveBurst {
   points: Points<BufferGeometry, PointsMaterial>;
@@ -131,7 +135,17 @@ function material(definition: VisualDefinition): MeshStandardMaterial {
 }
 
 export function createThreeRenderer(canvas: HTMLCanvasElement): PresentationRenderer {
-  const renderer = new WebGLRenderer({ canvas, antialias: true, alpha: true });
+  const renderer = new WebGLRenderer({
+    canvas,
+    antialias: true,
+    alpha: true,
+    powerPreference: "high-performance"
+  });
+  renderer.outputColorSpace = SRGBColorSpace;
+  renderer.toneMapping = ACESFilmicToneMapping;
+  renderer.toneMappingExposure = 1.12;
+  renderer.shadowMap.enabled = true;
+  renderer.shadowMap.type = PCFShadowMap;
   const scene = new Scene();
   const camera = new PerspectiveCamera(42, 1, 0.1, 100);
   camera.position.set(0, 6.4, 9.5);
@@ -141,6 +155,14 @@ export function createThreeRenderer(canvas: HTMLCanvasElement): PresentationRend
   scene.add(ambientLight);
   const keyLight = new DirectionalLight(0xffffff, 4);
   keyLight.position.set(3, 4, 6);
+  keyLight.castShadow = true;
+  keyLight.shadow.mapSize.set(2048, 2048);
+  keyLight.shadow.camera.left = -12;
+  keyLight.shadow.camera.right = 12;
+  keyLight.shadow.camera.top = 12;
+  keyLight.shadow.camera.bottom = -12;
+  keyLight.shadow.camera.near = 0.5;
+  keyLight.shadow.camera.far = 32;
   scene.add(keyLight);
   const reactorLight = new PointLight(0x58e0c2, 28, 18, 2);
   reactorLight.position.set(0, 2.2, -1.4);
@@ -150,6 +172,7 @@ export function createThreeRenderer(canvas: HTMLCanvasElement): PresentationRend
   scene.add(rimLight);
   const visuals = new Map<string, Mesh>();
   const bursts: ActiveBurst[] = [];
+  const cinematicPipeline = createCinematicPipeline(renderer, scene, camera);
   let previousRenderTime = performance.now();
 
   function updateParticles(): void {
@@ -190,6 +213,8 @@ export function createThreeRenderer(canvas: HTMLCanvasElement): PresentationRend
       }
       const mesh = new Mesh(geometry(definition), material(definition));
       mesh.userData.surface = definition.surface ?? "metal";
+      mesh.castShadow = definition.surface !== "glass";
+      mesh.receiveShadow = definition.surface !== "emissive";
       if (definition.scale !== undefined) {
         mesh.scale.set(...definition.scale);
       }
@@ -252,11 +277,13 @@ export function createThreeRenderer(canvas: HTMLCanvasElement): PresentationRend
     },
     render() {
       updateParticles();
-      renderer.render(scene, camera);
+      cinematicPipeline.render();
     },
     resize(width, height, pixelRatio) {
-      renderer.setPixelRatio(Math.min(pixelRatio, 2));
+      const cappedPixelRatio = Math.min(pixelRatio, 2);
+      renderer.setPixelRatio(cappedPixelRatio);
       renderer.setSize(width, height, false);
+      cinematicPipeline.resize(width, height, cappedPixelRatio);
       camera.aspect = width / Math.max(height, 1);
       camera.updateProjectionMatrix();
     },
@@ -274,6 +301,7 @@ export function createThreeRenderer(canvas: HTMLCanvasElement): PresentationRend
         burst.points.material.dispose();
       }
       bursts.length = 0;
+      cinematicPipeline.destroy();
       renderer.dispose();
     }
   };
