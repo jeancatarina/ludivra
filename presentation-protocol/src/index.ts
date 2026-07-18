@@ -1,16 +1,33 @@
-export type VisualShape = "box" | "sphere" | "ring";
+export type VisualShape =
+  | "box"
+  | "cone"
+  | "cylinder"
+  | "octahedron"
+  | "ring"
+  | "sphere"
+  | "torus";
+
+export type VisualSurface = "emissive" | "glass" | "matte" | "metal";
 
 export interface VisualDefinition {
   id: string;
   shape: VisualShape;
   color: number;
   scale?: readonly [number, number, number];
+  surface?: VisualSurface;
+  opacity?: number;
 }
 
 export interface VisualTransform {
   position: readonly [number, number, number];
   rotation: readonly [number, number, number];
   scale?: readonly [number, number, number];
+}
+
+export interface CameraView {
+  position: readonly [number, number, number];
+  target: readonly [number, number, number];
+  fieldOfView?: number;
 }
 
 export interface ParticleBurst {
@@ -28,6 +45,8 @@ export interface PresentationRenderer {
   createVisual(definition: VisualDefinition): void;
   setTransform(id: string, transform: VisualTransform): void;
   setColor(id: string, color: number): void;
+  setVisible(id: string, visible: boolean): void;
+  setCamera(view: CameraView): void;
   spawnParticles(burst: ParticleBurst): void;
   render(): void;
   resize(width: number, height: number, pixelRatio: number): void;

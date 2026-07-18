@@ -1,24 +1,32 @@
 import type {
+  CameraView,
   PresentationRenderer,
   ParticleBurst,
   VisualDefinition,
   VisualTransform
 } from "@ludivra/presentation-protocol";
 import {
+  AmbientLight,
   BoxGeometry,
   BufferAttribute,
   BufferGeometry,
   Color,
+  ConeGeometry,
+  CylinderGeometry,
   DirectionalLight,
   DoubleSide,
+  FogExp2,
   Mesh,
   MeshStandardMaterial,
+  OctahedronGeometry,
+  PointLight,
   Points,
   PointsMaterial,
   PerspectiveCamera,
   RingGeometry,
   Scene,
   SphereGeometry,
+  TorusGeometry,
   WebGLRenderer
 } from "three";
 
@@ -77,25 +85,67 @@ function createParticleBurst(definition: ParticleBurst): ActiveBurst {
   };
 }
 
-function geometry(definition: VisualDefinition): BoxGeometry | RingGeometry | SphereGeometry {
+type SupportedGeometry =
+  | BoxGeometry
+  | ConeGeometry
+  | CylinderGeometry
+  | OctahedronGeometry
+  | RingGeometry
+  | SphereGeometry
+  | TorusGeometry;
+
+function geometry(definition: VisualDefinition): SupportedGeometry {
   switch (definition.shape) {
     case "box":
       return new BoxGeometry(1, 1, 1);
+    case "cone":
+      return new ConeGeometry(0.65, 1.2, 6);
+    case "cylinder":
+      return new CylinderGeometry(0.72, 0.8, 1, 32);
+    case "octahedron":
+      return new OctahedronGeometry(0.8, 0);
     case "ring":
       return new RingGeometry(0.7, 1, 48);
     case "sphere":
       return new SphereGeometry(1, 48, 32);
+    case "torus":
+      return new TorusGeometry(0.72, 0.18, 16, 48);
   }
+}
+
+function material(definition: VisualDefinition): MeshStandardMaterial {
+  const surface = definition.surface ?? "metal";
+  const opacity = Math.max(0, Math.min(1, definition.opacity ?? 1));
+  const emissiveStrength = surface === "emissive" ? 0.85 : surface === "glass" ? 0.3 : 0.12;
+  return new MeshStandardMaterial({
+    color: definition.color,
+    emissive: new Color(definition.color).multiplyScalar(emissiveStrength),
+    metalness: surface === "metal" ? 0.82 : surface === "glass" ? 0.15 : 0.3,
+    roughness: surface === "matte" ? 0.78 : surface === "glass" ? 0.08 : 0.24,
+    transparent: opacity < 1 || surface === "glass",
+    opacity: surface === "glass" ? Math.min(opacity, 0.48) : opacity,
+    depthWrite: surface !== "glass",
+    ...(definition.shape === "ring" ? { side: DoubleSide } : {})
+  });
 }
 
 export function createThreeRenderer(canvas: HTMLCanvasElement): PresentationRenderer {
   const renderer = new WebGLRenderer({ canvas, antialias: true, alpha: true });
   const scene = new Scene();
   const camera = new PerspectiveCamera(42, 1, 0.1, 100);
-  camera.position.set(0, 0, 7);
+  camera.position.set(0, 6.4, 9.5);
+  camera.lookAt(0, -0.4, -1.3);
+  scene.fog = new FogExp2(0x05090e, 0.035);
+  scene.add(new AmbientLight(0x6ba3b3, 1.2));
   const light = new DirectionalLight(0xffffff, 4);
   light.position.set(3, 4, 6);
   scene.add(light);
+  const reactorLight = new PointLight(0x58e0c2, 28, 18, 2);
+  reactorLight.position.set(0, 2.2, -1.4);
+  scene.add(reactorLight);
+  const rimLight = new PointLight(0xd35cff, 18, 16, 2);
+  rimLight.position.set(-5, 1.5, -5);
+  scene.add(rimLight);
   const visuals = new Map<string, Mesh>();
   const bursts: ActiveBurst[] = [];
   let previousRenderTime = performance.now();
@@ -136,14 +186,8 @@ export function createThreeRenderer(canvas: HTMLCanvasElement): PresentationRend
       if (visuals.has(definition.id)) {
         throw new Error(`visual already exists: ${definition.id}`);
       }
-      const material = new MeshStandardMaterial({
-        color: definition.color,
-        emissive: new Color(definition.color).multiplyScalar(0.16),
-        metalness: 0.25,
-        roughness: 0.28,
-        ...(definition.shape === "ring" ? { side: DoubleSide } : {})
-      });
-      const mesh = new Mesh(geometry(definition), material);
+      const mesh = new Mesh(geometry(definition), material(definition));
+      mesh.userData.surface = definition.surface ?? "metal";
       if (definition.scale !== undefined) {
         mesh.scale.set(...definition.scale);
       }
@@ -167,6 +211,23 @@ export function createThreeRenderer(canvas: HTMLCanvasElement): PresentationRend
         throw new Error(`visual does not exist: ${id}`);
       }
       visual.material.color.setHex(color);
+      const emissiveScale = visual.userData.surface === "emissive" ? 0.85 : 0.12;
+      visual.material.emissive.setHex(color).multiplyScalar(emissiveScale);
+    },
+    setVisible(id, visible) {
+      const visual = visuals.get(id);
+      if (visual === undefined) {
+        throw new Error(`visual does not exist: ${id}`);
+      }
+      visual.visible = visible;
+    },
+    setCamera(view: CameraView) {
+      camera.position.set(...view.position);
+      camera.lookAt(...view.target);
+      if (view.fieldOfView !== undefined) {
+        camera.fov = Math.max(20, Math.min(90, view.fieldOfView));
+        camera.updateProjectionMatrix();
+      }
     },
     spawnParticles(definition) {
       const burst = createParticleBurst(definition);
