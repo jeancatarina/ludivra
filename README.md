@@ -1,89 +1,91 @@
+[Leia em Português](README.pt-BR.md)
+
 # Ludivra
 
 [![Version](https://img.shields.io/badge/version-0.3.0-7c5cff)](https://github.com/jeancatarina/ludivra)
 [![Status](https://img.shields.io/badge/status-experimental-f59e0b)](BACKLOG.md)
 [![License](https://img.shields.io/badge/license-MIT-22c55e)](LICENSE)
 
-Engine de jogos **AI-first, text-first e code-first** para criar jogos por chat, arquivos textuais e comandos reproduzíveis — sem depender de um editor visual proprietário.
+An **AI-first, text-first, and code-first** game engine for creating games through chat, text files, and reproducible commands—without depending on a proprietary visual editor.
 
-> **Estado atual:** a fundação é utilizável para protótipos e primeiros jogos desktop. A API ainda é experimental e pode mudar antes da versão 1.0.
+> **Current status:** the foundation is ready for prototypes and early desktop games. The API is experimental and may change before version 1.0.
 
-## O que é a Ludivra
+## What is Ludivra?
 
-Na Ludivra, o repositório é a fonte de verdade do jogo. Gameplay, apresentação, configuração e estado de desenvolvimento permanecem em arquivos que uma pessoa ou agente de IA pode ler, alterar, testar e versionar.
+In Ludivra, the repository is the source of truth for the game. Gameplay, presentation, configuration, and development state live in files that a person or AI agent can read, modify, test, and version.
 
-O fluxo principal é:
+The main workflow is:
 
 ```text
-Pedido pelo chat
+Request through chat
       ↓
-JSONC configura o jogo e os inputs
+JSONC configures the game and input bindings
       ↓
-Lua implementa gameplay determinístico
+Lua implements deterministic gameplay
       ↓
-C++20 executa simulação, saves e replays
+C++20 runs simulation, saves, and replays
       ↓
-WebAssembly + TypeScript conectam o host
+WebAssembly + TypeScript connect the host
       ↓
-Three.js apresenta o jogo
+Three.js presents the game
       ↓
-Electron gera o aplicativo desktop/Steam
+Electron packages the desktop/Steam application
 ```
 
-### Recursos disponíveis
+### Available features
 
-- kernel C++20 determinístico com fixed ticks;
-- Lua 5.4.8 em sandbox, com mutação por comandos;
-- runtime nativo e WebAssembly verificados pelo mesmo hash;
-- apresentação TypeScript por protocolo agnóstico;
-- renderer Three.js isolado do gameplay;
-- saves binários versionados e replays verificáveis;
-- autosave desktop atômico, backup e checkpoint no fechamento;
-- Electron com renderer sandboxed e IPC gerado por contrato;
-- adapters opcionais para Steam achievements, Cloud, usuário e overlay;
-- logs estruturados e Crashpad local;
-- CLI com saída legível por pessoas ou agentes;
-- pacote desktop com smoke test, checksums, SBOM e provenance.
+- deterministic C++20 kernel with fixed ticks;
+- sandboxed Lua 5.4.8 with command-based state mutation;
+- native and WebAssembly runtimes verified with the same state hash;
+- TypeScript presentation through a renderer-agnostic protocol;
+- Three.js renderer isolated from gameplay;
+- versioned binary saves and verifiable replays;
+- atomic desktop autosave, backup, and close-time checkpointing;
+- Electron with a sandboxed renderer and contract-generated IPC;
+- optional adapters for Steam achievements, Cloud, user, and overlay;
+- structured logs and local Crashpad reporting;
+- CLI output designed for both people and AI agents;
+- desktop packages with smoke tests, checksums, SBOM, and provenance.
 
-## Quem pode usar
+## Who can use it?
 
-Qualquer pessoa pode clonar, estudar, modificar e distribuir a Ludivra, inclusive em projetos comerciais, nos termos da [licença MIT](LICENSE).
+Anyone can clone, study, modify, and distribute Ludivra, including in commercial projects, under the terms of the [MIT License](LICENSE).
 
-No momento, a engine é consumida diretamente pelo repositório clonado. Ainda não existe uma distribuição estável em npm, Homebrew ou instalador próprio. Jogos criados com `game new` são pastas independentes, mas usam a CLI e o toolchain desta cópia da engine para executar e gerar builds.
+For now, the engine is consumed directly from a cloned repository. There is no stable npm package, Homebrew formula, or standalone installer yet. Projects created with `game new` are independent directories, but they use the CLI and toolchain from this engine checkout to run and produce builds.
 
-## Maturidade e plataformas
+## Maturity and platform support
 
-| Área | Estado |
+| Area | Status |
 |---|---|
-| Desenvolvimento e preview web | Experimental, funcional |
-| Kernel nativo e WebAssembly | Experimental, com teste de equivalência |
-| Pacote Electron para macOS | Validado localmente |
-| Pacotes Windows e Linux | Geráveis, ainda exigem validação nos respectivos sistemas |
-| Integração Steam | Implementada, exige App ID, Depot ID e conta Steamworks |
-| Assinatura e notarização | Responsabilidade do proprietário do jogo |
-| Áudio abstrato | Ainda não implementado |
-| Android e iOS | Planejados |
-| Consoles | Rota arquitetural futura, sem backend público |
+| Web development and preview | Experimental, functional |
+| Native and WebAssembly kernel | Experimental, with equivalence tests |
+| Electron package for macOS | Validated locally |
+| Windows and Linux packages | Can be generated; still require validation on their target systems |
+| Steam integration | Implemented; requires an App ID, Depot ID, and Steamworks account |
+| Signing and notarization | Responsibility of the game owner |
+| Abstract audio | Not implemented yet |
+| Android and iOS | Planned |
+| Consoles | Future architectural path; no public backend |
 
-Não trate a versão 0.3.0 como uma engine estável para produção sem avaliar essas limitações.
+Do not treat version 0.3.0 as a production-stable engine without evaluating these limitations.
 
-## Tutorial: seu primeiro jogo
+## Tutorial: create your first game
 
-### 1. Pré-requisitos
+### 1. Prerequisites
 
-O perfil atual fixa as versões em [toolchain.lock](toolchain.lock):
+The current development profile pins the versions in [toolchain.lock](toolchain.lock):
 
 - Git;
 - Node.js 22.14.0;
 - pnpm 11.7.0;
 - CMake 4.3.0;
 - Ninja 1.13.2;
-- compilador com suporte a C++20;
-- Bash para os scripts de bootstrap.
+- a compiler with C++20 support;
+- Bash for the bootstrap scripts.
 
-macOS é o ambiente atualmente validado para o pacote desktop completo. Em Windows, prefira WSL para desenvolvimento até o workflow nativo ser validado; o release Windows deve ser testado no Windows real.
+macOS is currently the validated environment for the complete desktop packaging flow. On Windows, prefer WSL for development until the native workflow is validated; Windows releases must still be tested on a real Windows system.
 
-### 2. Clone e prepare a engine
+### 2. Clone and prepare the engine
 
 ```sh
 git clone https://github.com/jeancatarina/ludivra.git
@@ -95,52 +97,52 @@ pnpm game -- doctor --format json
 pnpm test
 ```
 
-O bootstrap instala o Emscripten fixado dentro de `.toolchains/`; ele não altera o gameplay nem publica artefatos.
+The bootstrap installs the pinned Emscripten version inside `.toolchains/`. It does not modify gameplay or publish any artifact.
 
-O resultado esperado do `doctor` é `"status":"passed"`. Se houver `TOOL_VERSION_MISMATCH`, ajuste a ferramenta indicada para a versão registrada no lock.
+The expected `doctor` result is `"status":"passed"`. If it reports `TOOL_VERSION_MISMATCH`, install the version recorded in the toolchain lock for the affected tool.
 
-### 3. Crie o projeto do jogo
+### 3. Create a game project
 
-Execute a partir da raiz da Ludivra:
+Run this from the Ludivra root directory:
 
 ```sh
-pnpm game -- new ../meu-primeiro-jogo --name "Meu Primeiro Jogo"
-pnpm game -- validate --project ../meu-primeiro-jogo --format json
+pnpm game -- new ../my-first-game --name "My First Game"
+pnpm game -- validate --project ../my-first-game --format json
 ```
 
-O destino deve ser uma pasta que ainda não existe. A estrutura inicial será:
+The destination must be a directory that does not already exist. The starter creates:
 
 ```text
-meu-primeiro-jogo/
-├── AGENTS.md              instruções para agentes
-├── PROJECT_STATE.json     estado durável entre sessões
-├── BACKLOG.md             trabalho futuro
-├── DECISIONS.md           decisões do jogo
-├── SESSION_REPORT.md      evidências da última sessão
-├── game.jsonc             manifesto, targets e inputs
+my-first-game/
+├── AGENTS.md              instructions for AI agents
+├── PROJECT_STATE.json     durable state between sessions
+├── BACKLOG.md             future work
+├── DECISIONS.md           game-specific decisions
+├── SESSION_REPORT.md      evidence from the latest session
+├── game.jsonc             manifest, targets, and input bindings
 ├── scripts/
-│   └── gameplay.lua       regras autoritativas
+│   └── gameplay.lua       authoritative rules
 └── presentation/
-    └── index.ts           apresentação visual
+    └── index.ts           visual presentation
 ```
 
-É recomendado iniciar um repositório Git próprio para o jogo:
+Create a separate Git repository for the game:
 
 ```sh
-git -C ../meu-primeiro-jogo init -b main
-git -C ../meu-primeiro-jogo add .
-git -C ../meu-primeiro-jogo commit -m "chore: create game from Ludivra starter"
+git -C ../my-first-game init -b main
+git -C ../my-first-game add .
+git -C ../my-first-game commit -m "chore: create game from Ludivra starter"
 ```
 
-### 4. Configure nome, targets e controles
+### 4. Configure the game, targets, and controls
 
-Edite `../meu-primeiro-jogo/game.jsonc`:
+Edit `../my-first-game/game.jsonc`:
 
 ```jsonc
 {
   "schemaVersion": 1,
-  "id": "meu-primeiro-jogo",
-  "name": "Meu Primeiro Jogo",
+  "id": "my-first-game",
+  "name": "My First Game",
   "engine": { "version": "0.3.0" },
   "targets": ["browser", "desktop", "native-headless"],
   "entrypoints": {
@@ -149,8 +151,8 @@ Edite `../meu-primeiro-jogo/game.jsonc`:
   },
   "inputs": [
     {
-      "id": "confirmar",
-      "label": "Confirmar",
+      "id": "confirm",
+      "label": "Confirm",
       "actionId": 1,
       "keys": ["Space", "Enter"]
     }
@@ -162,11 +164,11 @@ Edite `../meu-primeiro-jogo/game.jsonc`:
 }
 ```
 
-Gameplay recebe `actionId`, nunca teclas físicas. O binding de `Space` e `Enter` pertence ao manifesto e pode mudar sem contaminar a regra Lua.
+Gameplay receives an `actionId`, never a physical key. The `Space` and `Enter` bindings belong to the manifest and can change without coupling device details to the Lua rule.
 
-### 5. Implemente uma regra em Lua
+### 5. Implement a gameplay rule in Lua
 
-Edite `scripts/gameplay.lua`:
+Edit `scripts/gameplay.lua`:
 
 ```lua
 local SCORE_KEY = 1
@@ -181,17 +183,17 @@ return {
 }
 ```
 
-Regras importantes:
+Important rules:
 
-- consulte estado com `ctx.query`;
-- altere estado somente com `ctx.commands`;
-- não acesse filesystem, rede, sistema operacional ou renderer;
-- não use relógio civil nem RNG externo;
-- mantenha IDs estáveis depois que saves públicos existirem.
+- read state through `ctx.query`;
+- change state only through `ctx.commands`;
+- do not access the filesystem, network, operating system, or renderer;
+- do not use wall-clock time or external random-number generators;
+- keep IDs stable after public saves exist.
 
-### 6. Apresente o estado em TypeScript
+### 6. Present the state in TypeScript
 
-Edite `presentation/index.ts`. O presenter lê o estado, cria visuais semânticos e não modifica gameplay:
+Edit `presentation/index.ts`. A presenter reads logical state, creates semantic visuals, and never changes gameplay:
 
 ```ts
 import type { CreateGamePresenter } from "@ludivra/presentation-protocol";
@@ -216,51 +218,51 @@ export const createGamePresenter: CreateGamePresenter = (renderer) => {
 };
 ```
 
-O jogo não importa Three.js diretamente. `renderer-three` é o único adapter autorizado a conhecer essa dependência.
+Game code does not import Three.js directly. `renderer-three` is the only adapter allowed to depend on it.
 
-### 7. Execute o jogo
+### 7. Run the game
 
 ```sh
-pnpm game -- run --project ../meu-primeiro-jogo
+pnpm game -- run --project ../my-first-game
 ```
 
-A CLI prepara o runtime WebAssembly e inicia o BrowserHost em `127.0.0.1`. Use `Ctrl+C` para encerrar.
+The CLI prepares the WebAssembly runtime and starts BrowserHost on `127.0.0.1`. Press `Ctrl+C` to stop it.
 
-Depois de cada alteração relevante:
+After every relevant change:
 
 ```sh
-pnpm game -- validate --project ../meu-primeiro-jogo --format json
+pnpm game -- validate --project ../my-first-game --format json
 pnpm game -- test --format json
-pnpm game -- build --project ../meu-primeiro-jogo --target web --format json
+pnpm game -- build --project ../my-first-game --target web --format json
 ```
 
-### 8. Gere um aplicativo desktop
+### 8. Build a desktop application
 
-Escolha o target correspondente:
+Choose the matching target:
 
 ```sh
 # macOS
-pnpm game -- package --project ../meu-primeiro-jogo --target steam-macos --format json
+pnpm game -- package --project ../my-first-game --target steam-macos --format json
 
 # Windows
-pnpm game -- package --project ../meu-primeiro-jogo --target steam-windows --format json
+pnpm game -- package --project ../my-first-game --target steam-windows --format json
 
 # Linux
-pnpm game -- package --project ../meu-primeiro-jogo --target steam-linux --format json
+pnpm game -- package --project ../my-first-game --target steam-linux --format json
 ```
 
-O pacote é gerado em `build/steam/` e não é publicado automaticamente. Quando o target for o mesmo sistema da máquina, o empacotador executa um smoke test do Electron, preload, renderer, WebAssembly e storage.
+The package is written to `build/steam/` and is never published automatically. When the target matches the host operating system, the packager runs a smoke test covering Electron, preload, renderer, WebAssembly, and storage.
 
-Junto do aplicativo são produzidos:
+Each package also produces:
 
 - `SHA256SUMS`;
 - `sbom.cdx.json`;
 - `provenance.json`;
-- scripts SteamPipe, quando os IDs estiverem configurados.
+- SteamPipe scripts when Steam IDs are configured.
 
-### 9. Configure a Steam
+### 9. Configure Steam
 
-No manifesto do jogo:
+Set the IDs in the game manifest:
 
 ```jsonc
 "steam": {
@@ -269,87 +271,87 @@ No manifesto do jogo:
 }
 ```
 
-Depois, gere novamente o pacote no sistema operacional alvo. Achievements, Steam Cloud, usuário e overlay só ficam disponíveis quando o cliente Steam, o App ID e a configuração da aplicação estiverem válidos.
+Then generate the package again on the target operating system. Achievements, Steam Cloud, user data, and the overlay are available only when the Steam client, App ID, and application configuration are valid.
 
-Assinatura, notarização, credenciais, SteamCMD e upload são deliberadamente externos. Siga [Release desktop para Steam](docs/recipes/desktop-steam-release.md) e nunca coloque segredos no repositório.
+Signing, notarization, credentials, SteamCMD, and uploads are deliberately external. Follow the [Desktop Steam release guide](docs/recipes/desktop-steam-release.md), and never store secrets in the repository.
 
-## Desenvolvimento por chat
+## Chat-driven development
 
-O jogo criado contém estado suficiente para outra sessão continuar sem depender da memória da conversa. Um pedido inicial recomendado é:
+A generated game contains enough durable state for a new session to continue without depending on conversation memory. A useful initial request is:
 
 ```text
-Leia AGENTS.md, PROJECT_STATE.json, game.jsonc, BACKLOG.md e as decisões relevantes.
-Implemente um vertical slice pequeno. Antes de concluir, valide, teste, execute,
-inspecione o resultado e atualize o relatório da sessão com evidências e limitações.
+Read AGENTS.md, PROJECT_STATE.json, game.jsonc, BACKLOG.md, and the relevant decisions.
+Implement a small vertical slice. Before finishing, validate, test, run, and inspect it.
+Update the session report with evidence, limitations, and one recommended next step.
 ```
 
-Para mudanças na própria engine, agentes devem começar por [AGENTS.md](AGENTS.md). As fronteiras técnicas estão em [architecture.md](architecture.md), e os gates obrigatórios em [docs/guardrails/](docs/guardrails/).
+Agents modifying the engine itself must start with [AGENTS.md](AGENTS.md). Technical boundaries are defined in [architecture.md](architecture.md), and mandatory gates live in [docs/guardrails/](docs/guardrails/).
 
-## Referência da CLI
+## CLI reference
 
-Todos os comandos devem ser executados na raiz da engine.
+Run all commands from the engine root directory.
 
-| Comando | Finalidade |
+| Command | Purpose |
 |---|---|
-| `game doctor` | verifica o toolchain fixado |
-| `game inspect` | lista versão, plataformas e capacidades |
-| `game new <pasta>` | cria um jogo a partir do starter |
-| `game validate --project <pasta>` | valida schema e regras arquiteturais |
-| `game test` | executa a suíte e grava o log em `reports/runs/` |
-| `game run --project <pasta>` | inicia o preview local |
-| `game build --project <pasta> --target web` | gera o build web |
-| `game package --project <pasta> --target <target>` | gera o pacote desktop |
+| `game doctor` | checks the pinned toolchain |
+| `game inspect` | lists the engine version, platforms, and capabilities |
+| `game new <directory>` | creates a game from the starter |
+| `game validate --project <directory>` | validates schemas and architectural rules |
+| `game test` | runs the test suite and writes a log to `reports/runs/` |
+| `game run --project <directory>` | starts the local preview |
+| `game build --project <directory> --target web` | creates the web build |
+| `game package --project <directory> --target <target>` | creates a desktop package |
 
-Use `--format json` para obter resultados estruturados apropriados para automação e agentes.
+Use `--format json` for structured output designed for automation and AI agents.
 
-## Arquitetura do repositório
+## Repository architecture
 
 ```text
 ludivra/
-├── kernel/                  simulação C++20, saves e replays
-├── runtime-c-api/           boundary C estável
-├── runtime-wasm/            build Emscripten
-├── runtime-web/             bridge TypeScript
-├── presentation-protocol/   protocolo agnóstico
-├── renderer-three/          único adapter Three.js
-├── platform-contracts/      contratos dos hosts
+├── kernel/                  C++20 simulation, saves, and replays
+├── runtime-c-api/           stable C boundary
+├── runtime-wasm/            Emscripten build
+├── runtime-web/             TypeScript bridge
+├── presentation-protocol/   renderer-agnostic protocol
+├── renderer-three/          sole Three.js adapter
+├── platform-contracts/      host contracts
 ├── hosts/
-│   ├── browser/             preview e build web
-│   ├── electron/            desktop e Steam
-│   └── native-headless/     diagnóstico nativo
-├── cli/                     comando `game`
-├── contracts/               schemas e fontes geradas
-├── capabilities/            catálogo legível por máquinas
-├── examples/first-game/     starter jogável
-└── docs/                    ADRs, guardrails e receitas
+│   ├── browser/             preview and web build
+│   ├── electron/            desktop and Steam
+│   └── native-headless/     native diagnostics
+├── cli/                     `game` command
+├── contracts/               schemas and generation sources
+├── capabilities/            machine-readable catalog
+├── examples/first-game/     playable starter
+└── docs/                    ADRs, guardrails, and recipes
 ```
 
-## Limitações conhecidas
+## Known limitations
 
-- API e formatos permanecem experimentais até 1.0;
-- não há runtime de áudio abstrato;
-- Windows e Linux ainda precisam de testes em runners nativos;
-- pacotes não são assinados ou notarizados pela engine;
-- updates exigem pacote assinado e feed HTTPS controlado;
-- não há distribuição independente da CLI fora do repositório;
-- Android, iOS e consoles ainda não possuem hosts utilizáveis;
-- o starter demonstra a arquitetura, não um jogo comercial pronto.
+- APIs and formats remain experimental until 1.0;
+- there is no abstract audio runtime yet;
+- Windows and Linux still require tests on native runners;
+- the engine does not sign or notarize packages;
+- updates require a signed package and a controlled HTTPS feed;
+- the CLI is not distributed independently from the repository;
+- Android, iOS, and consoles do not have usable hosts yet;
+- the starter demonstrates the architecture; it is not a production-ready commercial game.
 
-O trabalho planejado está em [BACKLOG.md](BACKLOG.md). Não esconda uma limitação com fallback silencioso.
+Planned work is tracked in [BACKLOG.md](BACKLOG.md). Never hide a limitation behind a silent fallback.
 
-## Como contribuir
+## Contributing
 
-Leia [AGENTS.md](AGENTS.md) antes de alterar a engine. Mudanças devem preservar os boundaries, incluir evidência e passar em:
+Read [AGENTS.md](AGENTS.md) before changing the engine. Changes must preserve architectural boundaries, include evidence, and pass:
 
 ```sh
 pnpm game -- validate --format json
 pnpm test
 ```
 
-Dependências e assets distribuídos precisam de versão, origem e licença verificáveis.
+Distributed dependencies and assets must have verifiable versions, origins, and licenses.
 
-## Licença
+## License
 
-Ludivra é software livre sob a [licença MIT](LICENSE). Você pode usar a engine em jogos gratuitos ou comerciais, modificar o código e redistribuí-lo conforme os termos da licença.
+Ludivra is open-source software under the [MIT License](LICENSE). You may use the engine in free or commercial games, modify it, and redistribute it under the license terms.
 
-Licenças e avisos das dependências distribuídas estão em [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
+Third-party dependency licenses and notices are documented in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
