@@ -108,7 +108,7 @@ const provenance = {
   schemaVersion: 1,
   generatedAt: new Date().toISOString(),
   subject: { path: packageDirectory, sha256: packageHashes.aggregate },
-  source: { repository: "https://github.com/jmsouza/ludivra", commit: git.commit, dirty: git.dirty },
+  source: { repository: git.repository, commit: git.commit, dirty: git.dirty },
   inputs: { gameManifestSha256: manifestHash, pnpmLockSha256: lockHash, toolchainLockSha256: toolchainHash },
   build: { platform, architecture: "x64", electronVersion, command: "game package" },
   verification: { smoke }
@@ -187,7 +187,9 @@ async function hashDirectory(directory) {
 function gitState() {
   const commit = spawnSync("git", ["rev-parse", "HEAD"], { cwd: engineRoot, encoding: "utf8" });
   const status = spawnSync("git", ["status", "--porcelain"], { cwd: engineRoot, encoding: "utf8" });
+  const remote = spawnSync("git", ["remote", "get-url", "origin"], { cwd: engineRoot, encoding: "utf8" });
   return {
+    repository: remote.status === 0 ? remote.stdout.trim() : "unknown",
     commit: commit.status === 0 ? commit.stdout.trim() : "unknown",
     dirty: status.status !== 0 || status.stdout.trim().length > 0
   };
