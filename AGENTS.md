@@ -23,6 +23,10 @@ Não carregue documentação sem relação com a mudança.
 
 Não repita regras destes documentos em novos arquivos. Aponte para a fonte canônica. Guardrails só podem ser editados quando a tarefa pedir explicitamente sua alteração.
 
+## Git e publicação
+
+O workflow obrigatório está em [engineering-rules.md, seção 8](docs/guardrails/engineering-rules.md#8-git-e-publicação). Agentes DEVEM concluir mudanças com commit e push diretos em `main`. Branches e pull requests somente podem ser usados quando o usuário pedir explicitamente.
+
 ## Quando parar
 
 Pare e peça decisão quando houver:

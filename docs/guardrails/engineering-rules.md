@@ -86,3 +86,12 @@ Código específico de vendor só existe em adapter de borda. Código específic
 Toda regra mecanicamente verificável DEVE virar lint, teste arquitetural, schema ou gate de CI. Até ser automatizada, a regra continua obrigatória e deve possuir item de backlog para automação.
 
 Suppression só é aceita pelo processo formal de exceção. Comentário local, flag escondida ou configuração divergente não substituem exceção aprovada.
+
+## 8. Git e publicação
+
+1. Todo change set concluído DEVE ser commitado diretamente na branch local `main` e enviado diretamente para `origin/main`.
+2. Criar branch de trabalho, pull request ou draft PR é proibido, salvo quando o usuário pedir explicitamente esse fluxo.
+3. Se uma mudança já estiver em outra branch, ela DEVE ser integrada em `main`, validada e enviada para `origin/main`; a branch não substitui a publicação na principal.
+4. Antes do commit, o agente DEVE confirmar o escopo com `git status`, executar os gates aplicáveis e verificar `git diff --check`.
+5. `force-push`, rebase destrutivo e reescrita do histórico de `main` são proibidos.
+6. Falha de autenticação, conflito não resolvido ou mudança remota inesperada DEVE interromper o push; o agente não pode contornar proteção ou sobrescrever trabalho remoto.
