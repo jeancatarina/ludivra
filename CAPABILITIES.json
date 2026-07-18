@@ -1,8 +1,13 @@
 {
   "_generated": "tools/contracts/generate-capabilities.mjs",
   "schemaVersion": 1,
-  "engineVersion": "0.3.0",
+  "engineVersion": "0.4.0",
   "capabilities": [
+    {
+      "id": "feedback.audio-effects",
+      "status": "experimental",
+      "version": "0.1.0"
+    },
     {
       "id": "host.electron-steam-package",
       "status": "experimental",

@@ -1,4 +1,5 @@
 #include "runtime.hpp"
+#include "generated/presentation_events.hpp"
 
 #include <algorithm>
 #include <limits>
@@ -69,6 +70,14 @@ const std::string& Runtime::last_error() const noexcept {
   return lua_.last_error();
 }
 
+const std::vector<PresentationEvent>& Runtime::presentation_events() const noexcept {
+  return presentation_events_;
+}
+
+void Runtime::clear_presentation_events() noexcept {
+  presentation_events_.clear();
+}
+
 std::vector<std::uint8_t> Runtime::save() const {
   return encode_save({tick_, state_hash_, integer_state_});
 }
@@ -88,6 +97,7 @@ RuntimeError Runtime::load_save(const std::span<const std::uint8_t> bytes) {
   replay_initial_state_ = std::move(next_replay_state);
   replay_frames_.clear();
   commands_.clear();
+  presentation_events_.clear();
   return RuntimeError::none;
 }
 
@@ -119,6 +129,7 @@ RuntimeError Runtime::verify_replay(const std::span<const std::uint8_t> bytes) c
     if (verification.step(1U) != RuntimeError::none) {
       return RuntimeError::replay_mismatch;
     }
+    verification.clear_presentation_events();
   }
   return verification.tick() == decoded.expected_tick &&
           verification.state_hash() == decoded.expected_hash
@@ -193,21 +204,54 @@ RuntimeError Runtime::commit_tick() {
 
 RuntimeError Runtime::apply_commands() {
   IntegerState committed = integer_state_;
+  auto committed_events = presentation_events_;
+  auto committed_sequence = next_presentation_sequence_;
   std::uint64_t committed_hash = state_hash_;
-  for (const auto& command : commands_.additions()) {
-    const auto found = committed.find(command.key);
-    const auto current = found == committed.end() ? 0 : found->second;
-    if ((command.delta > 0 && current > std::numeric_limits<std::int64_t>::max() - command.delta) ||
-        (command.delta < 0 && current < std::numeric_limits<std::int64_t>::min() - command.delta)) {
-      return RuntimeError::integer_overflow;
+  for (const auto& command : commands_.entries()) {
+    switch (command.kind) {
+      case CommandKind::add_integer: {
+        const auto found = committed.find(command.id);
+        const auto current = found == committed.end() ? 0 : found->second;
+        if ((command.value > 0 && current > std::numeric_limits<std::int64_t>::max() - command.value) ||
+            (command.value < 0 && current < std::numeric_limits<std::int64_t>::min() - command.value)) {
+          return RuntimeError::integer_overflow;
+        }
+        const auto value = current + command.value;
+        committed[command.id] = value;
+        mix_byte(committed_hash, 0xC1U);
+        mix_u32(committed_hash, command.id);
+        mix_u64(committed_hash, static_cast<std::uint64_t>(value));
+        break;
+      }
+      case CommandKind::play_audio:
+      case CommandKind::stop_audio:
+      case CommandKind::spawn_effect: {
+        if (committed_events.size() >= contract::maximum_presentation_events) {
+          return RuntimeError::presentation_limit;
+        }
+        const auto kind = command.kind == CommandKind::play_audio
+            ? PresentationEventKind::audio_play
+            : command.kind == CommandKind::stop_audio
+                ? PresentationEventKind::audio_stop
+                : PresentationEventKind::effect_spawn;
+        committed_events.push_back({kind, command.id, static_cast<std::int32_t>(command.value),
+            command.x_milli, command.y_milli, command.z_milli, committed_sequence++});
+        const auto marker = kind == PresentationEventKind::audio_play
+            ? 0xD1U
+            : kind == PresentationEventKind::audio_stop ? 0xD2U : 0xE1U;
+        mix_byte(committed_hash, marker);
+        mix_u32(committed_hash, command.id);
+        mix_u32(committed_hash, static_cast<std::uint32_t>(command.value));
+        mix_u32(committed_hash, static_cast<std::uint32_t>(command.x_milli));
+        mix_u32(committed_hash, static_cast<std::uint32_t>(command.y_milli));
+        mix_u32(committed_hash, static_cast<std::uint32_t>(command.z_milli));
+        break;
+      }
     }
-    const auto value = current + command.delta;
-    committed[command.key] = value;
-    mix_byte(committed_hash, 0xC1U);
-    mix_u32(committed_hash, command.key);
-    mix_u64(committed_hash, static_cast<std::uint64_t>(value));
   }
   integer_state_.swap(committed);
+  presentation_events_.swap(committed_events);
+  next_presentation_sequence_ = committed_sequence;
   state_hash_ = committed_hash;
   return RuntimeError::none;
 }

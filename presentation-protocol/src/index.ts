@@ -13,10 +13,22 @@ export interface VisualTransform {
   scale?: readonly [number, number, number];
 }
 
+export interface ParticleBurst {
+  position: readonly [number, number, number];
+  color: number;
+  count: number;
+  size: number;
+  speed: number;
+  lifetimeMs: number;
+  gravity: number;
+  seed: bigint;
+}
+
 export interface PresentationRenderer {
   createVisual(definition: VisualDefinition): void;
   setTransform(id: string, transform: VisualTransform): void;
   setColor(id: string, color: number): void;
+  spawnParticles(burst: ParticleBurst): void;
   render(): void;
   resize(width: number, height: number, pixelRatio: number): void;
   destroy(): void;

@@ -8,3 +8,4 @@
 | [0004](docs/adr/0004-lua-sandbox.md) | aceito | Lua 5.4.8, sandbox e command buffer |
 | [0005](docs/adr/0005-first-steam-delivery.md) | aceito | WebAssembly, Three.js, BrowserHost e pacote Electron/Steam |
 | [0006](docs/adr/0006-desktop-commercial-host.md) | aceito | Host desktop, IPC, storage, diagnóstico e Steam opcional |
+| [0007](docs/adr/0007-semantic-audio-and-effects.md) | aceito | Áudio, música e efeitos semânticos por eventos |

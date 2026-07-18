@@ -6,6 +6,7 @@
 #include <cstring>
 #include <limits>
 #include <new>
+#include <type_traits>
 
 struct ludivra_runtime final {
   explicit ludivra_runtime(const ludivra::kernel::RuntimeConfig config) : value(config) {}
@@ -33,9 +34,26 @@ ludivra_result to_public_result(const ludivra::kernel::RuntimeError error) noexc
       return LUDIVRA_ERROR_REPLAY_MISMATCH;
     case ludivra::kernel::RuntimeError::pending_inputs:
       return LUDIVRA_ERROR_PENDING_INPUTS;
+    case ludivra::kernel::RuntimeError::presentation_limit:
+      return LUDIVRA_ERROR_PRESENTATION_LIMIT;
   }
   return LUDIVRA_ERROR_INTERNAL;
 }
+
+uint32_t to_public_event_type(const ludivra::kernel::PresentationEventKind kind) noexcept {
+  switch (kind) {
+    case ludivra::kernel::PresentationEventKind::audio_play:
+      return LUDIVRA_PRESENTATION_AUDIO_PLAY;
+    case ludivra::kernel::PresentationEventKind::audio_stop:
+      return LUDIVRA_PRESENTATION_AUDIO_STOP;
+    case ludivra::kernel::PresentationEventKind::effect_spawn:
+      return LUDIVRA_PRESENTATION_EFFECT_SPAWN;
+  }
+  return 0U;
+}
+
+static_assert(sizeof(ludivra_presentation_event) == LUDIVRA_PRESENTATION_EVENT_RECORD_SIZE);
+static_assert(std::is_standard_layout_v<ludivra_presentation_event>);
 
 template <typename Producer>
 ludivra_result archive_size(const ludivra_runtime* runtime, uint32_t* out_size, Producer producer) {
@@ -111,6 +129,8 @@ const char* ludivra_result_message(const ludivra_result result) {
       return "operation rejected while inputs are pending";
     case LUDIVRA_ERROR_BUFFER_TOO_SMALL:
       return "output buffer too small";
+    case LUDIVRA_ERROR_PRESENTATION_LIMIT:
+      return "presentation event limit reached; drain events before stepping again";
   }
   return "unknown result";
 }
@@ -273,6 +293,54 @@ ludivra_result ludivra_runtime_verify_replay(
   } catch (...) {
     return LUDIVRA_ERROR_INTERNAL;
   }
+}
+
+ludivra_result ludivra_runtime_presentation_event_count(
+    const ludivra_runtime* runtime,
+    uint32_t* out_count) {
+  if (runtime == nullptr || out_count == nullptr) {
+    return LUDIVRA_ERROR_INVALID_ARGUMENT;
+  }
+  const auto size = runtime->value.presentation_events().size();
+  if (size > LUDIVRA_MAX_BUFFERED_PRESENTATION_EVENTS) {
+    return LUDIVRA_ERROR_INTERNAL;
+  }
+  *out_count = static_cast<uint32_t>(size);
+  return LUDIVRA_OK;
+}
+
+ludivra_result ludivra_runtime_presentation_events_write(
+    const ludivra_runtime* runtime,
+    ludivra_presentation_event* buffer,
+    const uint32_t capacity,
+    uint32_t* out_count) {
+  if (runtime == nullptr || out_count == nullptr) {
+    return LUDIVRA_ERROR_INVALID_ARGUMENT;
+  }
+  const auto& events = runtime->value.presentation_events();
+  if (events.size() > capacity) {
+    *out_count = static_cast<uint32_t>(events.size());
+    return LUDIVRA_ERROR_BUFFER_TOO_SMALL;
+  }
+  if (!events.empty() && buffer == nullptr) {
+    return LUDIVRA_ERROR_INVALID_ARGUMENT;
+  }
+  for (std::size_t index = 0; index < events.size(); ++index) {
+    const auto& source = events[index];
+    buffer[index] = {sizeof(ludivra_presentation_event), to_public_event_type(source.kind),
+        source.id, source.value_milli, source.x_milli, source.y_milli, source.z_milli,
+        0U, source.sequence};
+  }
+  *out_count = static_cast<uint32_t>(events.size());
+  return LUDIVRA_OK;
+}
+
+ludivra_result ludivra_runtime_presentation_events_clear(ludivra_runtime* runtime) {
+  if (runtime == nullptr) {
+    return LUDIVRA_ERROR_INVALID_ARGUMENT;
+  }
+  runtime->value.clear_presentation_events();
+  return LUDIVRA_OK;
 }
 
 const char* ludivra_runtime_last_error(const ludivra_runtime* runtime) {

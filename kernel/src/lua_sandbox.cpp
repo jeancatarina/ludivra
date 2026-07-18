@@ -28,6 +28,15 @@ std::uint32_t checked_key(lua_State* state, const int index) {
   return static_cast<std::uint32_t>(key);
 }
 
+std::int32_t checked_milli(lua_State* state, const int index, const char* message) {
+  const auto value = luaL_checkinteger(state, index);
+  if (value < std::numeric_limits<std::int32_t>::min() ||
+      value > std::numeric_limits<std::int32_t>::max()) {
+    luaL_argerror(state, index, message);
+  }
+  return static_cast<std::int32_t>(value);
+}
+
 ExecutionContext& context(lua_State* state) {
   lua_pushlightuserdata(state, const_cast<char*>(&execution_context_key));
   lua_gettable(state, LUA_REGISTRYINDEX);
@@ -58,6 +67,46 @@ int commands_add_i64(lua_State* state) {
   return 0;
 }
 
+int commands_play_audio(lua_State* state) {
+  const auto id = checked_key(state, 2);
+  const auto volume = checked_milli(state, 3, "volume must be a signed 32-bit fixed-point value");
+  if (volume < 0 || volume > 1000) {
+    return luaL_argerror(state, 3, "volume must be between 0 and 1000");
+  }
+  try {
+    context(state).commands->play_audio(id, volume);
+  } catch (...) {
+    return luaL_error(state, "unable to allocate audio command");
+  }
+  return 0;
+}
+
+int commands_stop_audio(lua_State* state) {
+  try {
+    context(state).commands->stop_audio(checked_key(state, 2));
+  } catch (...) {
+    return luaL_error(state, "unable to allocate audio command");
+  }
+  return 0;
+}
+
+int commands_spawn_effect(lua_State* state) {
+  const auto id = checked_key(state, 2);
+  const auto intensity = checked_milli(state, 3, "intensity must be a signed 32-bit fixed-point value");
+  if (intensity < 0 || intensity > 10'000) {
+    return luaL_argerror(state, 3, "intensity must be between 0 and 10000");
+  }
+  const auto x = checked_milli(state, 4, "x must be a signed 32-bit fixed-point value");
+  const auto y = checked_milli(state, 5, "y must be a signed 32-bit fixed-point value");
+  const auto z = checked_milli(state, 6, "z must be a signed 32-bit fixed-point value");
+  try {
+    context(state).commands->spawn_effect(id, intensity, x, y, z);
+  } catch (...) {
+    return luaL_error(state, "unable to allocate effect command");
+  }
+  return 0;
+}
+
 void budget_hook(lua_State* state, lua_Debug*) {
   luaL_error(state, "gameplay instruction budget exceeded");
 }
@@ -74,9 +123,15 @@ void push_context_table(lua_State* state) {
   lua_pushcfunction(state, query_get_i64);
   lua_setfield(state, -2, "get_i64");
   lua_setfield(state, -2, "query");
-  lua_createtable(state, 0, 1);
+  lua_createtable(state, 0, 4);
   lua_pushcfunction(state, commands_add_i64);
   lua_setfield(state, -2, "add_i64");
+  lua_pushcfunction(state, commands_play_audio);
+  lua_setfield(state, -2, "play_audio");
+  lua_pushcfunction(state, commands_stop_audio);
+  lua_setfield(state, -2, "stop_audio");
+  lua_pushcfunction(state, commands_spawn_effect);
+  lua_setfield(state, -2, "spawn_effect");
   lua_setfield(state, -2, "commands");
 }
 

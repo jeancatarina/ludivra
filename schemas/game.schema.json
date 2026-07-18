@@ -54,6 +54,60 @@
         }
       }
     },
+    "audio": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "eventId", "bus", "loop", "autoplay", "volume", "origin", "license"],
+        "properties": {
+          "id": { "type": "string", "pattern": "^[a-z][a-z0-9.-]*$" },
+          "eventId": { "type": "integer", "minimum": 1 },
+          "bus": { "enum": ["music", "ambience", "effects"] },
+          "loop": { "type": "boolean" },
+          "autoplay": { "type": "boolean" },
+          "volume": { "type": "number", "minimum": 0, "maximum": 1 },
+          "origin": { "type": "string", "minLength": 1 },
+          "license": { "type": "string", "minLength": 1 },
+          "source": { "type": "string", "minLength": 1 },
+          "synth": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["waveform", "frequency", "durationMs"],
+            "properties": {
+              "waveform": { "enum": ["sine", "square", "sawtooth", "triangle"] },
+              "frequency": { "type": "number", "minimum": 20, "maximum": 20000 },
+              "durationMs": { "type": "integer", "minimum": 10, "maximum": 60000 }
+            }
+          }
+        },
+        "oneOf": [
+          { "required": ["source"], "not": { "required": ["synth"] } },
+          { "required": ["synth"], "not": { "required": ["source"] } }
+        ]
+      }
+    },
+    "effects": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "eventId", "type", "color", "count", "size", "speed", "lifetimeMs", "gravity"],
+        "properties": {
+          "id": { "type": "string", "pattern": "^[a-z][a-z0-9.-]*$" },
+          "eventId": { "type": "integer", "minimum": 1 },
+          "type": { "const": "particle-burst" },
+          "color": { "type": "integer", "minimum": 0, "maximum": 16777215 },
+          "count": { "type": "integer", "minimum": 1, "maximum": 5000 },
+          "size": { "type": "number", "exclusiveMinimum": 0, "maximum": 10 },
+          "speed": { "type": "number", "minimum": 0, "maximum": 100 },
+          "lifetimeMs": { "type": "integer", "minimum": 16, "maximum": 60000 },
+          "gravity": { "type": "number", "minimum": -100, "maximum": 100 }
+        }
+      }
+    },
     "steam": {
       "type": "object",
       "additionalProperties": false,

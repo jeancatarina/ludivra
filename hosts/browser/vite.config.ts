@@ -1,5 +1,5 @@
 import { readFile } from "node:fs/promises";
-import { isAbsolute, relative, resolve } from "node:path";
+import { basename, isAbsolute, relative, resolve } from "node:path";
 import { parse } from "jsonc-parser";
 import { defineConfig, type Plugin } from "vite";
 
@@ -15,6 +15,7 @@ interface GameManifest {
     actionId: number;
     keys: string[];
   }>;
+  audio?: Array<{ eventId: number; source?: string }>;
 }
 
 function withinProject(projectDirectory: string, path: string): string {
@@ -48,8 +49,20 @@ function gamePlugin(projectDirectory: string): Plugin {
         withinProject(projectDirectory, manifest.entrypoints.gameplay),
         "utf8"
       );
+      const audioSources: string[] = [];
+      for (const audio of manifest.audio ?? []) {
+        if (audio.source === undefined) continue;
+        const sourcePath = withinProject(projectDirectory, audio.source);
+        const reference = this.emitFile({
+          type: "asset",
+          name: basename(sourcePath),
+          source: await readFile(sourcePath)
+        });
+        audioSources.push(`${JSON.stringify(audio.eventId)}: import.meta.ROLLUP_FILE_URL_${reference}`);
+      }
       return `export const manifest = ${JSON.stringify(manifest)};\n` +
-        `export const gameplaySource = ${JSON.stringify(gameplay)};`;
+        `export const gameplaySource = ${JSON.stringify(gameplay)};\n` +
+        `export const audioSources = {${audioSources.join(",")}};`;
     }
   };
 }

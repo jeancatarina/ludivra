@@ -1,6 +1,6 @@
 import { spawnSync } from "node:child_process";
 import { readdir, readFile } from "node:fs/promises";
-import { extname, relative, resolve } from "node:path";
+import { extname, isAbsolute, relative, resolve } from "node:path";
 import { Ajv2020 } from "ajv/dist/2020.js";
 import { parse, type ParseError } from "jsonc-parser";
 import type { Diagnostic } from "../generated/cli-result.js";
@@ -17,6 +17,7 @@ const requiredFiles = [
   "THIRD_PARTY_NOTICES.md",
   "contracts/cli-result.schema.json",
   "contracts/desktop-host.schema.json",
+  "contracts/presentation-events.schema.json",
   "runtime-c-api/include/ludivra/runtime.h",
   "toolchain.lock"
 ] as const;
@@ -28,6 +29,7 @@ const jsonFiles = [
   "contracts/capability-catalog.source.json",
   "contracts/cli-result.schema.json",
   "contracts/desktop-host.schema.json",
+  "contracts/presentation-events.schema.json",
   "schemas/game.schema.json",
   "toolchain.lock"
 ] as const;
@@ -115,6 +117,7 @@ export async function runValidate(arguments_: string[] = []): Promise<CommandOut
   const generationChecks = [
     "tools/contracts/generate-cli-result.mjs",
     "tools/contracts/generate-desktop-host.mjs",
+    "tools/contracts/generate-presentation-events.mjs",
     "tools/contracts/generate-capabilities.mjs"
   ];
   for (const script of generationChecks) {
@@ -201,6 +204,54 @@ export async function runValidate(arguments_: string[] = []): Promise<CommandOut
               message: `${error.instancePath || "/"} ${error.message ?? "is invalid"}`,
               file: gamePath
             });
+          }
+        } else {
+          const manifest = game as {
+            audio?: Array<{ id: string; eventId: number; source?: string }>;
+            effects?: Array<{ id: string; eventId: number }>;
+          };
+          for (const [collection, entries] of [
+            ["audio", manifest.audio ?? []],
+            ["effects", manifest.effects ?? []]
+          ] as const) {
+            const ids = new Set<string>();
+            const eventIds = new Set<number>();
+            for (const entry of entries) {
+              if (ids.has(entry.id) || eventIds.has(entry.eventId)) {
+                diagnostics.push({
+                  code: "PRESENTATION_EVENT_ID_DUPLICATE",
+                  severity: "error",
+                  message: `${collection} IDs and eventIds must be unique`,
+                  file: gamePath
+                });
+              }
+              ids.add(entry.id);
+              eventIds.add(entry.eventId);
+            }
+          }
+          for (const audio of manifest.audio ?? []) {
+            if (audio.source === undefined) continue;
+            const source = resolve(project, audio.source);
+            const relation = relative(project, source);
+            if (relation.startsWith("..") || isAbsolute(relation)) {
+              diagnostics.push({
+                code: "AUDIO_SOURCE_OUTSIDE_PROJECT",
+                severity: "error",
+                message: `Audio source escapes the game project: ${audio.source}`,
+                file: gamePath
+              });
+              continue;
+            }
+            try {
+              await readFile(source);
+            } catch {
+              diagnostics.push({
+                code: "AUDIO_SOURCE_MISSING",
+                severity: "error",
+                message: `Audio source does not exist: ${audio.source}`,
+                file: gamePath
+              });
+            }
           }
         }
       }

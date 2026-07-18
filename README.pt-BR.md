@@ -2,7 +2,7 @@
 
 # Ludivra
 
-[![Version](https://img.shields.io/badge/version-0.3.0-7c5cff)](https://github.com/jeancatarina/ludivra)
+[![Version](https://img.shields.io/badge/version-0.4.0-7c5cff)](https://github.com/jeancatarina/ludivra)
 [![Status](https://img.shields.io/badge/status-experimental-f59e0b)](BACKLOG.md)
 [![License](https://img.shields.io/badge/license-MIT-22c55e)](LICENSE)
 
@@ -63,11 +63,11 @@ No momento, a engine é consumida diretamente pelo repositório clonado. Ainda n
 | Pacotes Windows e Linux | Geráveis, ainda exigem validação nos respectivos sistemas |
 | Integração Steam | Implementada, exige App ID, Depot ID e conta Steamworks |
 | Assinatura e notarização | Responsabilidade do proprietário do jogo |
-| Áudio abstrato | Ainda não implementado |
+| Áudio semântico, música e partículas | Experimental, funcional no Browser e Electron |
 | Android e iOS | Planejados |
 | Consoles | Rota arquitetural futura, sem backend público |
 
-Não trate a versão 0.3.0 como uma engine estável para produção sem avaliar essas limitações.
+Não trate a versão 0.4.0 como uma engine estável para produção sem avaliar essas limitações.
 
 ## Tutorial: seu primeiro jogo
 
@@ -143,7 +143,7 @@ Edite `../meu-primeiro-jogo/game.jsonc`:
   "schemaVersion": 1,
   "id": "meu-primeiro-jogo",
   "name": "Meu Primeiro Jogo",
-  "engine": { "version": "0.3.0" },
+  "engine": { "version": "0.4.0" },
   "targets": ["browser", "desktop", "native-headless"],
   "entrypoints": {
     "gameplay": "scripts/gameplay.lua",
@@ -155,6 +155,32 @@ Edite `../meu-primeiro-jogo/game.jsonc`:
       "label": "Confirmar",
       "actionId": 1,
       "keys": ["Space", "Enter"]
+    }
+  ],
+  "audio": [
+    {
+      "id": "audio.confirm",
+      "eventId": 1,
+      "bus": "effects",
+      "loop": false,
+      "autoplay": false,
+      "volume": 0.3,
+      "origin": "projeto",
+      "license": "project_owned",
+      "source": "assets/audio/confirm.ogg"
+    }
+  ],
+  "effects": [
+    {
+      "id": "effect.confirm",
+      "eventId": 1,
+      "type": "particle-burst",
+      "color": 8150015,
+      "count": 48,
+      "size": 0.08,
+      "speed": 2.4,
+      "lifetimeMs": 500,
+      "gravity": 1.0
     }
   ],
   "steam": { "appId": null, "depotId": null },
@@ -173,11 +199,15 @@ Edite `scripts/gameplay.lua`:
 ```lua
 local SCORE_KEY = 1
 local ACTION_CONFIRM = 1
+local AUDIO_CONFIRM = 1
+local EFFECT_CONFIRM = 1
 
 return {
   on_input = function(ctx, event)
     if event.action_id == ACTION_CONFIRM and event.value_milli > 0 then
       ctx.commands:add_i64(SCORE_KEY, 1)
+      ctx.commands:play_audio(AUDIO_CONFIRM, 1000)
+      ctx.commands:spawn_effect(EFFECT_CONFIRM, 1000, 0, 0, 0)
     end
   end
 }
@@ -190,6 +220,10 @@ Regras importantes:
 - não acesse filesystem, rede, sistema operacional ou renderer;
 - não use relógio civil nem RNG externo;
 - mantenha IDs estáveis depois que saves públicos existirem.
+
+IDs de áudio e efeitos são contratos semânticos. O manifesto mapeia cada um para um arquivo (ou synth simples gerado) e para uma definição de partículas. Lua apenas emite a intenção; nunca importa Web Audio ou Three.js. No navegador, o áudio começa depois do primeiro gesto do usuário por causa das políticas de autoplay.
+
+Consulte a [receita completa de áudio e feedback visual](docs/recipes/audio-and-effects.md).
 
 ### 6. Apresente o estado em TypeScript
 
@@ -329,7 +363,8 @@ ludivra/
 ## Limitações conhecidas
 
 - API e formatos permanecem experimentais até 1.0;
-- não há runtime de áudio abstrato;
+- o áudio usa Web Audio no Browser/Electron; adapters nativos de áudio ainda não existem;
+- o feedback visual oferece bursts determinísticos de partículas; trails, decals, presets de pós-processamento e grafos de efeitos ficam para capacidades futuras;
 - Windows e Linux ainda precisam de testes em runners nativos;
 - pacotes não são assinados ou notarizados pela engine;
 - updates exigem pacote assinado e feed HTTPS controlado;

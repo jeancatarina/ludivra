@@ -58,11 +58,15 @@ int64_t integer_state(TestContext& context, ludivra_runtime* runtime, const uint
   return value;
 }
 
-std::string counter_gameplay() {
-  std::ifstream input(std::string(LUDIVRA_TEST_FIXTURE_DIR) + "/counter.lua");
+std::string fixture(const char* name) {
+  std::ifstream input(std::string(LUDIVRA_TEST_FIXTURE_DIR) + "/" + name);
   std::ostringstream content;
   content << input.rdbuf();
   return content.str();
+}
+
+std::string counter_gameplay() {
+  return fixture("counter.lua");
 }
 
 std::vector<uint8_t> save_archive(TestContext& context, ludivra_runtime* runtime) {
@@ -91,7 +95,7 @@ std::vector<uint8_t> replay_archive(TestContext& context, ludivra_runtime* runti
 
 int main() {
   TestContext context;
-  context.expect(ludivra_runtime_abi_version() == 1U, "ABI version is stable");
+  context.expect(ludivra_runtime_abi_version() == 2U, "ABI version is stable");
   context.expect(
       ludivra_runtime_create(nullptr, nullptr) == LUDIVRA_ERROR_INVALID_ARGUMENT,
       "invalid creation arguments are rejected");
@@ -201,11 +205,66 @@ return { on_input = function() return os.time() end }
       ludivra_runtime_submit_input(limited, &excess_input) == LUDIVRA_ERROR_INPUT_LIMIT,
       "pending input limit is enforced");
 
+  auto* feedback = create_runtime(context);
+  const auto feedback_source = fixture("feedback.lua");
+  context.expect(
+      ludivra_runtime_load_gameplay(
+          feedback, feedback_source.data(), static_cast<uint32_t>(feedback_source.size())) == LUDIVRA_OK,
+      "feedback gameplay loads");
+  submit(context, feedback, 1U, 1000, 1U);
+  context.expect(ludivra_runtime_step(feedback, 1U) == LUDIVRA_OK, "feedback tick advances");
+  uint32_t event_count = 0;
+  context.expect(
+      ludivra_runtime_presentation_event_count(feedback, &event_count) == LUDIVRA_OK &&
+          event_count == 3U,
+      "feedback commands produce one ordered event batch");
+  std::vector<ludivra_presentation_event> events(event_count);
+  context.expect(
+      ludivra_runtime_presentation_events_write(feedback, events.data(), 2U, &event_count) ==
+          LUDIVRA_ERROR_BUFFER_TOO_SMALL && event_count == 3U,
+      "feedback batch rejects undersized buffers without clearing events");
+  context.expect(
+      ludivra_runtime_presentation_events_write(
+          feedback, events.data(), static_cast<uint32_t>(events.size()), &event_count) == LUDIVRA_OK,
+      "feedback batch is copied in one call");
+  context.expect(
+      events[0].type == LUDIVRA_PRESENTATION_AUDIO_PLAY && events[0].id == 7U &&
+          events[0].value_milli == 750 && events[0].sequence == 1U,
+      "audio play event preserves semantic data");
+  context.expect(
+      events[1].type == LUDIVRA_PRESENTATION_EFFECT_SPAWN && events[1].id == 9U &&
+          events[1].value_milli == 1250 && events[1].x_milli == 1000 &&
+          events[1].y_milli == -500 && events[1].z_milli == 250 && events[1].sequence == 2U,
+      "effect event preserves fixed-point position and intensity");
+  context.expect(
+      events[2].type == LUDIVRA_PRESENTATION_AUDIO_STOP && events[2].sequence == 3U,
+      "audio stop remains ordered after the effect");
+  context.expect(
+      ludivra_runtime_presentation_events_clear(feedback) == LUDIVRA_OK,
+      "feedback batch is explicitly acknowledged");
+  context.expect(
+      ludivra_runtime_presentation_event_count(feedback, &event_count) == LUDIVRA_OK &&
+          event_count == 0U,
+      "acknowledged feedback events are removed");
+  const auto feedback_save = save_archive(context, feedback);
+  context.expect(
+      ludivra_runtime_load_save(
+          feedback, feedback_save.data(), static_cast<uint32_t>(feedback_save.size())) == LUDIVRA_OK,
+      "feedback save reload succeeds");
+  submit(context, feedback, 1U, 1000, 2U);
+  context.expect(ludivra_runtime_step(feedback, 1U) == LUDIVRA_OK, "feedback resumes after load");
+  events.resize(3U);
+  context.expect(
+      ludivra_runtime_presentation_events_write(feedback, events.data(), 3U, &event_count) == LUDIVRA_OK &&
+          event_count == 3U && events[0].sequence == 4U,
+      "presentation sequence remains monotonic across in-process save loads");
+
   std::printf("state_hash=%016" PRIx64 "\n", state_hash(context, first));
   ludivra_runtime_destroy(first);
   ludivra_runtime_destroy(second);
   ludivra_runtime_destroy(limited);
   ludivra_runtime_destroy(restored);
+  ludivra_runtime_destroy(feedback);
   ludivra_runtime_destroy(scripted);
   return context.failures == 0 ? 0 : 1;
 }

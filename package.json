@@ -1,13 +1,13 @@
 {
   "name": "ludivra",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "private": true,
   "packageManager": "pnpm@11.7.0",
   "devDependencies": {
     "jsonc-parser": "3.3.1"
   },
   "scripts": {
-    "contracts": "node tools/contracts/generate-cli-result.mjs && node tools/contracts/generate-desktop-host.mjs && node tools/contracts/generate-capabilities.mjs",
+    "contracts": "node tools/contracts/generate-cli-result.mjs && node tools/contracts/generate-desktop-host.mjs && node tools/contracts/generate-presentation-events.mjs && node tools/contracts/generate-capabilities.mjs",
     "build:cli": "pnpm contracts && pnpm --filter @ludivra/cli build",
     "build:packages": "pnpm --filter @ludivra/presentation-protocol build && pnpm --filter @ludivra/platform-contracts build && pnpm --filter @ludivra/runtime-web build && pnpm --filter @ludivra/renderer-three build",
     "build:wasm": "tools/build/build-wasm.sh",

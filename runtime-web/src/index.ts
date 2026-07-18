@@ -1,3 +1,16 @@
+import {
+  PRESENTATION_EVENT_RECORD_SIZE,
+  PRESENTATION_EVENT_TYPES,
+  type PresentationEvent
+} from "./generated/presentation-events.js";
+
+export type {
+  AudioPlayEvent,
+  AudioStopEvent,
+  EffectSpawnEvent,
+  PresentationEvent
+} from "./generated/presentation-events.js";
+
 export interface RuntimeModule {
   HEAPU8: Uint8Array;
   HEAPU32: Uint32Array;
@@ -195,6 +208,80 @@ export class LudivraRuntime {
         this.handle
       );
     });
+  }
+
+  drainPresentationEvents(): PresentationEvent[] {
+    const countPointer = this.module._malloc(4);
+    try {
+      requireOk(
+        this.module,
+        "presentation event count",
+        call(this.module, "ludivra_runtime_presentation_event_count", [
+          this.liveHandle(),
+          countPointer
+        ]),
+        this.handle
+      );
+      const count = new DataView(this.module.HEAPU8.buffer).getUint32(countPointer, true);
+      if (count === 0) return [];
+      const bufferPointer = this.module._malloc(count * PRESENTATION_EVENT_RECORD_SIZE);
+      try {
+        requireOk(
+          this.module,
+          "presentation event read",
+          call(this.module, "ludivra_runtime_presentation_events_write", [
+            this.liveHandle(),
+            bufferPointer,
+            count,
+            countPointer
+          ]),
+          this.handle
+        );
+        const written = new DataView(this.module.HEAPU8.buffer).getUint32(countPointer, true);
+        const view = new DataView(this.module.HEAPU8.buffer);
+        const events: PresentationEvent[] = [];
+        for (let index = 0; index < written; index += 1) {
+          const offset = bufferPointer + index * PRESENTATION_EVENT_RECORD_SIZE;
+          if (view.getUint32(offset, true) !== PRESENTATION_EVENT_RECORD_SIZE) {
+            throw new Error("presentation event record size mismatch");
+          }
+          const type = view.getUint32(offset + 4, true);
+          const id = view.getUint32(offset + 8, true);
+          const value = view.getInt32(offset + 12, true);
+          const sequence = view.getBigUint64(offset + 32, true);
+          if (type === PRESENTATION_EVENT_TYPES.audioPlay) {
+            events.push({ type: "audio-play", id, volumeMilli: value, sequence });
+          } else if (type === PRESENTATION_EVENT_TYPES.audioStop) {
+            events.push({ type: "audio-stop", id, sequence });
+          } else if (type === PRESENTATION_EVENT_TYPES.effectSpawn) {
+            events.push({
+              type: "effect-spawn",
+              id,
+              intensityMilli: value,
+              position: [
+                view.getInt32(offset + 16, true) / 1000,
+                view.getInt32(offset + 20, true) / 1000,
+                view.getInt32(offset + 24, true) / 1000
+              ],
+              sequence
+            });
+          } else {
+            throw new Error(`unknown presentation event type: ${type}`);
+          }
+        }
+        requireOk(
+          this.module,
+          "presentation event clear",
+          call(this.module, "ludivra_runtime_presentation_events_clear", [this.liveHandle()]),
+          this.handle
+        );
+        return events;
+      } finally {
+        this.module._free(bufferPointer);
+      }
+    } finally {
+      this.module._free(countPointer);
+    }
   }
 
   destroy(): void {

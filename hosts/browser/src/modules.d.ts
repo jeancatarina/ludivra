@@ -7,8 +7,36 @@ declare module "virtual:ludivra-game" {
       actionId: number;
       keys: string[];
     }>;
+    audio?: Array<{
+      id: string;
+      eventId: number;
+      bus: "music" | "ambience" | "effects";
+      loop: boolean;
+      autoplay: boolean;
+      volume: number;
+      origin: string;
+      license: string;
+      source?: string;
+      synth?: {
+        waveform: OscillatorType;
+        frequency: number;
+        durationMs: number;
+      };
+    }>;
+    effects?: Array<{
+      id: string;
+      eventId: number;
+      type: "particle-burst";
+      color: number;
+      count: number;
+      size: number;
+      speed: number;
+      lifetimeMs: number;
+      gravity: number;
+    }>;
   };
   export const gameplaySource: string;
+  export const audioSources: Record<number, string>;
 }
 
 declare module "@ludivra/runtime-module" {

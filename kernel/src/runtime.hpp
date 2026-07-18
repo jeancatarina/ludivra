@@ -23,6 +23,22 @@ struct LogicalInput final {
   std::uint64_t sequence;
 };
 
+enum class PresentationEventKind : std::uint8_t {
+  audio_play,
+  audio_stop,
+  effect_spawn
+};
+
+struct PresentationEvent final {
+  PresentationEventKind kind;
+  std::uint32_t id;
+  std::int32_t value_milli;
+  std::int32_t x_milli;
+  std::int32_t y_milli;
+  std::int32_t z_milli;
+  std::uint64_t sequence;
+};
+
 enum class RuntimeError : std::uint8_t {
   none,
   tick_overflow,
@@ -31,7 +47,8 @@ enum class RuntimeError : std::uint8_t {
   integer_overflow,
   archive_invalid,
   replay_mismatch,
-  pending_inputs
+  pending_inputs,
+  presentation_limit
 };
 
 class Runtime final {
@@ -48,6 +65,8 @@ class Runtime final {
   [[nodiscard]] RuntimeError load_save(std::span<const std::uint8_t> bytes);
   [[nodiscard]] std::vector<std::uint8_t> replay() const;
   [[nodiscard]] RuntimeError verify_replay(std::span<const std::uint8_t> bytes) const;
+  [[nodiscard]] const std::vector<PresentationEvent>& presentation_events() const noexcept;
+  void clear_presentation_events() noexcept;
   [[nodiscard]] const std::string& last_error() const noexcept;
 
  private:
@@ -68,6 +87,8 @@ class Runtime final {
   std::string gameplay_source_;
   SavedState replay_initial_state_;
   std::vector<ReplayFrame> replay_frames_;
+  std::vector<PresentationEvent> presentation_events_;
+  std::uint64_t next_presentation_sequence_{1};
 };
 
 }  // namespace ludivra::kernel

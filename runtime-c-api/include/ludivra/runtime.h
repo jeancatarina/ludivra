@@ -2,12 +2,13 @@
 #define LUDIVRA_RUNTIME_H
 
 #include <stdint.h>
+#include "ludivra/presentation_events.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-#define LUDIVRA_RUNTIME_ABI_VERSION 1U
+#define LUDIVRA_RUNTIME_ABI_VERSION 2U
 
 typedef struct ludivra_runtime ludivra_runtime;
 
@@ -23,7 +24,8 @@ typedef enum ludivra_result {
   LUDIVRA_ERROR_ARCHIVE_INVALID = 8,
   LUDIVRA_ERROR_REPLAY_MISMATCH = 9,
   LUDIVRA_ERROR_PENDING_INPUTS = 10,
-  LUDIVRA_ERROR_BUFFER_TOO_SMALL = 11
+  LUDIVRA_ERROR_BUFFER_TOO_SMALL = 11,
+  LUDIVRA_ERROR_PRESENTATION_LIMIT = 12
 } ludivra_result;
 
 typedef struct ludivra_runtime_config {
@@ -117,6 +119,20 @@ ludivra_result ludivra_runtime_verify_replay(
     const ludivra_runtime* runtime,
     const uint8_t* buffer,
     uint32_t buffer_size);
+
+/* Presentation events are transient, ordered, and retained until explicitly cleared. */
+ludivra_result ludivra_runtime_presentation_event_count(
+    const ludivra_runtime* runtime,
+    uint32_t* out_count);
+
+ludivra_result ludivra_runtime_presentation_events_write(
+    const ludivra_runtime* runtime,
+    ludivra_presentation_event* buffer,
+    uint32_t capacity,
+    uint32_t* out_count);
+
+ludivra_result ludivra_runtime_presentation_events_clear(
+    ludivra_runtime* runtime);
 
 /* Pointer remains valid until the next non-const operation or runtime destruction. */
 const char* ludivra_runtime_last_error(const ludivra_runtime* runtime);

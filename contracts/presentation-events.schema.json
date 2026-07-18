@@ -1,0 +1,20 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ludivra.dev/contracts/presentation-events/v1",
+  "title": "Ludivra presentation event buffer",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["protocolVersion", "recordSize", "maxBufferedEvents", "eventTypes"],
+  "properties": {
+    "protocolVersion": { "const": 1 },
+    "recordSize": { "const": 40 },
+    "maxBufferedEvents": { "const": 4096 },
+    "eventTypes": {
+      "const": {
+        "audioPlay": 1,
+        "audioStop": 2,
+        "effectSpawn": 3
+      }
+    }
+  }
+}

@@ -54,3 +54,24 @@ try {
 } finally {
   runtime.destroy();
 }
+
+const feedback = await LudivraRuntime.create(
+  createLudivraModule,
+  { tickRateHz: 60, maxPendingInputs: 4096, seed: 42n },
+  { locateFile: (path) => resolve(root, "runtime-wasm/generated", path) }
+);
+try {
+  feedback.loadGameplay(await readFile(resolve(root, "tests/fixtures/feedback.lua"), "utf8"));
+  feedback.submitInput({ actionId: 1, valueMilli: 1000, sequence: 1n });
+  feedback.step(1);
+  const events = feedback.drainPresentationEvents();
+  if (events.length !== 3 || events[0]?.type !== "audio-play" ||
+      events[1]?.type !== "effect-spawn" || events[2]?.type !== "audio-stop") {
+    throw new Error(`WASM presentation event mismatch: ${JSON.stringify(events)}`);
+  }
+  if (events[1].position.join(",") !== "1,-0.5,0.25") {
+    throw new Error("WASM effect position mismatch");
+  }
+} finally {
+  feedback.destroy();
+}
