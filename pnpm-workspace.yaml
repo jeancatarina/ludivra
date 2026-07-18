@@ -1,3 +1,7 @@
 packages:
   - cli
-
+  - presentation-protocol
+  - renderer-three
+  - runtime-web
+  - hosts/browser
+  - hosts/electron

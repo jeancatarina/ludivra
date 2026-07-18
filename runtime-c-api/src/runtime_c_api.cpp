@@ -21,6 +21,10 @@ ludivra_result to_public_result(const ludivra::kernel::RuntimeError error) noexc
       return LUDIVRA_ERROR_TICK_OVERFLOW;
     case ludivra::kernel::RuntimeError::input_limit:
       return LUDIVRA_ERROR_INPUT_LIMIT;
+    case ludivra::kernel::RuntimeError::script_failure:
+      return LUDIVRA_ERROR_SCRIPT;
+    case ludivra::kernel::RuntimeError::integer_overflow:
+      return LUDIVRA_ERROR_INTEGER_OVERFLOW;
   }
   return LUDIVRA_ERROR_INTERNAL;
 }
@@ -45,6 +49,10 @@ const char* ludivra_result_message(const ludivra_result result) {
       return "pending input limit reached";
     case LUDIVRA_ERROR_INTERNAL:
       return "internal error";
+    case LUDIVRA_ERROR_SCRIPT:
+      return "gameplay script failure";
+    case LUDIVRA_ERROR_INTEGER_OVERFLOW:
+      return "integer state overflow";
   }
   return "unknown result";
 }
@@ -97,7 +105,13 @@ ludivra_result ludivra_runtime_step(ludivra_runtime* runtime, const uint32_t tic
   if (runtime == nullptr) {
     return LUDIVRA_ERROR_INVALID_ARGUMENT;
   }
-  return to_public_result(runtime->value.step(tick_count));
+  try {
+    return to_public_result(runtime->value.step(tick_count));
+  } catch (const std::bad_alloc&) {
+    return LUDIVRA_ERROR_ALLOCATION;
+  } catch (...) {
+    return LUDIVRA_ERROR_INTERNAL;
+  }
 }
 
 ludivra_result ludivra_runtime_tick(const ludivra_runtime* runtime, uint64_t* out_tick) {
@@ -116,4 +130,35 @@ ludivra_result ludivra_runtime_state_hash(
   }
   *out_state_hash = runtime->value.state_hash();
   return LUDIVRA_OK;
+}
+
+ludivra_result ludivra_runtime_load_gameplay(
+    ludivra_runtime* runtime,
+    const char* source,
+    const uint32_t source_size) {
+  if (runtime == nullptr || source == nullptr) {
+    return LUDIVRA_ERROR_INVALID_ARGUMENT;
+  }
+  try {
+    return to_public_result(runtime->value.load_gameplay({source, source_size}));
+  } catch (const std::bad_alloc&) {
+    return LUDIVRA_ERROR_ALLOCATION;
+  } catch (...) {
+    return LUDIVRA_ERROR_INTERNAL;
+  }
+}
+
+ludivra_result ludivra_runtime_integer_state(
+    const ludivra_runtime* runtime,
+    const uint32_t key,
+    int64_t* out_value) {
+  if (runtime == nullptr || out_value == nullptr) {
+    return LUDIVRA_ERROR_INVALID_ARGUMENT;
+  }
+  *out_value = runtime->value.integer_state(key);
+  return LUDIVRA_OK;
+}
+
+const char* ludivra_runtime_last_error(const ludivra_runtime* runtime) {
+  return runtime == nullptr ? "invalid runtime" : runtime->value.last_error().c_str();
 }

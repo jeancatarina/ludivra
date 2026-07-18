@@ -2,7 +2,7 @@
 
 - Status: provisório
 - Data: 2026-07-18
-- Revisão: antes da primeira bridge WebAssembly pública
+- Revisão: antes da primeira versão estável
 
 ## Contexto
 
@@ -10,7 +10,7 @@ Hosts nativos e WebAssembly precisam acessar o kernel sem expor classes, STL, ex
 
 ## Decisão
 
-Expor uma C ABI versionada com handle opaco, configuração por struct, códigos de erro e funções explícitas de create/destroy/input/step/inspect. O primeiro contrato comprova tick e hash determinístico; buffers de apresentação serão adicionados apenas com schema próprio.
+Expor uma C ABI versionada com handle opaco, configuração por struct, códigos de erro e funções explícitas de create/destroy/input/step/inspect. Funções aditivas carregam o módulo Lua, consultam estado inteiro e expõem o último erro. Buffers de apresentação serão adicionados apenas com schema próprio.
 
 ## Consequências
 
@@ -18,4 +18,3 @@ Expor uma C ABI versionada com handle opaco, configuração por struct, códigos
 - o teste de boundary não depende de internals do kernel;
 - mudanças incompatíveis exigem nova versão de ABI;
 - o contrato inicial permanece deliberadamente pequeno.
-

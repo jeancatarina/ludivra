@@ -1,4 +1,6 @@
 add_library(ludivra_kernel STATIC
+  src/command_buffer.cpp
+  src/lua_sandbox.cpp
   src/runtime.cpp
 )
 
@@ -7,5 +9,6 @@ target_include_directories(ludivra_kernel
     ${CMAKE_CURRENT_SOURCE_DIR}/src
 )
 
-ludivra_enable_strict_warnings(ludivra_kernel)
+target_link_libraries(ludivra_kernel PRIVATE ludivra_lua)
 
+ludivra_enable_strict_warnings(ludivra_kernel)

@@ -1,12 +1,14 @@
 cmake_minimum_required(VERSION 3.25)
 
-project(ludivra VERSION 0.1.0 LANGUAGES CXX)
+project(ludivra VERSION 0.2.0 LANGUAGES C CXX)
 
 option(LUDIVRA_BUILD_TESTS "Build Ludivra tests" ON)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
+
+include(cmake/Lua.cmake)
 
 function(ludivra_enable_strict_warnings target)
   if(MSVC)
@@ -18,6 +20,9 @@ endfunction()
 
 add_subdirectory(kernel)
 add_subdirectory(runtime-c-api)
+if(EMSCRIPTEN)
+  add_subdirectory(runtime-wasm)
+endif()
 add_subdirectory(hosts/native-headless)
 
 if(LUDIVRA_BUILD_TESTS)

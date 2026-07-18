@@ -17,7 +17,9 @@ typedef enum ludivra_result {
   LUDIVRA_ERROR_ALLOCATION = 2,
   LUDIVRA_ERROR_TICK_OVERFLOW = 3,
   LUDIVRA_ERROR_INPUT_LIMIT = 4,
-  LUDIVRA_ERROR_INTERNAL = 5
+  LUDIVRA_ERROR_INTERNAL = 5,
+  LUDIVRA_ERROR_SCRIPT = 6,
+  LUDIVRA_ERROR_INTEGER_OVERFLOW = 7
 } ludivra_result;
 
 typedef struct ludivra_runtime_config {
@@ -69,6 +71,20 @@ ludivra_result ludivra_runtime_tick(
 ludivra_result ludivra_runtime_state_hash(
     const ludivra_runtime* runtime,
     uint64_t* out_state_hash);
+
+/* Replaces the current Lua gameplay module. Source must return a table with on_input(ctx, event). */
+ludivra_result ludivra_runtime_load_gameplay(
+    ludivra_runtime* runtime,
+    const char* source,
+    uint32_t source_size);
+
+ludivra_result ludivra_runtime_integer_state(
+    const ludivra_runtime* runtime,
+    uint32_t key,
+    int64_t* out_value);
+
+/* Pointer remains valid until the next non-const operation or runtime destruction. */
+const char* ludivra_runtime_last_error(const ludivra_runtime* runtime);
 
 #ifdef __cplusplus
 }

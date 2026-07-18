@@ -1,0 +1,12 @@
+{
+  "name": "@ludivra/electron-host",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "package": "node ../../tools/build/package-steam.mjs"
+  },
+  "devDependencies": {
+    "@electron/packager": "20.0.3",
+    "electron": "43.1.1"
+  }
+}

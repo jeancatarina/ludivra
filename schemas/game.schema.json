@@ -4,7 +4,7 @@
   "title": "Ludivra game manifest",
   "type": "object",
   "additionalProperties": false,
-  "required": ["schemaVersion", "id", "name", "engine", "targets"],
+  "required": ["schemaVersion", "id", "name", "engine", "targets", "entrypoints", "inputs"],
   "properties": {
     "schemaVersion": { "const": 1 },
     "id": { "type": "string", "pattern": "^[a-z][a-z0-9-]*$" },
@@ -24,7 +24,44 @@
       "items": {
         "enum": ["browser", "desktop", "android", "ios", "native-headless"]
       }
+    },
+    "entrypoints": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["gameplay", "presentation"],
+      "properties": {
+        "gameplay": { "type": "string", "minLength": 1 },
+        "presentation": { "type": "string", "minLength": 1 }
+      }
+    },
+    "inputs": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "label", "actionId", "keys"],
+        "properties": {
+          "id": { "type": "string", "pattern": "^[a-z][a-z0-9-]*$" },
+          "label": { "type": "string", "minLength": 1 },
+          "actionId": { "type": "integer", "minimum": 1 },
+          "keys": {
+            "type": "array",
+            "minItems": 1,
+            "uniqueItems": true,
+            "items": { "type": "string", "minLength": 1 }
+          }
+        }
+      }
+    },
+    "steam": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["appId", "depotId"],
+      "properties": {
+        "appId": { "type": ["integer", "null"], "minimum": 1 },
+        "depotId": { "type": ["integer", "null"], "minimum": 1 }
+      }
     }
   }
 }
-

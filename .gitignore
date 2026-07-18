@@ -1,5 +1,13 @@
 /build/
+/.toolchains/
 /cli/dist/
+/runtime-web/dist/
+/presentation-protocol/dist/
+/renderer-three/dist/
+/runtime-wasm/generated/
+/hosts/browser/dist/
+/hosts/browser/public/runtime/
+/hosts/electron/out/
 node_modules/
 /reports/runs/*
 !/reports/runs/.gitkeep

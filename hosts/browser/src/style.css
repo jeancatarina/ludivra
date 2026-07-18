@@ -1,0 +1,42 @@
+:root {
+  color: #f6f3ff;
+  background: #080711;
+  font-family: Inter, ui-sans-serif, system-ui, sans-serif;
+  font-synthesis: none;
+}
+
+* { box-sizing: border-box; }
+body { margin: 0; min-width: 320px; min-height: 100vh; }
+#app {
+  width: min(1080px, 100%);
+  min-height: 100vh;
+  margin: 0 auto;
+  padding: clamp(20px, 4vw, 52px);
+  display: grid;
+  grid-template-rows: auto minmax(320px, 1fr) auto;
+  gap: 24px;
+}
+.eyebrow { margin: 0 0 10px; color: #a992ff; font-size: 12px; letter-spacing: 0.2em; }
+h1 { margin: 0; font-size: clamp(32px, 6vw, 64px); letter-spacing: -0.04em; }
+#runtime-status { margin: 8px 0 0; color: #aaa4bd; }
+.stage {
+  min-height: 320px;
+  overflow: hidden;
+  border: 1px solid #29243f;
+  border-radius: 28px;
+  background: radial-gradient(circle at 50% 35%, #201949 0, #0e0b1d 55%, #080711 100%);
+  box-shadow: 0 30px 90px #0008;
+}
+#game-canvas { display: block; width: 100%; height: 100%; min-height: 320px; }
+#game-actions { display: flex; flex-wrap: wrap; gap: 12px; }
+button {
+  border: 1px solid #7561d3;
+  border-radius: 999px;
+  padding: 12px 20px;
+  color: #fff;
+  background: #392b79;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+button:hover, button:focus-visible { background: #6047c5; outline: 3px solid #9b87ff55; }

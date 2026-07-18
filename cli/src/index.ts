@@ -5,6 +5,11 @@ import { runDoctor } from "./commands/doctor.js";
 import { runInspect } from "./commands/inspect.js";
 import { runTest } from "./commands/test.js";
 import { runValidate } from "./commands/validate.js";
+import { runBuild } from "./commands/build.js";
+import { runNew } from "./commands/new.js";
+import { runPackage } from "./commands/package.js";
+import { runGame } from "./commands/run.js";
+import { optionValue } from "./arguments.js";
 import {
   createOperationResult,
   createRunId,
@@ -13,11 +18,6 @@ import {
   type OutputFormat,
   writeOperationResult
 } from "./result.js";
-
-function optionValue(arguments_: string[], name: string): string | undefined {
-  const index = arguments_.indexOf(name);
-  return index < 0 ? undefined : arguments_[index + 1];
-}
 
 function parseFormat(arguments_: string[]): OutputFormat {
   const value = optionValue(arguments_, "--format");
@@ -33,7 +33,7 @@ function parseMaxDiagnostics(arguments_: string[]): number | undefined {
   return Number.isInteger(parsed) && parsed >= 0 ? parsed : undefined;
 }
 
-async function dispatch(command: string, context: CommandContext): Promise<CommandOutcome> {
+async function dispatch(command: string, context: CommandContext, arguments_: string[]): Promise<CommandOutcome> {
   switch (command) {
     case "doctor":
       return runDoctor();
@@ -42,11 +42,19 @@ async function dispatch(command: string, context: CommandContext): Promise<Comma
     case "test":
       return runTest(context);
     case "validate":
-      return runValidate();
+      return runValidate(arguments_);
+    case "new":
+      return runNew(arguments_);
+    case "build":
+      return runBuild(arguments_);
+    case "package":
+      return runPackage(arguments_);
+    case "run":
+      return runGame(arguments_);
     case "help":
       return {
         diagnostics: [],
-        data: { commands: ["doctor", "inspect", "test", "validate"] },
+        data: { commands: ["build", "doctor", "inspect", "new", "package", "run", "test", "validate"] },
         nextActions: ["Run game doctor --format json"]
       };
     default:
@@ -69,7 +77,7 @@ const context: CommandContext = { runId: createRunId() };
 let outcome: CommandOutcome;
 
 try {
-  outcome = await dispatch(command, context);
+  outcome = await dispatch(command, context, arguments_);
 } catch (error) {
   const message = error instanceof Error ? error.message : "Unexpected CLI failure";
   const diagnostic: Diagnostic = {

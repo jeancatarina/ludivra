@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Ludivra</title>
+  </head>
+  <body>
+    <main id="app">
+      <header>
+        <p class="eyebrow">LUDIVRA · AI-FIRST GAME</p>
+        <h1 id="game-title">Carregando…</h1>
+        <p id="runtime-status" role="status">Inicializando kernel WebAssembly</p>
+      </header>
+      <section class="stage" aria-label="Área do jogo">
+        <canvas id="game-canvas"></canvas>
+      </section>
+      <nav id="game-actions" aria-label="Ações do jogo"></nav>
+    </main>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

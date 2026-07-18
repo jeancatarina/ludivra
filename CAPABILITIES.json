@@ -1,12 +1,28 @@
 {
   "_generated": "tools/contracts/generate-capabilities.mjs",
   "schemaVersion": 1,
-  "engineVersion": "0.1.0",
-  "capabilities": [],
+  "engineVersion": "0.2.0",
+  "capabilities": [
+    {
+      "id": "host.electron-steam-package",
+      "status": "experimental",
+      "version": "0.1.0"
+    },
+    {
+      "id": "presentation.three",
+      "status": "experimental",
+      "version": "0.1.0"
+    },
+    {
+      "id": "runtime.lua-gameplay",
+      "status": "experimental",
+      "version": "0.1.0"
+    }
+  ],
   "platforms": {
     "native-headless": "experimental",
-    "browser": "planned",
-    "electron": "planned",
+    "browser": "experimental",
+    "electron": "experimental",
     "android": "planned",
     "ios": "planned",
     "console-native": "planned"

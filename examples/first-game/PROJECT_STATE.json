@@ -1,0 +1,8 @@
+{
+  "schemaVersion": 1,
+  "milestone": "first-playable",
+  "build": "passing",
+  "tests": "passing",
+  "knownIssues": [],
+  "nextRecommendedTask": "replace-the-starter-loop-with-the-first-game-design"
+}

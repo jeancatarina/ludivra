@@ -19,8 +19,7 @@ const probes: ToolProbe[] = [
   { id: "cxx", command: "c++", arguments: ["--version"], required: true },
   { id: "node", command: "node", arguments: ["--version"], required: true, lockKey: "node" },
   { id: "pnpm", command: "pnpm", arguments: ["--version"], required: true, lockKey: "pnpm" },
-  { id: "emscripten", command: "emcmake", arguments: ["--version"], required: false },
-  { id: "lua", command: "lua", arguments: ["-v"], required: false }
+  { id: "emscripten", command: ".toolchains/emsdk/upstream/emscripten/emcc", arguments: ["--version"], required: true, lockKey: "emscripten" }
 ];
 
 function extractVersion(output: string): string | undefined {
@@ -32,9 +31,11 @@ export async function runDoctor(): Promise<CommandOutcome> {
   const lock = JSON.parse(await readFile(resolve(root, "toolchain.lock"), "utf8"));
   const diagnostics: Diagnostic[] = [];
   const tools: Record<string, unknown> = {};
+  tools.lua = { available: true, version: lock.tools.lua, source: "CMake FetchContent with SHA-256" };
 
   for (const probe of probes) {
-    const execution = spawnSync(probe.command, probe.arguments, {
+    const command = probe.command.startsWith(".") ? resolve(root, probe.command) : probe.command;
+    const execution = spawnSync(command, probe.arguments, {
       encoding: "utf8",
       timeout: 5_000
     });
@@ -70,4 +71,3 @@ export async function runDoctor(): Promise<CommandOutcome> {
       : ["Run game validate --format json"]
   };
 }
-

@@ -2,6 +2,9 @@
 
 #include <cinttypes>
 #include <cstdio>
+#include <fstream>
+#include <sstream>
+#include <string>
 
 namespace {
 
@@ -46,6 +49,21 @@ uint64_t state_hash(TestContext& context, ludivra_runtime* runtime) {
   return value;
 }
 
+int64_t integer_state(TestContext& context, ludivra_runtime* runtime, const uint32_t key) {
+  int64_t value = 0;
+  context.expect(
+      ludivra_runtime_integer_state(runtime, key, &value) == LUDIVRA_OK,
+      "integer state inspection succeeds");
+  return value;
+}
+
+std::string counter_gameplay() {
+  std::ifstream input(std::string(LUDIVRA_TEST_FIXTURE_DIR) + "/counter.lua");
+  std::ostringstream content;
+  content << input.rdbuf();
+  return content.str();
+}
+
 }  // namespace
 
 int main() {
@@ -81,6 +99,33 @@ int main() {
       state_hash(context, first) == expected_state_hash,
       "state hash matches the golden vector");
 
+  auto* scripted = create_runtime(context);
+  const auto gameplay_source = counter_gameplay();
+  context.expect(
+      ludivra_runtime_load_gameplay(
+          scripted, gameplay_source.data(), static_cast<uint32_t>(gameplay_source.size())) == LUDIVRA_OK,
+      "sandboxed gameplay module loads");
+  submit(context, scripted, 1U, 1000, 1U);
+  submit(context, scripted, 2U, 1000, 2U);
+  context.expect(ludivra_runtime_step(scripted, 1U) == LUDIVRA_OK, "Lua gameplay advances");
+  context.expect(integer_state(context, scripted, 1U) == 1, "Lua changes state through commands");
+  std::printf("wasm_equivalence_hash=%016" PRIx64 "\n", state_hash(context, scripted));
+
+  constexpr char forbidden_gameplay[] = R"(
+return { on_input = function() return os.time() end }
+)";
+  context.expect(
+      ludivra_runtime_load_gameplay(
+          scripted, forbidden_gameplay, static_cast<uint32_t>(sizeof(forbidden_gameplay) - 1U)) == LUDIVRA_OK,
+      "module with deferred forbidden access loads");
+  submit(context, scripted, 1U, 1000, 3U);
+  context.expect(
+      ludivra_runtime_step(scripted, 1U) == LUDIVRA_ERROR_SCRIPT,
+      "operating-system access is unavailable in gameplay");
+  context.expect(
+      ludivra_runtime_last_error(scripted)[0] != '\0',
+      "script failures expose a diagnostic message");
+
   auto* limited = create_runtime(context, 1U);
   submit(context, limited, 1U, 1000, 1U);
   const ludivra_logical_input excess_input{sizeof(ludivra_logical_input), 2U, 1000, 2U};
@@ -92,5 +137,6 @@ int main() {
   ludivra_runtime_destroy(first);
   ludivra_runtime_destroy(second);
   ludivra_runtime_destroy(limited);
+  ludivra_runtime_destroy(scripted);
   return context.failures == 0 ? 0 : 1;
 }
