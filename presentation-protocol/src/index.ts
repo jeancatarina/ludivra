@@ -30,6 +30,17 @@ export interface CameraView {
   fieldOfView?: number;
 }
 
+export interface SceneAtmosphere {
+  fogColor: number;
+  fogDensity: number;
+  ambientColor: number;
+  ambientIntensity: number;
+  keyColor: number;
+  keyIntensity: number;
+  fillColor: number;
+  fillIntensity: number;
+}
+
 export interface ParticleBurst {
   position: readonly [number, number, number];
   color: number;
@@ -47,6 +58,7 @@ export interface PresentationRenderer {
   setColor(id: string, color: number): void;
   setVisible(id: string, visible: boolean): void;
   setCamera(view: CameraView): void;
+  setAtmosphere(atmosphere: SceneAtmosphere): void;
   spawnParticles(burst: ParticleBurst): void;
   render(): void;
   resize(width: number, height: number, pixelRatio: number): void;

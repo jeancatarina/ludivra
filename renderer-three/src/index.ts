@@ -2,6 +2,7 @@ import type {
   CameraView,
   PresentationRenderer,
   ParticleBurst,
+  SceneAtmosphere,
   VisualDefinition,
   VisualTransform
 } from "@ludivra/presentation-protocol";
@@ -136,10 +137,11 @@ export function createThreeRenderer(canvas: HTMLCanvasElement): PresentationRend
   camera.position.set(0, 6.4, 9.5);
   camera.lookAt(0, -0.4, -1.3);
   scene.fog = new FogExp2(0x05090e, 0.035);
-  scene.add(new AmbientLight(0x6ba3b3, 1.2));
-  const light = new DirectionalLight(0xffffff, 4);
-  light.position.set(3, 4, 6);
-  scene.add(light);
+  const ambientLight = new AmbientLight(0x6ba3b3, 1.2);
+  scene.add(ambientLight);
+  const keyLight = new DirectionalLight(0xffffff, 4);
+  keyLight.position.set(3, 4, 6);
+  scene.add(keyLight);
   const reactorLight = new PointLight(0x58e0c2, 28, 18, 2);
   reactorLight.position.set(0, 2.2, -1.4);
   scene.add(reactorLight);
@@ -228,6 +230,20 @@ export function createThreeRenderer(canvas: HTMLCanvasElement): PresentationRend
         camera.fov = Math.max(20, Math.min(90, view.fieldOfView));
         camera.updateProjectionMatrix();
       }
+    },
+    setAtmosphere(atmosphere: SceneAtmosphere) {
+      scene.fog = new FogExp2(
+        atmosphere.fogColor,
+        Math.max(0, Math.min(0.25, atmosphere.fogDensity))
+      );
+      ambientLight.color.setHex(atmosphere.ambientColor);
+      ambientLight.intensity = Math.max(0, atmosphere.ambientIntensity);
+      keyLight.color.setHex(atmosphere.keyColor);
+      keyLight.intensity = Math.max(0, atmosphere.keyIntensity);
+      reactorLight.color.setHex(atmosphere.fillColor);
+      reactorLight.intensity = Math.max(0, atmosphere.fillIntensity);
+      rimLight.color.setHex(atmosphere.fillColor);
+      rimLight.intensity = Math.max(0, atmosphere.fillIntensity * 0.55);
     },
     spawnParticles(definition) {
       const burst = createParticleBurst(definition);

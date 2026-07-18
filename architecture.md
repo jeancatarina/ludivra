@@ -484,7 +484,7 @@ interface PresentationEventBatch {
 
 Operações semânticas incluem criar/remover visual, escolher visual state, atualizar transform, solicitar animação, efeito, áudio, câmera, texto e tela. Materiais e efeitos usam IDs e parâmetros compatíveis com perfis, não instâncias de Three.js.
 
-Primitivas 3D portáteis podem declarar forma, superfície, opacidade, visibilidade e transform, enquanto a câmera é descrita por posição, alvo e campo de visão. Esses termos pertencem ao protocolo e devem continuar implementáveis por um renderer nativo; propriedades, shaders ou classes exclusivas do Three.js permanecem proibidos fora de `renderer-three`.
+Primitivas 3D portáteis podem declarar forma, superfície, opacidade, visibilidade e transform, enquanto câmera e atmosfera usam intenções agnósticas para enquadramento, névoa e luzes. Esses termos pertencem ao protocolo e devem continuar implementáveis por um renderer nativo; propriedades, shaders ou classes exclusivas do Three.js permanecem proibidos fora de `renderer-three`.
 
 Projectors de jogo podem ser escritos em Lua ou C++, mas rodam depois do commit do tick em contexto read-only. Eles não consomem RNG, não emitem comandos e não fazem parte de save nem do hash autoritativo. O custo de projeção é medido separadamente e sua saída usa IDs e strings internadas para não transformar a bridge em gargalo.
 
