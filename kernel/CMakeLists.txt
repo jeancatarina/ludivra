@@ -2,6 +2,7 @@ add_library(ludivra_kernel STATIC
   src/command_buffer.cpp
   src/lua_sandbox.cpp
   src/runtime.cpp
+  src/state_archive.cpp
 )
 
 target_include_directories(ludivra_kernel

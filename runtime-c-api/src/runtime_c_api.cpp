@@ -3,10 +3,12 @@
 #include "runtime.hpp"
 
 #include <cstddef>
+#include <cstring>
+#include <limits>
 #include <new>
 
 struct ludivra_runtime final {
-  explicit ludivra_runtime(const ludivra::kernel::RuntimeConfig config) noexcept : value(config) {}
+  explicit ludivra_runtime(const ludivra::kernel::RuntimeConfig config) : value(config) {}
 
   ludivra::kernel::Runtime value;
 };
@@ -25,8 +27,56 @@ ludivra_result to_public_result(const ludivra::kernel::RuntimeError error) noexc
       return LUDIVRA_ERROR_SCRIPT;
     case ludivra::kernel::RuntimeError::integer_overflow:
       return LUDIVRA_ERROR_INTEGER_OVERFLOW;
+    case ludivra::kernel::RuntimeError::archive_invalid:
+      return LUDIVRA_ERROR_ARCHIVE_INVALID;
+    case ludivra::kernel::RuntimeError::replay_mismatch:
+      return LUDIVRA_ERROR_REPLAY_MISMATCH;
+    case ludivra::kernel::RuntimeError::pending_inputs:
+      return LUDIVRA_ERROR_PENDING_INPUTS;
   }
   return LUDIVRA_ERROR_INTERNAL;
+}
+
+template <typename Producer>
+ludivra_result archive_size(const ludivra_runtime* runtime, uint32_t* out_size, Producer producer) {
+  if (runtime == nullptr || out_size == nullptr) {
+    return LUDIVRA_ERROR_INVALID_ARGUMENT;
+  }
+  try {
+    const auto archive = producer(runtime->value);
+    if (archive.size() > std::numeric_limits<uint32_t>::max()) {
+      return LUDIVRA_ERROR_INTERNAL;
+    }
+    *out_size = static_cast<uint32_t>(archive.size());
+    return LUDIVRA_OK;
+  } catch (const std::bad_alloc&) {
+    return LUDIVRA_ERROR_ALLOCATION;
+  } catch (...) {
+    return LUDIVRA_ERROR_INTERNAL;
+  }
+}
+
+template <typename Producer>
+ludivra_result archive_write(
+    const ludivra_runtime* runtime,
+    uint8_t* buffer,
+    const uint32_t buffer_size,
+    Producer producer) {
+  if (runtime == nullptr || buffer == nullptr) {
+    return LUDIVRA_ERROR_INVALID_ARGUMENT;
+  }
+  try {
+    const auto archive = producer(runtime->value);
+    if (archive.size() > buffer_size) {
+      return LUDIVRA_ERROR_BUFFER_TOO_SMALL;
+    }
+    std::memcpy(buffer, archive.data(), archive.size());
+    return LUDIVRA_OK;
+  } catch (const std::bad_alloc&) {
+    return LUDIVRA_ERROR_ALLOCATION;
+  } catch (...) {
+    return LUDIVRA_ERROR_INTERNAL;
+  }
 }
 
 }  // namespace
@@ -53,6 +103,14 @@ const char* ludivra_result_message(const ludivra_result result) {
       return "gameplay script failure";
     case LUDIVRA_ERROR_INTEGER_OVERFLOW:
       return "integer state overflow";
+    case LUDIVRA_ERROR_ARCHIVE_INVALID:
+      return "invalid or corrupt archive";
+    case LUDIVRA_ERROR_REPLAY_MISMATCH:
+      return "replay result mismatch";
+    case LUDIVRA_ERROR_PENDING_INPUTS:
+      return "operation rejected while inputs are pending";
+    case LUDIVRA_ERROR_BUFFER_TOO_SMALL:
+      return "output buffer too small";
   }
   return "unknown result";
 }
@@ -157,6 +215,64 @@ ludivra_result ludivra_runtime_integer_state(
   }
   *out_value = runtime->value.integer_state(key);
   return LUDIVRA_OK;
+}
+
+ludivra_result ludivra_runtime_save_size(
+    const ludivra_runtime* runtime,
+    uint32_t* out_size) {
+  return archive_size(runtime, out_size, [](const auto& value) { return value.save(); });
+}
+
+ludivra_result ludivra_runtime_save_write(
+    const ludivra_runtime* runtime,
+    uint8_t* buffer,
+    const uint32_t buffer_size) {
+  return archive_write(runtime, buffer, buffer_size, [](const auto& value) { return value.save(); });
+}
+
+ludivra_result ludivra_runtime_load_save(
+    ludivra_runtime* runtime,
+    const uint8_t* buffer,
+    const uint32_t buffer_size) {
+  if (runtime == nullptr || buffer == nullptr || buffer_size == 0U) {
+    return LUDIVRA_ERROR_INVALID_ARGUMENT;
+  }
+  try {
+    return to_public_result(runtime->value.load_save({buffer, buffer_size}));
+  } catch (const std::bad_alloc&) {
+    return LUDIVRA_ERROR_ALLOCATION;
+  } catch (...) {
+    return LUDIVRA_ERROR_INTERNAL;
+  }
+}
+
+ludivra_result ludivra_runtime_replay_size(
+    const ludivra_runtime* runtime,
+    uint32_t* out_size) {
+  return archive_size(runtime, out_size, [](const auto& value) { return value.replay(); });
+}
+
+ludivra_result ludivra_runtime_replay_write(
+    const ludivra_runtime* runtime,
+    uint8_t* buffer,
+    const uint32_t buffer_size) {
+  return archive_write(runtime, buffer, buffer_size, [](const auto& value) { return value.replay(); });
+}
+
+ludivra_result ludivra_runtime_verify_replay(
+    const ludivra_runtime* runtime,
+    const uint8_t* buffer,
+    const uint32_t buffer_size) {
+  if (runtime == nullptr || buffer == nullptr || buffer_size == 0U) {
+    return LUDIVRA_ERROR_INVALID_ARGUMENT;
+  }
+  try {
+    return to_public_result(runtime->value.verify_replay({buffer, buffer_size}));
+  } catch (const std::bad_alloc&) {
+    return LUDIVRA_ERROR_ALLOCATION;
+  } catch (...) {
+    return LUDIVRA_ERROR_INTERNAL;
+  }
 }
 
 const char* ludivra_runtime_last_error(const ludivra_runtime* runtime) {

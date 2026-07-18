@@ -1,0 +1,73 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ludivra.dev/contracts/desktop-host/v1",
+  "title": "Ludivra desktop host contract",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["protocolVersion", "platform", "packaged", "services"],
+  "properties": {
+    "protocolVersion": { "const": 1 },
+    "platform": { "enum": ["darwin", "linux", "win32"] },
+    "packaged": { "type": "boolean" },
+    "services": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/serviceStatus" }
+    }
+  },
+  "$defs": {
+    "serviceId": {
+      "enum": [
+        "storage.local",
+        "diagnostics.crash",
+        "diagnostics.logs",
+        "steam.achievements",
+        "steam.cloud",
+        "steam.overlay",
+        "steam.user",
+        "updates.desktop"
+      ]
+    },
+    "serviceStatus": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "availability"],
+      "properties": {
+        "id": { "$ref": "#/$defs/serviceId" },
+        "availability": { "enum": ["available", "unavailable"] },
+        "reason": { "type": "string" }
+      }
+    },
+    "currentUser": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "displayName"],
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "displayName": { "type": "string", "minLength": 1 }
+      }
+    },
+    "updateStatus": {
+      "enum": ["disabled", "checking", "available", "current", "error"]
+    },
+    "lifecycleEvent": {
+      "enum": ["suspend", "resume"]
+    }
+  },
+  "x-channels": {
+    "hostInfo": "ludivra:host-info",
+    "storageRead": "ludivra:storage-read",
+    "storageReadBackup": "ludivra:storage-read-backup",
+    "storageWrite": "ludivra:storage-write",
+    "storageDelete": "ludivra:storage-delete",
+    "achievementUnlock": "ludivra:achievement-unlock",
+    "cloudRead": "ludivra:cloud-read",
+    "cloudWrite": "ludivra:cloud-write",
+    "cloudDelete": "ludivra:cloud-delete",
+    "userCurrent": "ludivra:user-current",
+    "overlayActivate": "ludivra:overlay-activate",
+    "updateCheck": "ludivra:update-check",
+    "lifecycle": "ludivra:lifecycle",
+    "checkpointRequest": "ludivra:checkpoint-request",
+    "checkpointComplete": "ludivra:checkpoint-complete"
+  }
+}

@@ -1,6 +1,7 @@
 packages:
   - cli
   - presentation-protocol
+  - platform-contracts
   - renderer-three
   - runtime-web
   - hosts/browser

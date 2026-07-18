@@ -2,38 +2,33 @@
 
 ## Resultado
 
-Ludivra 0.2.0 preparada para criar, executar e empacotar o primeiro jogo desktop em 2026-07-18.
+Ludivra 0.3.0 com fundação desktop/Steam implementada e pacote macOS validado em 2026-07-18.
 
 ## Implementado
 
-- Lua 5.4.8 embutida com sandbox, orçamento de instruções, query somente leitura e command buffer;
-- runtime nativo e WebAssembly Emscripten 6.0.3 com equivalência por hash;
-- bridge TypeScript única para a C ABI;
-- protocolo agnóstico de apresentação e Three.js restrito a `renderer-three`;
-- BrowserHost com input lógico, fixed ticks e preview responsivo;
-- ElectronHost endurecido e pacote desktop local para Steam;
-- CLI ampliada com `new`, `run`, `build` e `package`;
-- schema completo do manifesto de jogo e starter jogável;
-- versões e decisões registradas nos ADRs 0004 e 0005.
+- saves e replays binários, versionados, checksummed e transacionais no kernel;
+- C ABI e bridge WASM para salvar, restaurar, exportar e verificar replay;
+- autosave desktop, backup, reconciliação Steam Cloud e checkpoint no fechamento;
+- preload sandboxed gerado pelo contrato IPC, sem Node.js no renderer;
+- storage, lifecycle, logs, Crashpad, update opt-in e adapters Steam no processo principal;
+- pacote Electron com smoke test do renderer/WASM/storage, hashes, SBOM e provenance;
+- scripts SteamPipe quando App ID e Depot ID estiverem configurados.
 
 ## Evidências
 
-- `pnpm test`: PASS — CLI, boundary nativo, sandbox e equivalência native/WASM;
-- equivalência native/WASM: `a16b3a84c7581c0a`;
-- `game validate --project examples/first-game`: PASS;
-- `game new` seguido de validação do projeto gerado: PASS;
-- build Vite de produção: PASS;
-- inspeção no navegador: PASS — gameplay alterou a apresentação sem erros correntes;
-- `game package --target steam-macos`: PASS — pacote Electron gerado.
+- `pnpm test:native`: PASS;
+- `pnpm test:wasm-equivalence`: PASS, hash `a16b3a84c7581c0a`;
+- `pnpm test:desktop`: PASS;
+- `game package --target steam-macos`: PASS com smoke do aplicativo empacotado;
+- `game validate --project examples/first-game`: PASS.
 
-## Não disponível
+## Não executado
 
-- App ID e Depot ID: `NOT_CONFIGURED`; nenhum upload foi tentado;
-- assinatura e notarização: `NOT_IMPLEMENTED`, rastreado por `ENG-009`;
-- execução em Windows e Linux reais: `NOT_RUN`;
-- saves, replays e áudio: `NOT_IMPLEMENTED`, rastreados por `ENG-007` e `ENG-008`;
-- CI remoto: `NOT_IMPLEMENTED`, rastreado por `ENG-006`.
+- Steam real: `NOT_CONFIGURED`, sem App ID/Depot ID e sem upload;
+- assinatura/notarização: `NOT_RUN`, exige identidade e credenciais do usuário;
+- Windows/Linux: `NOT_RUN`, exige runners nos respectivos sistemas;
+- áudio abstrato: `NOT_IMPLEMENTED`, rastreado por `ENG-008`.
 
 ## Próxima prioridade
 
-ENG-007 — saves versionados e replays antes de iniciar produção de conteúdo persistente.
+ENG-008 — protocolo de áudio abstrato e validação audiovisual do primeiro vertical slice.

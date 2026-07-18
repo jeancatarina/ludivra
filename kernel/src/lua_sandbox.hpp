@@ -1,17 +1,15 @@
 #pragma once
 
 #include "command_buffer.hpp"
+#include "state_archive.hpp"
 
 #include <cstdint>
 #include <string>
 #include <string_view>
-#include <unordered_map>
 
 struct lua_State;
 
 namespace ludivra::kernel {
-
-using IntegerState = std::unordered_map<std::uint32_t, std::int64_t>;
 
 struct ScriptInput final {
   std::uint32_t action_id;

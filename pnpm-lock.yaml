@@ -29,6 +29,9 @@ importers:
 
   hosts/browser:
     dependencies:
+      '@ludivra/platform-contracts':
+        specifier: workspace:*
+        version: link:../../platform-contracts
       '@ludivra/presentation-protocol':
         specifier: workspace:*
         version: link:../../presentation-protocol
@@ -53,6 +56,10 @@ importers:
         version: 8.1.5(@types/node@22.15.3)
 
   hosts/electron:
+    dependencies:
+      steamworks.js:
+        specifier: 0.4.0
+        version: 0.4.0
     devDependencies:
       '@electron/packager':
         specifier: 20.0.3
@@ -60,6 +67,12 @@ importers:
       electron:
         specifier: 43.1.1
         version: 43.1.1
+
+  platform-contracts:
+    devDependencies:
+      typescript:
+        specifier: 5.9.3
+        version: 5.9.3
 
   presentation-protocol:
     devDependencies:
@@ -559,6 +572,10 @@ packages:
   source-map-js@1.2.1:
     resolution: {integrity: sha512-UXWMKhLOwVKb728IUtQPXxfYU+usdybtUrK/8uGE8CQMvrhOpwvzDBwj0QhSL7MQc7vIsISBG8VQ8+IDQxpfQA==}
     engines: {node: '>=0.10.0'}
+
+  steamworks.js@0.4.0:
+    resolution: {integrity: sha512-O5TTRs7ucCRql4IA/kYUIQYeghTsXqf3rAm81sC22RDId264LQYqQjuaMEUSqL60I5LdULiGu0W2/A+ZDcKBKA==}
+    engines: {node: '>= 14'}
 
   sumchecker@3.0.1:
     resolution: {integrity: sha512-MvjXzkz/BOfyVDkG0oFOtBxHX2u3gKbMHIF/dXblZsgD3BWOFLmHovIpZY7BykJdAjcqRCBi1WYBNdEC9yI7vg==}
@@ -1064,6 +1081,10 @@ snapshots:
   shebang-regex@3.0.0: {}
 
   source-map-js@1.2.1: {}
+
+  steamworks.js@0.4.0:
+    dependencies:
+      '@types/node': 22.15.3
 
   sumchecker@3.0.1:
     dependencies:

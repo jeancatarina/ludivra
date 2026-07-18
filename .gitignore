@@ -3,6 +3,7 @@
 /cli/dist/
 /runtime-web/dist/
 /presentation-protocol/dist/
+/platform-contracts/dist/
 /renderer-three/dist/
 /runtime-wasm/generated/
 /hosts/browser/dist/

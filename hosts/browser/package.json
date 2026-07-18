@@ -8,6 +8,7 @@
     "dev": "vite"
   },
   "dependencies": {
+    "@ludivra/platform-contracts": "workspace:*",
     "@ludivra/presentation-protocol": "workspace:*",
     "@ludivra/renderer-three": "workspace:*",
     "@ludivra/runtime-web": "workspace:*"

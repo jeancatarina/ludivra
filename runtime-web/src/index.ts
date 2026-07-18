@@ -44,9 +44,16 @@ function requireOk(module: RuntimeModule, operation: string, result: number, han
   if (result === ok) {
     return;
   }
-  const detail = handle === undefined
-    ? `result ${result}`
+  const message = module.ccall(
+    "ludivra_result_message",
+    "string",
+    ["number"],
+    [result]
+  ) as string;
+  const runtimeDetail = handle === undefined
+    ? ""
     : module.UTF8ToString(call(module, "ludivra_runtime_last_error", [handle]));
+  const detail = runtimeDetail.length > 0 ? `${message}: ${runtimeDetail}` : message;
   throw new Error(`${operation} failed: ${detail}`);
 }
 
@@ -152,6 +159,44 @@ export class LudivraRuntime {
     }
   }
 
+  save(): Uint8Array {
+    return this.readArchive("save", "ludivra_runtime_save_size", "ludivra_runtime_save_write");
+  }
+
+  loadSave(archive: Uint8Array): void {
+    this.withArchive(archive, (pointer) => {
+      requireOk(
+        this.module,
+        "save load",
+        call(this.module, "ludivra_runtime_load_save", [this.liveHandle(), pointer, archive.length]),
+        this.handle
+      );
+    });
+  }
+
+  replay(): Uint8Array {
+    return this.readArchive(
+      "replay",
+      "ludivra_runtime_replay_size",
+      "ludivra_runtime_replay_write"
+    );
+  }
+
+  verifyReplay(archive: Uint8Array): void {
+    this.withArchive(archive, (pointer) => {
+      requireOk(
+        this.module,
+        "replay verification",
+        call(this.module, "ludivra_runtime_verify_replay", [
+          this.liveHandle(),
+          pointer,
+          archive.length
+        ]),
+        this.handle
+      );
+    });
+  }
+
   destroy(): void {
     if (this.handle !== 0) {
       call(this.module, "ludivra_runtime_destroy", [this.handle]);
@@ -176,6 +221,46 @@ export class LudivraRuntime {
         this.handle
       );
       return new DataView(this.module.HEAPU8.buffer).getBigUint64(pointer, true);
+    } finally {
+      this.module._free(pointer);
+    }
+  }
+
+  private readArchive(operation: string, sizeFunction: string, writeFunction: string): Uint8Array {
+    const sizePointer = this.module._malloc(4);
+    try {
+      requireOk(
+        this.module,
+        `${operation} size`,
+        call(this.module, sizeFunction, [this.liveHandle(), sizePointer]),
+        this.handle
+      );
+      const size = new DataView(this.module.HEAPU8.buffer).getUint32(sizePointer, true);
+      const archivePointer = this.module._malloc(size);
+      try {
+        requireOk(
+          this.module,
+          `${operation} write`,
+          call(this.module, writeFunction, [this.liveHandle(), archivePointer, size]),
+          this.handle
+        );
+        return this.module.HEAPU8.slice(archivePointer, archivePointer + size);
+      } finally {
+        this.module._free(archivePointer);
+      }
+    } finally {
+      this.module._free(sizePointer);
+    }
+  }
+
+  private withArchive(archive: Uint8Array, operation: (pointer: number) => void): void {
+    if (archive.length === 0) {
+      throw new Error("archive must not be empty");
+    }
+    const pointer = this.module._malloc(archive.length);
+    try {
+      this.module.HEAPU8.set(archive, pointer);
+      operation(pointer);
     } finally {
       this.module._free(pointer);
     }

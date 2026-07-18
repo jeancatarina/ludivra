@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "id": "first-game",
   "name": "First Ludivra Game",
-  "engine": { "version": "0.2.0" },
+  "engine": { "version": "0.3.0" },
   "targets": ["browser", "desktop", "native-headless"],
   "entrypoints": {
     "gameplay": "scripts/gameplay.lua",
@@ -12,5 +12,6 @@
     { "id": "charge", "label": "Carregar núcleo", "actionId": 1, "keys": ["Space", "Enter"] },
     { "id": "reset", "label": "Reiniciar", "actionId": 2, "keys": ["KeyR"] }
   ],
-  "steam": { "appId": null, "depotId": null }
+  "steam": { "appId": null, "depotId": null },
+  "desktop": { "updates": { "enabled": false, "feedUrl": null } }
 }

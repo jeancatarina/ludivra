@@ -21,3 +21,7 @@ declare module "@game/presentation" {
   import type { CreateGamePresenter } from "@ludivra/presentation-protocol";
   export const createGamePresenter: CreateGamePresenter;
 }
+
+interface Window {
+  ludivraDesktop?: import("@ludivra/platform-contracts").DesktopBridge;
+}

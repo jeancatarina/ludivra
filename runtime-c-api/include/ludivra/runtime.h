@@ -19,7 +19,11 @@ typedef enum ludivra_result {
   LUDIVRA_ERROR_INPUT_LIMIT = 4,
   LUDIVRA_ERROR_INTERNAL = 5,
   LUDIVRA_ERROR_SCRIPT = 6,
-  LUDIVRA_ERROR_INTEGER_OVERFLOW = 7
+  LUDIVRA_ERROR_INTEGER_OVERFLOW = 7,
+  LUDIVRA_ERROR_ARCHIVE_INVALID = 8,
+  LUDIVRA_ERROR_REPLAY_MISMATCH = 9,
+  LUDIVRA_ERROR_PENDING_INPUTS = 10,
+  LUDIVRA_ERROR_BUFFER_TOO_SMALL = 11
 } ludivra_result;
 
 typedef struct ludivra_runtime_config {
@@ -82,6 +86,37 @@ ludivra_result ludivra_runtime_integer_state(
     const ludivra_runtime* runtime,
     uint32_t key,
     int64_t* out_value);
+
+/* Save and replay archives use a versioned, checksummed, engine-owned binary format. */
+ludivra_result ludivra_runtime_save_size(
+    const ludivra_runtime* runtime,
+    uint32_t* out_size);
+
+ludivra_result ludivra_runtime_save_write(
+    const ludivra_runtime* runtime,
+    uint8_t* buffer,
+    uint32_t buffer_size);
+
+/* Loading is transactional and rejected while logical inputs are pending. */
+ludivra_result ludivra_runtime_load_save(
+    ludivra_runtime* runtime,
+    const uint8_t* buffer,
+    uint32_t buffer_size);
+
+ludivra_result ludivra_runtime_replay_size(
+    const ludivra_runtime* runtime,
+    uint32_t* out_size);
+
+ludivra_result ludivra_runtime_replay_write(
+    const ludivra_runtime* runtime,
+    uint8_t* buffer,
+    uint32_t buffer_size);
+
+/* Re-simulates the archive with the currently loaded gameplay module. */
+ludivra_result ludivra_runtime_verify_replay(
+    const ludivra_runtime* runtime,
+    const uint8_t* buffer,
+    uint32_t buffer_size);
 
 /* Pointer remains valid until the next non-const operation or runtime destruction. */
 const char* ludivra_runtime_last_error(const ludivra_runtime* runtime);

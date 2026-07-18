@@ -1,3 +1,3 @@
 # Última sessão
 
-Projeto criado a partir do starter oficial da Ludivra 0.2.0.
+Starter atualizado para Ludivra 0.3.0, com autosave desktop e pacote Steam verificável.

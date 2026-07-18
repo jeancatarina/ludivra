@@ -3,7 +3,12 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
+    "check": "node --check src/main.cjs && node --check src/preload.cjs && node --check src/services/storage.cjs && node --check src/services/steam.cjs && node --check src/services/updates.cjs",
+    "test": "node --test test/*.test.cjs",
     "package": "node ../../tools/build/package-steam.mjs"
+  },
+  "dependencies": {
+    "steamworks.js": "0.4.0"
   },
   "devDependencies": {
     "@electron/packager": "20.0.3",

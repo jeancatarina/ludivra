@@ -5,6 +5,7 @@
 #include <fstream>
 #include <sstream>
 #include <string>
+#include <vector>
 
 namespace {
 
@@ -64,6 +65,28 @@ std::string counter_gameplay() {
   return content.str();
 }
 
+std::vector<uint8_t> save_archive(TestContext& context, ludivra_runtime* runtime) {
+  uint32_t size = 0;
+  context.expect(ludivra_runtime_save_size(runtime, &size) == LUDIVRA_OK, "save size is available");
+  std::vector<uint8_t> archive(size);
+  context.expect(
+      ludivra_runtime_save_write(runtime, archive.data(), size) == LUDIVRA_OK,
+      "save archive is written");
+  return archive;
+}
+
+std::vector<uint8_t> replay_archive(TestContext& context, ludivra_runtime* runtime) {
+  uint32_t size = 0;
+  context.expect(
+      ludivra_runtime_replay_size(runtime, &size) == LUDIVRA_OK,
+      "replay size is available");
+  std::vector<uint8_t> archive(size);
+  context.expect(
+      ludivra_runtime_replay_write(runtime, archive.data(), size) == LUDIVRA_OK,
+      "replay archive is written");
+  return archive;
+}
+
 }  // namespace
 
 int main() {
@@ -111,6 +134,51 @@ int main() {
   context.expect(integer_state(context, scripted, 1U) == 1, "Lua changes state through commands");
   std::printf("wasm_equivalence_hash=%016" PRIx64 "\n", state_hash(context, scripted));
 
+  auto save = save_archive(context, scripted);
+  context.expect(
+      ludivra_runtime_save_write(scripted, save.data(), 1U) ==
+          LUDIVRA_ERROR_BUFFER_TOO_SMALL,
+      "undersized save buffers are rejected");
+  auto* restored = create_runtime(context);
+  context.expect(
+      ludivra_runtime_load_gameplay(
+          restored, gameplay_source.data(), static_cast<uint32_t>(gameplay_source.size())) == LUDIVRA_OK,
+      "restored runtime loads gameplay");
+  context.expect(
+      ludivra_runtime_load_save(restored, save.data(), static_cast<uint32_t>(save.size())) == LUDIVRA_OK,
+      "valid save loads");
+  context.expect(integer_state(context, restored, 1U) == 1, "save restores logical state");
+  context.expect(
+      state_hash(context, restored) == state_hash(context, scripted),
+      "save restores the exact deterministic hash");
+
+  auto corrupt_save = save;
+  corrupt_save[8] ^= 0x01U;
+  context.expect(
+      ludivra_runtime_load_save(restored, corrupt_save.data(), static_cast<uint32_t>(corrupt_save.size())) ==
+          LUDIVRA_ERROR_ARCHIVE_INVALID,
+      "corrupt saves are rejected");
+  context.expect(integer_state(context, restored, 1U) == 1, "failed save load is transactional");
+
+  const auto replay = replay_archive(context, scripted);
+  context.expect(
+      ludivra_runtime_verify_replay(scripted, replay.data(), static_cast<uint32_t>(replay.size())) ==
+          LUDIVRA_OK,
+      "replay reproduces the expected hash");
+  auto corrupt_replay = replay;
+  corrupt_replay[8] ^= 0x01U;
+  context.expect(
+      ludivra_runtime_verify_replay(
+          scripted, corrupt_replay.data(), static_cast<uint32_t>(corrupt_replay.size())) ==
+          LUDIVRA_ERROR_ARCHIVE_INVALID,
+      "corrupt replays are rejected");
+
+  submit(context, restored, 1U, 1000, 3U);
+  context.expect(
+      ludivra_runtime_load_save(restored, save.data(), static_cast<uint32_t>(save.size())) ==
+          LUDIVRA_ERROR_PENDING_INPUTS,
+      "save loading cannot discard pending inputs");
+
   constexpr char forbidden_gameplay[] = R"(
 return { on_input = function() return os.time() end }
 )";
@@ -137,6 +205,7 @@ return { on_input = function() return os.time() end }
   ludivra_runtime_destroy(first);
   ludivra_runtime_destroy(second);
   ludivra_runtime_destroy(limited);
+  ludivra_runtime_destroy(restored);
   ludivra_runtime_destroy(scripted);
   return context.failures == 0 ? 0 : 1;
 }

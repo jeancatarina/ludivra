@@ -51,7 +51,10 @@ export async function runPackage(arguments_: string[]): Promise<CommandOutcome> 
     }],
     artifacts: [
       { kind: "steam-desktop-package", path: executableDirectory },
-      { kind: "steam-metadata", path: steamMetadata }
+      { kind: "steam-metadata", path: steamMetadata },
+      { kind: "sbom", path: resolve(steamMetadata, "sbom.cdx.json") },
+      { kind: "provenance", path: resolve(steamMetadata, "provenance.json") },
+      { kind: "checksums", path: resolve(steamMetadata, "SHA256SUMS") }
     ],
     data: { project, target, steamPipeConfigured: configured },
     nextActions: configured

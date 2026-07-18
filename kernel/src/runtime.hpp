@@ -4,6 +4,7 @@
 #include "lua_sandbox.hpp"
 
 #include <cstdint>
+#include <span>
 #include <string>
 #include <string_view>
 #include <vector>
@@ -27,7 +28,10 @@ enum class RuntimeError : std::uint8_t {
   tick_overflow,
   input_limit,
   script_failure,
-  integer_overflow
+  integer_overflow,
+  archive_invalid,
+  replay_mismatch,
+  pending_inputs
 };
 
 class Runtime final {
@@ -40,15 +44,20 @@ class Runtime final {
   [[nodiscard]] std::uint64_t state_hash() const noexcept;
   [[nodiscard]] RuntimeError load_gameplay(std::string_view source);
   [[nodiscard]] std::int64_t integer_state(std::uint32_t key) const noexcept;
+  [[nodiscard]] std::vector<std::uint8_t> save() const;
+  [[nodiscard]] RuntimeError load_save(std::span<const std::uint8_t> bytes);
+  [[nodiscard]] std::vector<std::uint8_t> replay() const;
+  [[nodiscard]] RuntimeError verify_replay(std::span<const std::uint8_t> bytes) const;
   [[nodiscard]] const std::string& last_error() const noexcept;
 
  private:
-  void mix_byte(std::uint8_t value) noexcept;
-  void mix_u32(std::uint32_t value) noexcept;
-  void mix_u64(std::uint64_t value) noexcept;
+  static void mix_byte(std::uint64_t& hash, std::uint8_t value) noexcept;
+  static void mix_u32(std::uint64_t& hash, std::uint32_t value) noexcept;
+  static void mix_u64(std::uint64_t& hash, std::uint64_t value) noexcept;
   [[nodiscard]] RuntimeError commit_tick();
   [[nodiscard]] RuntimeError apply_commands();
 
+  RuntimeConfig config_;
   std::uint64_t tick_{0};
   std::uint64_t state_hash_{14695981039346656037ULL};
   std::uint32_t max_pending_inputs_;
@@ -56,6 +65,9 @@ class Runtime final {
   IntegerState integer_state_;
   CommandBuffer commands_;
   LuaSandbox lua_;
+  std::string gameplay_source_;
+  SavedState replay_initial_state_;
+  std::vector<ReplayFrame> replay_frames_;
 };
 
 }  // namespace ludivra::kernel

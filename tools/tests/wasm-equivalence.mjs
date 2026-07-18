@@ -31,6 +31,25 @@ try {
   if (wasmHash !== match[1]) {
     throw new Error(`native/WASM mismatch: native=${match[1]} wasm=${wasmHash}`);
   }
+  const save = runtime.save();
+  const replay = runtime.replay();
+  runtime.verifyReplay(replay);
+
+  const restored = await LudivraRuntime.create(
+    createLudivraModule,
+    { tickRateHz: 60, maxPendingInputs: 4096, seed: 42n },
+    { locateFile: (path) => resolve(root, "runtime-wasm/generated", path) }
+  );
+  try {
+    restored.loadGameplay(await readFile(resolve(root, "tests/fixtures/counter.lua"), "utf8"));
+    restored.loadSave(save);
+    if (restored.stateHash() !== runtime.stateHash() || restored.integerState(1) !== 1n) {
+      throw new Error("WASM save round-trip changed runtime state");
+    }
+    restored.verifyReplay(replay);
+  } finally {
+    restored.destroy();
+  }
   process.stdout.write(`native_wasm_hash=${wasmHash}\n`);
 } finally {
   runtime.destroy();

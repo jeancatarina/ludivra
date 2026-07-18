@@ -15,7 +15,8 @@
     "three": "0.185.1",
     "vite": "8.1.5",
     "electron": "43.1.1",
-    "electronPackager": "20.0.3"
+    "electronPackager": "20.0.3",
+    "steamworksJs": "0.4.0"
   },
   "pending": []
 }

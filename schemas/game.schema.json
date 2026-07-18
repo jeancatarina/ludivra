@@ -62,6 +62,24 @@
         "appId": { "type": ["integer", "null"], "minimum": 1 },
         "depotId": { "type": ["integer", "null"], "minimum": 1 }
       }
+    },
+    "desktop": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "updates": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["enabled", "feedUrl"],
+          "properties": {
+            "enabled": { "type": "boolean" },
+            "feedUrl": {
+              "type": ["string", "null"],
+              "pattern": "^https://"
+            }
+          }
+        }
+      }
     }
   }
 }

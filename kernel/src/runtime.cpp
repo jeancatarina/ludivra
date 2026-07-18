@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <limits>
 #include <tuple>
+#include <utility>
 
 namespace ludivra::kernel {
 namespace {
@@ -12,10 +13,12 @@ constexpr std::uint8_t tick_marker = 0xA5U;
 
 }  // namespace
 
-Runtime::Runtime(const RuntimeConfig config) : max_pending_inputs_(config.max_pending_inputs) {
-  mix_u32(config.tick_rate_hz);
-  mix_u32(config.max_pending_inputs);
-  mix_u64(config.seed);
+Runtime::Runtime(const RuntimeConfig config)
+    : config_(config), max_pending_inputs_(config.max_pending_inputs) {
+  mix_u32(state_hash_, config.tick_rate_hz);
+  mix_u32(state_hash_, config.max_pending_inputs);
+  mix_u64(state_hash_, config.seed);
+  replay_initial_state_ = {tick_, state_hash_, integer_state_};
 }
 
 RuntimeError Runtime::submit_input(const LogicalInput input) {
@@ -49,7 +52,12 @@ std::uint64_t Runtime::state_hash() const noexcept {
 }
 
 RuntimeError Runtime::load_gameplay(const std::string_view source) {
-  return lua_.load(source) ? RuntimeError::none : RuntimeError::script_failure;
+  std::string next_source(source);
+  if (!lua_.load(source)) {
+    return RuntimeError::script_failure;
+  }
+  gameplay_source_.swap(next_source);
+  return RuntimeError::none;
 }
 
 std::int64_t Runtime::integer_state(const std::uint32_t key) const noexcept {
@@ -61,20 +69,77 @@ const std::string& Runtime::last_error() const noexcept {
   return lua_.last_error();
 }
 
-void Runtime::mix_byte(const std::uint8_t value) noexcept {
-  state_hash_ ^= value;
-  state_hash_ *= fnv_prime;
+std::vector<std::uint8_t> Runtime::save() const {
+  return encode_save({tick_, state_hash_, integer_state_});
 }
 
-void Runtime::mix_u32(const std::uint32_t value) noexcept {
+RuntimeError Runtime::load_save(const std::span<const std::uint8_t> bytes) {
+  if (!pending_inputs_.empty()) {
+    return RuntimeError::pending_inputs;
+  }
+  SavedState decoded{};
+  if (!decode_save(bytes, decoded)) {
+    return RuntimeError::archive_invalid;
+  }
+  SavedState next_replay_state = decoded;
+  tick_ = decoded.tick;
+  state_hash_ = decoded.state_hash;
+  integer_state_.swap(decoded.integers);
+  replay_initial_state_ = std::move(next_replay_state);
+  replay_frames_.clear();
+  commands_.clear();
+  return RuntimeError::none;
+}
+
+std::vector<std::uint8_t> Runtime::replay() const {
+  return encode_replay({config_.tick_rate_hz, config_.max_pending_inputs, config_.seed,
+      replay_initial_state_, tick_, state_hash_, replay_frames_});
+}
+
+RuntimeError Runtime::verify_replay(const std::span<const std::uint8_t> bytes) const {
+  ReplayState decoded{};
+  if (!decode_replay(bytes, decoded)) {
+    return RuntimeError::archive_invalid;
+  }
+  Runtime verification({decoded.tick_rate_hz, decoded.max_pending_inputs, decoded.seed});
+  if (!gameplay_source_.empty() && verification.load_gameplay(gameplay_source_) != RuntimeError::none) {
+    return RuntimeError::script_failure;
+  }
+  verification.tick_ = decoded.initial_state.tick;
+  verification.state_hash_ = decoded.initial_state.state_hash;
+  verification.integer_state_ = decoded.initial_state.integers;
+  verification.replay_initial_state_ = decoded.initial_state;
+  for (const auto& frame : decoded.frames) {
+    for (const auto& input : frame.inputs) {
+      if (verification.submit_input({input.action_id, input.value_milli, input.sequence}) !=
+          RuntimeError::none) {
+        return RuntimeError::replay_mismatch;
+      }
+    }
+    if (verification.step(1U) != RuntimeError::none) {
+      return RuntimeError::replay_mismatch;
+    }
+  }
+  return verification.tick() == decoded.expected_tick &&
+          verification.state_hash() == decoded.expected_hash
+      ? RuntimeError::none
+      : RuntimeError::replay_mismatch;
+}
+
+void Runtime::mix_byte(std::uint64_t& hash, const std::uint8_t value) noexcept {
+  hash ^= value;
+  hash *= fnv_prime;
+}
+
+void Runtime::mix_u32(std::uint64_t& hash, const std::uint32_t value) noexcept {
   for (std::uint32_t shift = 0; shift < 32; shift += 8) {
-    mix_byte(static_cast<std::uint8_t>((value >> shift) & 0xFFU));
+    mix_byte(hash, static_cast<std::uint8_t>((value >> shift) & 0xFFU));
   }
 }
 
-void Runtime::mix_u64(const std::uint64_t value) noexcept {
+void Runtime::mix_u64(std::uint64_t& hash, const std::uint64_t value) noexcept {
   for (std::uint32_t shift = 0; shift < 64; shift += 8) {
-    mix_byte(static_cast<std::uint8_t>((value >> shift) & 0xFFU));
+    mix_byte(hash, static_cast<std::uint8_t>((value >> shift) & 0xFFU));
   }
 }
 
@@ -91,46 +156,59 @@ RuntimeError Runtime::commit_tick() {
       return RuntimeError::script_failure;
     }
   }
-  const auto command_result = apply_commands();
+  ReplayFrame replay_frame;
+  replay_frame.inputs.reserve(pending_inputs_.size());
+  for (const auto& input : pending_inputs_) {
+    replay_frame.inputs.push_back({input.action_id, input.value_milli, input.sequence});
+  }
+  replay_frames_.push_back(std::move(replay_frame));
+
+  RuntimeError command_result = RuntimeError::none;
+  try {
+    command_result = apply_commands();
+  } catch (...) {
+    replay_frames_.pop_back();
+    commands_.clear();
+    throw;
+  }
   if (command_result != RuntimeError::none) {
+    replay_frames_.pop_back();
     commands_.clear();
     return command_result;
   }
 
   ++tick_;
-  mix_byte(tick_marker);
-  mix_u64(tick_);
-  mix_u32(static_cast<std::uint32_t>(pending_inputs_.size()));
+  mix_byte(state_hash_, tick_marker);
+  mix_u64(state_hash_, tick_);
+  mix_u32(state_hash_, static_cast<std::uint32_t>(pending_inputs_.size()));
 
   for (const auto& input : pending_inputs_) {
-    mix_u64(input.sequence);
-    mix_u32(input.action_id);
-    mix_u32(static_cast<std::uint32_t>(input.value_milli));
+    mix_u64(state_hash_, input.sequence);
+    mix_u32(state_hash_, input.action_id);
+    mix_u32(state_hash_, static_cast<std::uint32_t>(input.value_milli));
   }
   pending_inputs_.clear();
   return RuntimeError::none;
 }
 
 RuntimeError Runtime::apply_commands() {
-  IntegerState projected;
+  IntegerState committed = integer_state_;
+  std::uint64_t committed_hash = state_hash_;
   for (const auto& command : commands_.additions()) {
-    const auto projected_value = projected.find(command.key);
-    const auto current = projected_value == projected.end()
-        ? integer_state(command.key)
-        : projected_value->second;
+    const auto found = committed.find(command.key);
+    const auto current = found == committed.end() ? 0 : found->second;
     if ((command.delta > 0 && current > std::numeric_limits<std::int64_t>::max() - command.delta) ||
         (command.delta < 0 && current < std::numeric_limits<std::int64_t>::min() - command.delta)) {
       return RuntimeError::integer_overflow;
     }
-    projected[command.key] = current + command.delta;
+    const auto value = current + command.delta;
+    committed[command.key] = value;
+    mix_byte(committed_hash, 0xC1U);
+    mix_u32(committed_hash, command.key);
+    mix_u64(committed_hash, static_cast<std::uint64_t>(value));
   }
-  for (const auto& command : commands_.additions()) {
-    auto& value = integer_state_[command.key];
-    value += command.delta;
-    mix_byte(0xC1U);
-    mix_u32(command.key);
-    mix_u64(static_cast<std::uint64_t>(value));
-  }
+  integer_state_.swap(committed);
+  state_hash_ = committed_hash;
   return RuntimeError::none;
 }
 

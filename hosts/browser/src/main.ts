@@ -4,6 +4,7 @@ import { LudivraRuntime } from "@ludivra/runtime-web";
 import { createGamePresenter } from "@game/presentation";
 import createLudivraModule from "@ludivra/runtime-module";
 import { gameplaySource, manifest } from "virtual:ludivra-game";
+import { createDesktopCheckpointManager } from "./desktop-checkpoint";
 import "./style.css";
 
 const canvas = document.querySelector<HTMLCanvasElement>("#game-canvas");
@@ -22,6 +23,8 @@ const runtime = await LudivraRuntime.create(
   { tickRateHz: 60, maxPendingInputs: 4096, seed: 42n }
 );
 runtime.loadGameplay(gameplaySource);
+const desktop = await createDesktopCheckpointManager(runtime);
+status.textContent = `Kernel WASM · tick ${runtime.tick()}${desktop === null ? "" : " · autosave desktop"}`;
 
 const renderer = createThreeRenderer(canvas);
 const presenter = createGamePresenter(renderer);
@@ -35,6 +38,7 @@ const tickDuration = 1000 / 60;
 function submit(actionId: number): void {
   sequence += 1n;
   runtime.submitInput({ actionId, valueMilli: 1000, sequence });
+  desktop?.schedule();
 }
 
 for (const input of manifest.inputs) {
@@ -78,7 +82,7 @@ function frame(time: number): void {
   }
   presenter.present(presentationState);
   renderer.render();
-  status.textContent = `Kernel WASM · tick ${runtime.tick()}`;
+  status.textContent = `Kernel WASM · tick ${runtime.tick()}${desktop === null ? "" : " · autosave desktop"}`;
   animationFrame = requestAnimationFrame(frame);
 }
 animationFrame = requestAnimationFrame(frame);
@@ -86,6 +90,7 @@ animationFrame = requestAnimationFrame(frame);
 window.addEventListener("beforeunload", () => {
   running = false;
   cancelAnimationFrame(animationFrame);
+  desktop?.dispose();
   presenter.destroy();
   renderer.destroy();
   runtime.destroy();

@@ -16,6 +16,7 @@ const requiredFiles = [
   "LICENSE",
   "THIRD_PARTY_NOTICES.md",
   "contracts/cli-result.schema.json",
+  "contracts/desktop-host.schema.json",
   "runtime-c-api/include/ludivra/runtime.h",
   "toolchain.lock"
 ] as const;
@@ -26,6 +27,7 @@ const jsonFiles = [
   "package.json",
   "contracts/capability-catalog.source.json",
   "contracts/cli-result.schema.json",
+  "contracts/desktop-host.schema.json",
   "schemas/game.schema.json",
   "toolchain.lock"
 ] as const;
@@ -112,6 +114,7 @@ export async function runValidate(arguments_: string[] = []): Promise<CommandOut
 
   const generationChecks = [
     "tools/contracts/generate-cli-result.mjs",
+    "tools/contracts/generate-desktop-host.mjs",
     "tools/contracts/generate-capabilities.mjs"
   ];
   for (const script of generationChecks) {

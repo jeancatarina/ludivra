@@ -9,6 +9,7 @@ export interface GameManifest {
   name: string;
   entrypoints: { gameplay: string; presentation: string };
   steam?: { appId: number | null; depotId: number | null };
+  desktop?: { updates?: { enabled: boolean; feedUrl: string | null } };
 }
 
 export async function resolveProjectDirectory(arguments_: string[]): Promise<string> {
