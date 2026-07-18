@@ -13,7 +13,8 @@ Fundação executável da Ludivra 0.1.0 criada em 2026-07-18.
 - contrato gerador do envelope da CLI e catálogo de capacidades;
 - CLI TypeScript: `doctor`, `inspect`, `test` e `validate`;
 - schemas iniciais, ADRs, backlog e guardrails;
-- repositório Git local inicializado, sem commit ou remote.
+- repositório GitHub configurado com branch principal `main`;
+- licença MIT adicionada para publicação pública.
 
 ## Evidências
 
@@ -29,8 +30,7 @@ Fundação executável da Ludivra 0.1.0 criada em 2026-07-18.
 - Lua e sandbox: `NOT_AVAILABLE`;
 - Emscripten e equivalência native/WASM: `NOT_AVAILABLE`;
 - saves, replays, renderer e captura visual: `NOT_APPLICABLE` nesta fundação;
-- CI remoto: `NOT_AVAILABLE` enquanto não houver remote GitHub;
-- licença: decisão humana pendente.
+- CI remoto: `NOT_IMPLEMENTED`, rastreado por `ENG-006`.
 
 ## Próxima prioridade
 

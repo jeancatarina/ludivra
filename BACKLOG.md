@@ -8,5 +8,3 @@
 | ENG-004 | média | planejado | Automatizar todas as regras de imports e ciclos |
 | ENG-005 | média | planejado | Produzir artifact manifest por execução da CLI |
 | ENG-006 | média | planejado | Adicionar CI com actions fixadas após configurar o remote GitHub |
-| LIC-001 | bloqueado | decisão humana | Escolher licença open source antes de publicação |
-

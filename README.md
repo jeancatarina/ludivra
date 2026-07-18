@@ -21,3 +21,7 @@ pnpm --silent game -- test --format json
 ```
 
 Consulte [AGENTS.md](AGENTS.md) antes de contribuir. Limitações e próximos marcos estão em [BACKLOG.md](BACKLOG.md).
+
+## Licença
+
+Ludivra é distribuída sob a [licença MIT](LICENSE).

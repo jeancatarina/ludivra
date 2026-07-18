@@ -8,7 +8,7 @@
 | Status | Arquitetura proposta |
 | Escopo inicial | Web, Steam/desktop, Android e iOS |
 | Rota futura | Hosts e renderers nativos para consoles |
-| Licença pretendida | Open source; a definir antes da primeira release pública |
+| Licença | MIT |
 
 **Convenções do documento**
 
