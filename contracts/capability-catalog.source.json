@@ -1,0 +1,13 @@
+{
+  "schemaVersion": 1,
+  "engineVersion": "0.1.0",
+  "platforms": {
+    "native-headless": "experimental",
+    "browser": "planned",
+    "electron": "planned",
+    "android": "planned",
+    "ios": "planned",
+    "console-native": "planned"
+  }
+}
+

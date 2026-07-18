@@ -1,0 +1,16 @@
+{
+  "name": "ludivra",
+  "version": "0.1.0",
+  "private": true,
+  "packageManager": "pnpm@11.7.0",
+  "scripts": {
+    "contracts": "node tools/contracts/generate-cli-result.mjs && node tools/contracts/generate-capabilities.mjs",
+    "build:cli": "pnpm contracts && pnpm --filter @ludivra/cli build",
+    "build:native": "cmake --preset dev && cmake --build --preset dev",
+    "build": "pnpm build:cli && pnpm build:native",
+    "test:cli": "pnpm --filter @ludivra/cli test",
+    "test:native": "ctest --preset dev",
+    "test": "pnpm build && pnpm test:cli && pnpm test:native",
+    "game": "node cli/dist/index.js"
+  }
+}

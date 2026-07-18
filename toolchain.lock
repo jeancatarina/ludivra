@@ -1,0 +1,15 @@
+{
+  "schemaVersion": 1,
+  "profile": "foundation-local",
+  "resolvedOn": "2026-07-18",
+  "tools": {
+    "cmake": "4.3.0",
+    "ninja": "1.13.2",
+    "node": "22.14.0",
+    "pnpm": "11.7.0",
+    "typescript": "5.9.3",
+    "nodeTypes": "22.15.3",
+    "cppStandard": "20"
+  },
+  "pending": ["emscripten", "lua"]
+}

@@ -1,0 +1,14 @@
+{
+  "_generated": "tools/contracts/generate-capabilities.mjs",
+  "schemaVersion": 1,
+  "engineVersion": "0.1.0",
+  "capabilities": [],
+  "platforms": {
+    "native-headless": "experimental",
+    "browser": "planned",
+    "electron": "planned",
+    "android": "planned",
+    "ios": "planned",
+    "console-native": "planned"
+  }
+}
