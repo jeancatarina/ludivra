@@ -2,11 +2,15 @@ import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { mkdir, writeFile } from "node:fs/promises";
 import { relative, resolve } from "node:path";
+import { optionValue } from "../arguments.js";
+import { resolveProjectDirectory } from "../project.js";
 import { findEngineRoot } from "../repository.js";
 import type { CommandContext, CommandOutcome } from "../result.js";
 
-export async function runTest(context: CommandContext): Promise<CommandOutcome> {
+export async function runTest(context: CommandContext, arguments_: string[]): Promise<CommandOutcome> {
   const root = await findEngineRoot();
+  const project = optionValue(arguments_, "--project");
+  const evidenceRoot = project === undefined ? root : await resolveProjectDirectory(arguments_);
   const execution = spawnSync("pnpm", ["test"], {
     cwd: root,
     encoding: "utf8",
@@ -14,7 +18,7 @@ export async function runTest(context: CommandContext): Promise<CommandOutcome> 
     timeout: 10 * 60 * 1000
   });
   const log = [execution.stdout, execution.stderr].filter(Boolean).join("\n");
-  const runDirectory = resolve(root, "reports/runs", context.runId);
+  const runDirectory = resolve(evidenceRoot, "reports/runs", context.runId);
   const logPath = resolve(runDirectory, "test.log");
   await mkdir(runDirectory, { recursive: true });
   await writeFile(logPath, log, "utf8");

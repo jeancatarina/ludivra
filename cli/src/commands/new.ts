@@ -2,6 +2,7 @@ import { access, cp, readFile, writeFile } from "node:fs/promises";
 import { basename, resolve } from "node:path";
 import { commandPositionals, optionValue } from "../arguments.js";
 import { findEngineRoot } from "../repository.js";
+import { writeProjectState } from "../project-state.js";
 import type { CommandOutcome } from "../result.js";
 
 function projectId(name: string): string {
@@ -36,9 +37,10 @@ export async function runNew(arguments_: string[]): Promise<CommandOutcome> {
   manifest.name = name;
   manifest.id = projectId(name);
   await writeFile(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`);
+  const { artifact: stateArtifact } = await writeProjectState(target);
   return {
     diagnostics: [],
-    artifacts: [{ kind: "game-project", path: target }],
+    artifacts: [{ kind: "game-project", path: target }, stateArtifact],
     data: { id: manifest.id, name, projectDirectory: target },
     nextActions: [`Run game validate --project ${target}`]
   };

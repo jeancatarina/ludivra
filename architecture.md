@@ -4,7 +4,7 @@
 
 | Campo | Valor |
 |---|---|
-| Versão do documento | 3.0 |
+| Versão do documento | 3.1 |
 | Status | Arquitetura proposta |
 | Escopo inicial | Web, Steam/desktop, Android e iOS |
 | Rota futura | Hosts e renderers nativos para consoles |
@@ -775,12 +775,13 @@ Capacidades não podem furar o sandbox nem importar um renderer por conveniênci
 
 1. `AGENTS.md`, antes de executar qualquer comando;
 2. `game doctor --format json`;
-3. `.ludivra/project-state.json`;
-4. `game.jsonc` e a parte relevante de `GAME_DESIGN.md`;
-5. `DECISIONS.md` e `BACKLOG.md` filtrados para a tarefa;
-6. `CAPABILITIES.json`;
-7. contratos e receitas diretamente relacionados;
-8. `architecture.md` quando a tarefa tocar uma fronteira, contrato público ou decisão de engine.
+3. `game status --project . --format json` para regenerar o índice;
+4. `.ludivra/project-state.json`;
+5. `game.jsonc` e a parte relevante de `GAME_DESIGN.md`;
+6. `DECISIONS.md` e `BACKLOG.md` filtrados para a tarefa;
+7. `CAPABILITIES.json`;
+8. contratos e receitas diretamente relacionados;
+9. `architecture.md` quando a tarefa tocar uma fronteira, contrato público ou decisão de engine.
 
 O agente não precisa carregar toda a documentação para cada alteração. A documentação deve ter índice, links estáveis e receitas curtas orientadas a tarefas.
 
@@ -808,6 +809,7 @@ A CLI `game` é a API operacional estável da engine. APIs internas de scripts d
 ```text
 game doctor       verifica ambiente, locks e ferramentas
 game new          cria jogo a partir de template versionado
+game status       regenera o estado canônico derivado do projeto
 game inspect      descreve projeto, cena, estado ou capacidade
 game validate     valida conteúdo, arquitetura e assets
 game test         executa suites e contratos
@@ -945,6 +947,8 @@ reports/runs/<run-id>/
 ```
 
 `manifest.json` contém commit, dirty-state, versões, target, perfil, hashes e relações entre requisitos e evidências.
+
+O contrato executável da versão 1 está em `contracts/run-manifest.schema.json`. O envelope da CLI referencia o manifest com SHA-256; o manifest não inclui seu próprio hash para evitar uma dependência circular.
 
 Runs são imutáveis, mas builds, vídeos e traces grandes não devem inflar o Git. O repositório versiona manifests, summaries, baselines aprovadas e replays escolhidos como fixtures. Artefatos pesados ficam no workspace efêmero ou em armazenamento de CI, referenciados por URI content-addressed e hash. A resposta no chat deve deixar claro quais artefatos continuam disponíveis após a sessão.
 
@@ -1157,7 +1161,7 @@ A engine publica CLI, runtime native/WASM, SDK Lua, schemas, pacotes TypeScript,
 
 1. ler `AGENTS.md` e suas regras antes de executar comandos;
 2. executar `game doctor --format json`;
-3. inspecionar estado e último run comprovado;
+3. executar `game status --project . --format json` e inspecionar o último run compatível;
 4. consultar capacidades existentes;
 5. converter o pedido em critérios observáveis;
 6. escolher uma mudança limitada ou um vertical slice;

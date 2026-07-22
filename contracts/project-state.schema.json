@@ -1,0 +1,119 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ludivra.dev/contracts/project-state/v1",
+  "title": "Ludivra generated project state",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "_generated",
+    "schemaVersion",
+    "generatedAt",
+    "project",
+    "engine",
+    "capabilities",
+    "evidence",
+    "limitations",
+    "nextActions"
+  ],
+  "properties": {
+    "_generated": { "const": "game status" },
+    "schemaVersion": { "const": 1 },
+    "generatedAt": { "type": "string", "format": "date-time" },
+    "project": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "name", "targets", "repository"],
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "name": { "type": "string", "minLength": 1 },
+        "targets": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+        "repository": { "$ref": "#/$defs/repository" }
+      }
+    },
+    "engine": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["version", "repository"],
+      "properties": {
+        "version": { "type": "string", "minLength": 1 },
+        "repository": { "$ref": "#/$defs/repository" }
+      }
+    },
+    "capabilities": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["catalog", "sha256", "statuses"],
+      "properties": {
+        "catalog": { "const": "engine:CAPABILITIES.json" },
+        "sha256": { "$ref": "#/$defs/sha256" },
+        "statuses": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["planned", "experimental", "stable", "unavailable", "deprecated"],
+          "properties": {
+            "planned": { "type": "integer", "minimum": 0 },
+            "experimental": { "type": "integer", "minimum": 0 },
+            "stable": { "type": "integer", "minimum": 0 },
+            "unavailable": { "type": "integer", "minimum": 0 },
+            "deprecated": { "type": "integer", "minimum": 0 }
+          }
+        }
+      }
+    },
+    "evidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["latestCompatibleRun"],
+      "properties": {
+        "latestCompatibleRun": {
+          "oneOf": [
+            { "type": "null" },
+            { "$ref": "#/$defs/runEvidence" }
+          ]
+        }
+      }
+    },
+    "limitations": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/limitation" }
+    },
+    "nextActions": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 }
+    }
+  },
+  "$defs": {
+    "sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+    "repository": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["commit", "dirty", "worktreeHash"],
+      "properties": {
+        "commit": { "type": ["string", "null"], "pattern": "^[a-f0-9]{40}$" },
+        "dirty": { "type": ["boolean", "null"] },
+        "worktreeHash": { "type": ["string", "null"], "pattern": "^[a-f0-9]{64}$" }
+      }
+    },
+    "runEvidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["runId", "operation", "status", "manifestPath"],
+      "properties": {
+        "runId": { "type": "string", "minLength": 1 },
+        "operation": { "type": "string", "minLength": 1 },
+        "status": { "enum": ["passed", "failed"] },
+        "manifestPath": { "type": "string", "minLength": 1 }
+      }
+    },
+    "limitation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["code", "source", "message"],
+      "properties": {
+        "code": { "type": "string", "pattern": "^[A-Z][A-Z0-9_]*$" },
+        "source": { "type": "string", "minLength": 1 },
+        "message": { "type": "string", "minLength": 1 }
+      }
+    }
+  }
+}

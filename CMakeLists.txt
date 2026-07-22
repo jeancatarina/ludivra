@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.25)
 
-project(ludivra VERSION 0.4.0 LANGUAGES C CXX)
+project(ludivra VERSION 0.5.0 LANGUAGES C CXX)
 
 option(LUDIVRA_BUILD_TESTS "Build Ludivra tests" ON)
 

@@ -12,3 +12,4 @@
 node_modules/
 /reports/runs/*
 !/reports/runs/.gitkeep
+**/.ludivra/project-state.json

@@ -1,5 +1,21 @@
 {
   "id": "feedback.audio-effects",
   "status": "experimental",
-  "version": "0.1.0"
+  "version": "0.1.0",
+  "owner": "presentation-protocol",
+  "targets": ["browser", "electron"],
+  "contracts": ["contracts/presentation-events.schema.json"],
+  "examples": ["examples/first-game"],
+  "dependencies": ["presentation.three", "runtime.lua-gameplay"],
+  "verification": ["pnpm test", "pnpm game -- validate --project examples/first-game --format json"],
+  "limitations": [
+    {
+      "code": "AUDIO_NATIVE_BACKEND_UNAVAILABLE",
+      "message": "Audio is implemented through Web Audio in BrowserHost and ElectronHost only."
+    },
+    {
+      "code": "EFFECT_GRAPH_UNAVAILABLE",
+      "message": "Visual effects currently support bounded particle bursts, not general effect graphs."
+    }
+  ]
 }

@@ -1,5 +1,17 @@
 {
   "id": "runtime.save-replay",
   "status": "experimental",
-  "version": "0.1.0"
+  "version": "0.1.0",
+  "owner": "kernel",
+  "targets": ["native-headless", "browser", "electron"],
+  "contracts": ["runtime-c-api/include/ludivra/runtime.h"],
+  "examples": ["examples/first-game"],
+  "dependencies": ["runtime.lua-gameplay"],
+  "verification": ["pnpm test:native", "pnpm test:wasm-equivalence", "pnpm test:desktop"],
+  "limitations": [
+    {
+      "code": "SAVE_COMPATIBILITY_EXPERIMENTAL",
+      "message": "Save and replay compatibility are versioned but have not yet been proven across released engine upgrades."
+    }
+  ]
 }

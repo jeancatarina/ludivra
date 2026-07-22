@@ -2,7 +2,7 @@
 
 # Ludivra
 
-[![Version](https://img.shields.io/badge/version-0.4.0-7c5cff)](https://github.com/jeancatarina/ludivra)
+[![Version](https://img.shields.io/badge/version-0.5.0-7c5cff)](https://github.com/jeancatarina/ludivra)
 [![Status](https://img.shields.io/badge/status-experimental-f59e0b)](BACKLOG.md)
 [![License](https://img.shields.io/badge/license-MIT-22c55e)](LICENSE)
 
@@ -67,7 +67,7 @@ No momento, a engine é consumida diretamente pelo repositório clonado. Ainda n
 | Android e iOS | Planejados |
 | Consoles | Rota arquitetural futura, sem backend público |
 
-Não trate a versão 0.4.0 como uma engine estável para produção sem avaliar essas limitações.
+Não trate a versão 0.5.0 como uma engine estável para produção sem avaliar essas limitações.
 
 ## Tutorial: seu primeiro jogo
 
@@ -107,6 +107,7 @@ Execute a partir da raiz da Ludivra:
 
 ```sh
 pnpm game -- new ../meu-primeiro-jogo --name "Meu Primeiro Jogo"
+pnpm game -- status --project ../meu-primeiro-jogo --format json
 pnpm game -- validate --project ../meu-primeiro-jogo --format json
 ```
 
@@ -115,7 +116,8 @@ O destino deve ser uma pasta que ainda não existe. A estrutura inicial será:
 ```text
 meu-primeiro-jogo/
 ├── AGENTS.md              instruções para agentes
-├── PROJECT_STATE.json     estado durável entre sessões
+├── .ludivra/
+│   └── project-state.json estado derivado por `game status`
 ├── BACKLOG.md             trabalho futuro
 ├── DECISIONS.md           decisões do jogo
 ├── SESSION_REPORT.md      evidências da última sessão
@@ -143,7 +145,7 @@ Edite `../meu-primeiro-jogo/game.jsonc`:
   "schemaVersion": 1,
   "id": "meu-primeiro-jogo",
   "name": "Meu Primeiro Jogo",
-  "engine": { "version": "0.4.0" },
+  "engine": { "version": "0.5.0" },
   "targets": ["browser", "desktop", "native-headless"],
   "entrypoints": {
     "gameplay": "scripts/gameplay.lua",
@@ -314,7 +316,8 @@ Assinatura, notarização, credenciais, SteamCMD e upload são deliberadamente e
 O jogo criado contém estado suficiente para outra sessão continuar sem depender da memória da conversa. Um pedido inicial recomendado é:
 
 ```text
-Leia AGENTS.md, PROJECT_STATE.json, game.jsonc, BACKLOG.md e as decisões relevantes.
+Execute `game status --project . --format json`. Depois leia AGENTS.md,
+.ludivra/project-state.json, game.jsonc, BACKLOG.md e as decisões relevantes.
 Implemente um vertical slice pequeno. Antes de concluir, valide, teste, execute,
 inspecione o resultado e atualize o relatório da sessão com evidências e limitações.
 ```
@@ -333,6 +336,7 @@ Todos os comandos devem ser executados na raiz da engine.
 | `game validate --project <pasta>` | valida schema e regras arquiteturais |
 | `game test` | executa a suíte e grava o log em `reports/runs/` |
 | `game run --project <pasta>` | inicia o preview local |
+| `game status --project <pasta>` | regenera o estado canônico derivado |
 | `game build --project <pasta> --target web` | gera o build web |
 | `game package --project <pasta> --target <target>` | gera o pacote desktop |
 

@@ -1,5 +1,17 @@
 {
   "id": "runtime.lua-gameplay",
   "status": "experimental",
-  "version": "0.1.0"
+  "version": "0.1.0",
+  "owner": "kernel",
+  "targets": ["native-headless", "browser", "electron"],
+  "contracts": ["runtime-c-api/include/ludivra/runtime.h"],
+  "examples": ["examples/first-game"],
+  "dependencies": [],
+  "verification": ["pnpm test:native", "pnpm test:wasm-equivalence"],
+  "limitations": [
+    {
+      "code": "LUA_API_EXPERIMENTAL",
+      "message": "The Lua API remains experimental until two materially different games prove its reusable surface."
+    }
+  ]
 }

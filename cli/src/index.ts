@@ -9,6 +9,7 @@ import { runBuild } from "./commands/build.js";
 import { runNew } from "./commands/new.js";
 import { runPackage } from "./commands/package.js";
 import { runGame } from "./commands/run.js";
+import { runStatus } from "./commands/status.js";
 import { optionValue } from "./arguments.js";
 import {
   createOperationResult,
@@ -18,6 +19,7 @@ import {
   type OutputFormat,
   writeOperationResult
 } from "./result.js";
+import { writeRunManifest } from "./run-manifest.js";
 
 function parseFormat(arguments_: string[]): OutputFormat {
   const value = optionValue(arguments_, "--format");
@@ -40,7 +42,7 @@ async function dispatch(command: string, context: CommandContext, arguments_: st
     case "inspect":
       return runInspect();
     case "test":
-      return runTest(context);
+      return runTest(context, arguments_);
     case "validate":
       return runValidate(arguments_);
     case "new":
@@ -51,10 +53,12 @@ async function dispatch(command: string, context: CommandContext, arguments_: st
       return runPackage(arguments_);
     case "run":
       return runGame(arguments_);
+    case "status":
+      return runStatus(arguments_);
     case "help":
       return {
         diagnostics: [],
-        data: { commands: ["build", "doctor", "inspect", "new", "package", "run", "test", "validate"] },
+        data: { commands: ["build", "doctor", "inspect", "new", "package", "run", "status", "test", "validate"] },
         nextActions: ["Run game doctor --format json"]
       };
     default:
@@ -72,6 +76,7 @@ async function dispatch(command: string, context: CommandContext, arguments_: st
 const rawArguments = process.argv.slice(2);
 const arguments_ = rawArguments[0] === "--" ? rawArguments.slice(1) : rawArguments;
 const command = arguments_[0] ?? "help";
+const startedAtDate = new Date();
 const startedAt = performance.now();
 const context: CommandContext = { runId: createRunId() };
 let outcome: CommandOutcome;
@@ -94,5 +99,17 @@ const result = createOperationResult(
   startedAt,
   outcome,
   parseMaxDiagnostics(arguments_));
+try {
+  result.artifacts.push(await writeRunManifest(arguments_, startedAtDate, result));
+} catch (error) {
+  result.status = "failed";
+  result.exitCode = 2;
+  result.diagnostics.push({
+    code: "RUN_MANIFEST_WRITE_FAILED",
+    severity: "error",
+    message: error instanceof Error ? error.message : "Unable to write run manifest"
+  });
+  result.nextActions = ["Repair run evidence output before trusting this operation"];
+}
 writeOperationResult(result, parseFormat(arguments_));
 process.exitCode = result.exitCode;

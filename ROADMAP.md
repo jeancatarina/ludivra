@@ -4,7 +4,7 @@
 
 | Campo | Valor |
 |---|---|
-| Versão | 1.1 |
+| Versão | 1.2 |
 | Data-base | 2026-07-21 |
 | Estado | ativo |
 | Escopo | sequência, critérios de promoção, fases obrigatórias e rota futura |
@@ -100,11 +100,11 @@ O projeto terá um único estado derivado e regenerável. Ele referencia, sem co
 - último run compatível e seus artefatos;
 - limitações conhecidas.
 
-Antes de expandir esse contrato, a implementação deve resolver a divergência atual entre `PROJECT_STATE.json` do starter e `.ludivra/project-state.json` descrito na arquitetura. Não serão adicionados `module-index`, `target-index`, `diagnostic-index` e outros arquivos separados enquanto consultas sobre um catálogo proprietário ou um único índice composto forem suficientes.
+A divergência anterior foi removida na versão 0.5.0: `.ludivra/project-state.json`, gerado por `game status`, é o único índice de estado do projeto. Não serão adicionados `module-index`, `target-index`, `diagnostic-index` e outros arquivos separados enquanto consultas sobre um catálogo proprietário ou o índice composto forem suficientes.
 
 ## 5. Estado de partida
 
-A versão 0.4.0 já demonstra partes importantes da fundação:
+A versão 0.5.0 fecha a fundação verificável e preserva as capacidades implementadas anteriormente:
 
 - kernel C++20, C ABI, Lua sandbox e runner native headless;
 - build WebAssembly e equivalência lógica automatizada;
@@ -113,13 +113,19 @@ A versão 0.4.0 já demonstra partes importantes da fundação:
 - eventos semânticos de áudio e efeitos;
 - ElectronHost, storage, lifecycle e empacotamento desktop/Steam experimental;
 - CLI estruturada com `doctor`, `inspect`, `new`, `validate`, `test`, `run`, `build` e `package`;
-- catálogo gerado de capabilities experimentais.
+- catálogo gerado e validado de capabilities experimentais;
+- estado canônico regenerável por `game status`;
+- artifact manifest com hashes para toda execução da CLI;
+- fitness functions de packages, CMake, boundaries e arquivos gerados;
+- CI com actions fixadas e matriz nativa, além de equivalência WebAssembly.
 
-Isso ainda não comprova a visão completa. O starter é uma demonstração arquitetural, o control protocol/harness está incompleto, o estado canônico do projeto é inconsistente, faltam manifests completos por run, Windows e Linux não foram validados em runners nativos e não existem hosts Android/iOS utilizáveis.
+Isso ainda não comprova a visão completa. O starter é uma demonstração arquitetural, o control protocol/harness está incompleto, os pacotes distribuíveis de Windows e Linux ainda não foram validados em runners nativos e não existem hosts Android/iOS utilizáveis.
 
 ## 6. Fase 0 — Fechar a fundação verificável
 
 **Objetivo:** transformar os componentes existentes em uma base cuja situação possa ser afirmada sem depender de relato manual.
+
+**Status:** concluída na versão 0.5.0.
 
 ### Entregas
 
@@ -425,9 +431,9 @@ O roadmap completo só recebe `PASS` depois dos cinco jogos, das capacidades obr
 
 ## 21. Próxima prioridade
 
-O próximo marco da engine é a **Fase 0 — Fechar a fundação verificável**, começando pelo artifact manifest por execução e pela reconciliação do estado canônico do projeto. Isso cria a evidência necessária para o harness e evita construir novos sistemas sobre status manuais ou divergentes.
+O próximo marco da engine é a **Fase 1 — Harness e ciclo de operabilidade por chat**, começando pelo `ENG-012`, o control protocol local de desenvolvimento e teste. Em seguida vêm scenario harness, captura, artifact bundle ampliado e sessão fria automatizada.
 
-Depois desse marco, a única prioridade seguinte é a **Fase 1 — Harness e ciclo de operabilidade por chat**. Física avançada, mundo procedural, Mass Runtime, multiplayer, construção procedural e Forges permanecem fora do P0, mas são fases posteriores obrigatórias.
+Física avançada, mundo procedural, Mass Runtime, multiplayer, construção procedural e Forges permanecem fora do marco corrente, mas são fases posteriores obrigatórias.
 
 ## 22. Política de evolução
 

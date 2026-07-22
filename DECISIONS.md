@@ -10,3 +10,4 @@
 | [0006](docs/adr/0006-desktop-commercial-host.md) | aceito | Host desktop, IPC, storage, diagnóstico e Steam opcional |
 | [0007](docs/adr/0007-semantic-audio-and-effects.md) | aceito | Áudio, música e efeitos semânticos por eventos |
 | [0008](docs/adr/0008-mandatory-scale-and-procedural-capabilities.md) | aceito | Capacidades obrigatórias de escala, multiplayer, construção e Forges |
+| [0009](docs/adr/0009-canonical-state-and-run-evidence.md) | aceito | Estado canônico derivado, catálogo validado e evidência por execução |

@@ -7,6 +7,7 @@ export interface GameManifest {
   schemaVersion: number;
   id: string;
   name: string;
+  targets: string[];
   entrypoints: { gameplay: string; presentation: string };
   steam?: { appId: number | null; depotId: number | null };
   desktop?: { updates?: { enabled: boolean; feedUrl: string | null } };

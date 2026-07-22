@@ -1,5 +1,21 @@
 {
   "id": "host.electron-steam-package",
   "status": "experimental",
-  "version": "0.2.0"
+  "version": "0.2.0",
+  "owner": "hosts/electron",
+  "targets": ["electron"],
+  "contracts": ["contracts/desktop-host.schema.json"],
+  "examples": ["examples/first-game"],
+  "dependencies": ["runtime.save-replay"],
+  "verification": ["pnpm test:desktop", "pnpm game -- package --project examples/first-game --target steam-macos --format json"],
+  "limitations": [
+    {
+      "code": "DESKTOP_CROSS_PLATFORM_NOT_RUN",
+      "message": "Windows and Linux packages still require smoke tests on native runners."
+    },
+    {
+      "code": "DESKTOP_SIGNING_REQUIRES_AUTHORITY",
+      "message": "Signing, notarization and store upload require explicit user credentials and authorization."
+    }
+  ]
 }

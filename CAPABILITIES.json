@@ -1,32 +1,159 @@
 {
   "_generated": "tools/contracts/generate-capabilities.mjs",
   "schemaVersion": 1,
-  "engineVersion": "0.4.0",
+  "engineVersion": "0.5.0",
   "capabilities": [
     {
       "id": "feedback.audio-effects",
       "status": "experimental",
-      "version": "0.1.0"
+      "version": "0.1.0",
+      "owner": "presentation-protocol",
+      "targets": [
+        "browser",
+        "electron"
+      ],
+      "contracts": [
+        "contracts/presentation-events.schema.json"
+      ],
+      "examples": [
+        "examples/first-game"
+      ],
+      "dependencies": [
+        "presentation.three",
+        "runtime.lua-gameplay"
+      ],
+      "verification": [
+        "pnpm test",
+        "pnpm game -- validate --project examples/first-game --format json"
+      ],
+      "limitations": [
+        {
+          "code": "AUDIO_NATIVE_BACKEND_UNAVAILABLE",
+          "message": "Audio is implemented through Web Audio in BrowserHost and ElectronHost only."
+        },
+        {
+          "code": "EFFECT_GRAPH_UNAVAILABLE",
+          "message": "Visual effects currently support bounded particle bursts, not general effect graphs."
+        }
+      ]
     },
     {
       "id": "host.electron-steam-package",
       "status": "experimental",
-      "version": "0.2.0"
+      "version": "0.2.0",
+      "owner": "hosts/electron",
+      "targets": [
+        "electron"
+      ],
+      "contracts": [
+        "contracts/desktop-host.schema.json"
+      ],
+      "examples": [
+        "examples/first-game"
+      ],
+      "dependencies": [
+        "runtime.save-replay"
+      ],
+      "verification": [
+        "pnpm test:desktop",
+        "pnpm game -- package --project examples/first-game --target steam-macos --format json"
+      ],
+      "limitations": [
+        {
+          "code": "DESKTOP_CROSS_PLATFORM_NOT_RUN",
+          "message": "Windows and Linux packages still require smoke tests on native runners."
+        },
+        {
+          "code": "DESKTOP_SIGNING_REQUIRES_AUTHORITY",
+          "message": "Signing, notarization and store upload require explicit user credentials and authorization."
+        }
+      ]
     },
     {
       "id": "presentation.three",
       "status": "experimental",
-      "version": "0.1.0"
+      "version": "0.1.0",
+      "owner": "renderer-three",
+      "targets": [
+        "browser",
+        "electron"
+      ],
+      "contracts": [
+        "presentation-protocol/src/index.ts"
+      ],
+      "examples": [
+        "examples/first-game"
+      ],
+      "dependencies": [],
+      "verification": [
+        "pnpm --filter @ludivra/renderer-three build",
+        "pnpm game -- build --project examples/first-game --target web --format json"
+      ],
+      "limitations": [
+        {
+          "code": "PRESENTATION_NATIVE_RENDERER_UNAVAILABLE",
+          "message": "The current renderer is Three.js on web technology hosts; native visual hosts are not implemented."
+        }
+      ]
     },
     {
       "id": "runtime.lua-gameplay",
       "status": "experimental",
-      "version": "0.1.0"
+      "version": "0.1.0",
+      "owner": "kernel",
+      "targets": [
+        "native-headless",
+        "browser",
+        "electron"
+      ],
+      "contracts": [
+        "runtime-c-api/include/ludivra/runtime.h"
+      ],
+      "examples": [
+        "examples/first-game"
+      ],
+      "dependencies": [],
+      "verification": [
+        "pnpm test:native",
+        "pnpm test:wasm-equivalence"
+      ],
+      "limitations": [
+        {
+          "code": "LUA_API_EXPERIMENTAL",
+          "message": "The Lua API remains experimental until two materially different games prove its reusable surface."
+        }
+      ]
     },
     {
       "id": "runtime.save-replay",
       "status": "experimental",
-      "version": "0.1.0"
+      "version": "0.1.0",
+      "owner": "kernel",
+      "targets": [
+        "native-headless",
+        "browser",
+        "electron"
+      ],
+      "contracts": [
+        "runtime-c-api/include/ludivra/runtime.h"
+      ],
+      "examples": [
+        "examples/first-game"
+      ],
+      "dependencies": [
+        "runtime.lua-gameplay"
+      ],
+      "verification": [
+        "pnpm test:native",
+        "pnpm test:wasm-equivalence",
+        "pnpm test:desktop"
+      ],
+      "limitations": [
+        {
+          "code": "SAVE_COMPATIBILITY_EXPERIMENTAL",
+          "message": "Save and replay compatibility are versioned but have not yet been proven across released engine upgrades."
+        }
+      ]
     }
   ],
   "platforms": {

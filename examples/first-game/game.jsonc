@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "id": "first-game",
   "name": "First Ludivra Game",
-  "engine": { "version": "0.4.0" },
+  "engine": { "version": "0.5.0" },
   "targets": ["browser", "desktop", "native-headless"],
   "entrypoints": {
     "gameplay": "scripts/gameplay.lua",

@@ -1,9 +1,10 @@
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { resolve } from "node:path";
 import test from "node:test";
+import { validateCmakeGraph, validateWorkspaceGraph } from "../dist/commands/validate.js";
 
 function runCli(arguments_) {
   const execution = spawnSync(process.execPath, ["dist/index.js", ...arguments_], {
@@ -18,6 +19,7 @@ test("pnpm argument separator is ignored", () => {
   assert.equal(execution.status, 0);
   assert.equal(result.operation, "help");
   assert.equal(result.status, "passed");
+  assert.ok(result.artifacts.some(({ kind, sha256 }) => kind === "run-manifest" && /^[a-f0-9]{64}$/.test(sha256)));
 });
 
 test("unknown command returns a structured failure", () => {
@@ -25,6 +27,19 @@ test("unknown command returns a structured failure", () => {
   assert.equal(execution.status, 2);
   assert.equal(result.status, "failed");
   assert.equal(result.diagnostics[0].code, "COMMAND_UNKNOWN");
+});
+
+test("an invalid project target is not created for evidence output", () => {
+  const temporaryRoot = mkdtempSync(resolve(tmpdir(), "ludivra-invalid-project-"));
+  const missingProject = resolve(temporaryRoot, "missing");
+  try {
+    const { execution, result } = runCli(["validate", "--project", missingProject, "--format", "json"]);
+    assert.equal(execution.status, 2);
+    assert.equal(existsSync(missingProject), false);
+    assert.ok(result.artifacts.some(({ kind }) => kind === "run-manifest"));
+  } finally {
+    rmSync(temporaryRoot, { recursive: true, force: true });
+  }
 });
 
 test("new creates a schema-valid game project", () => {
@@ -37,6 +52,56 @@ test("new creates a schema-valid game project", () => {
     const validated = runCli(["validate", "--project", project, "--format", "json"]);
     assert.equal(validated.execution.status, 0);
     assert.equal(validated.result.status, "passed");
+    assert.equal(existsSync(resolve(project, ".ludivra/project-state.json")), true);
+    assert.equal(existsSync(resolve(project, "PROJECT_STATE.json")), false);
+
+    const status = runCli(["status", "--project", project, "--format", "json"]);
+    assert.equal(status.execution.status, 0);
+    assert.equal(status.result.data.state.project.id, "test-game");
+    assert.notEqual(status.result.data.state.evidence.latestCompatibleRun, null);
+    const runArtifact = status.result.artifacts.find(({ kind }) => kind === "run-manifest");
+    assert.ok(runArtifact);
+    const runManifest = JSON.parse(readFileSync(resolve(project, runArtifact.path), "utf8"));
+    assert.equal(runManifest.context.projectId, "test-game");
+    assert.equal(typeof runManifest.repositories.engine.dirty, "boolean");
+    assert.ok(runManifest.artifacts.every(({ sha256 }) => /^[a-f0-9]{64}$/.test(sha256)));
+
+    const manifestPath = resolve(project, "game.jsonc");
+    const manifest = JSON.parse(readFileSync(manifestPath, "utf8"));
+    manifest.name = "Changed Without Status";
+    writeFileSync(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`);
+    const stale = runCli(["validate", "--project", project, "--format", "json"]);
+    assert.equal(stale.execution.status, 2);
+    assert.ok(stale.result.diagnostics.some(({ code }) => code === "PROJECT_STATE_STALE"));
+  } finally {
+    rmSync(temporaryRoot, { recursive: true, force: true });
+  }
+});
+
+test("fitness functions reject workspace and CMake cycles", async () => {
+  const temporaryRoot = mkdtempSync(resolve(tmpdir(), "ludivra-cycles-"));
+  try {
+    for (const [name, dependency] of [["a", "b"], ["b", "a"]]) {
+      const directory = resolve(temporaryRoot, name);
+      mkdirSync(directory, { recursive: true });
+      writeFileSync(resolve(directory, "package.json"), JSON.stringify({
+        name: `@ludivra/${name}`,
+        dependencies: { [`@ludivra/${dependency}`]: "workspace:*" }
+      }));
+    }
+    const workspaceDiagnostics = [];
+    await validateWorkspaceGraph(temporaryRoot, [], workspaceDiagnostics);
+    assert.ok(workspaceDiagnostics.some(({ code }) => code === "WORKSPACE_DEPENDENCY_CYCLE"));
+
+    writeFileSync(resolve(temporaryRoot, "CMakeLists.txt"), [
+      "add_library(alpha STATIC alpha.cpp)",
+      "add_library(beta STATIC beta.cpp)",
+      "target_link_libraries(alpha PRIVATE beta)",
+      "target_link_libraries(beta PRIVATE alpha)"
+    ].join("\n"));
+    const cmakeDiagnostics = [];
+    await validateCmakeGraph(temporaryRoot, cmakeDiagnostics);
+    assert.ok(cmakeDiagnostics.some(({ code }) => code === "CMAKE_DEPENDENCY_CYCLE"));
   } finally {
     rmSync(temporaryRoot, { recursive: true, force: true });
   }
