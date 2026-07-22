@@ -113,6 +113,10 @@ interface WorkspacePackage {
   dependencies: Set<string>;
 }
 
+export function normalizeRepositoryPath(path: string): string {
+  return path.replaceAll("\\", "/");
+}
+
 async function collectPackageFiles(directory: string): Promise<string[]> {
   const entries = await readdir(directory, { withFileTypes: true });
   const files: string[] = [];
@@ -187,7 +191,10 @@ export async function validateWorkspaceGraph(root: string, boundaryFiles: string
   const orderedPackages = [...packages.values()].sort((left, right) => right.directory.length - left.directory.length);
   const importPattern = /(?:from\s+|import\s*\(|require\s*\()\s*["'](@ludivra\/[^"'/]+)(?:\/[^"']*)?["']/g;
   for (const file of boundaryFiles) {
-    const owner = orderedPackages.find((workspacePackage) => file.startsWith(`${workspacePackage.directory}/`));
+    const owner = orderedPackages.find((workspacePackage) => {
+      const localPath = relative(workspacePackage.directory, file);
+      return localPath !== "" && !localPath.startsWith("..") && !isAbsolute(localPath);
+    });
     if (owner === undefined) continue;
     const content = await readFile(file, "utf8");
     for (const match of content.matchAll(importPattern)) {
@@ -197,7 +204,7 @@ export async function validateWorkspaceGraph(root: string, boundaryFiles: string
           code: "WORKSPACE_DEPENDENCY_UNDECLARED",
           severity: "error",
           message: `${owner.name} imports undeclared workspace dependency ${dependency}`,
-          file: relative(root, file)
+          file: normalizeRepositoryPath(relative(root, file))
         });
       }
     }
@@ -343,7 +350,7 @@ export async function runValidate(arguments_: string[] = []): Promise<CommandOut
 
   const boundaryFiles = await collectBoundaryFiles(root, diagnostics);
   for (const file of boundaryFiles) {
-    const path = relative(root, file);
+    const path = normalizeRepositoryPath(relative(root, file));
     const content = await readFile(file, "utf8");
     if (/(?:from\s+|import\s*\()["']three(?:\/[^"']*)?["']/.test(content) && !path.startsWith("renderer-three/")) {
       diagnostics.push({

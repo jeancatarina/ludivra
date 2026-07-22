@@ -18,7 +18,7 @@
     "test:cli": "pnpm --filter @ludivra/cli test",
     "test:desktop": "pnpm --filter @ludivra/electron-host check && pnpm --filter @ludivra/electron-host test",
     "test:native": "ctest --preset dev",
-    "test:wasm-equivalence": "pnpm build:wasm && pnpm --filter @ludivra/runtime-web build && node tools/tests/wasm-equivalence.mjs",
+    "test:wasm-equivalence": "pnpm build:native && pnpm build:wasm && pnpm --filter @ludivra/runtime-web build && node tools/tests/wasm-equivalence.mjs",
     "test": "pnpm build && pnpm test:cli && pnpm test:desktop && pnpm test:native && pnpm test:wasm-equivalence",
     "game": "node cli/dist/index.js"
   }

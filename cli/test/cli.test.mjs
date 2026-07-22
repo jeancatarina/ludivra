@@ -4,7 +4,7 @@ import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync
 import { tmpdir } from "node:os";
 import { resolve } from "node:path";
 import test from "node:test";
-import { validateCmakeGraph, validateWorkspaceGraph } from "../dist/commands/validate.js";
+import { normalizeRepositoryPath, validateCmakeGraph, validateWorkspaceGraph } from "../dist/commands/validate.js";
 
 function runCli(arguments_) {
   const execution = spawnSync(process.execPath, ["dist/index.js", ...arguments_], {
@@ -20,6 +20,11 @@ test("pnpm argument separator is ignored", () => {
   assert.equal(result.operation, "help");
   assert.equal(result.status, "passed");
   assert.ok(result.artifacts.some(({ kind, sha256 }) => kind === "run-manifest" && /^[a-f0-9]{64}$/.test(sha256)));
+});
+
+test("fitness functions normalize Windows repository paths", () => {
+  assert.equal(normalizeRepositoryPath("hosts\\electron\\src\\main.cjs"), "hosts/electron/src/main.cjs");
+  assert.equal(normalizeRepositoryPath("renderer-three\\src\\index.ts"), "renderer-three/src/index.ts");
 });
 
 test("unknown command returns a structured failure", () => {
