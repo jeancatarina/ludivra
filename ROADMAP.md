@@ -4,7 +4,7 @@
 
 | Campo | Valor |
 |---|---|
-| Versão | 1.3 |
+| Versão | 1.4 |
 | Data-base | 2026-07-22 |
 | Estado | ativo |
 | Escopo | sequência, critérios de promoção, fases obrigatórias e rota futura |
@@ -189,6 +189,8 @@ Uma sessão fria altera um comportamento limitado do starter, executa um cenári
 
 **Objetivo:** construir um card roguelite pequeno, porém completo, sem extrair antecipadamente um kit genérico de cartas.
 
+**Status:** em andamento. `ENG-016` foi concluído na versão 0.7.0; `ENG-017` e `ENG-018` ainda bloqueiam o gate visual da fase.
+
 ### O jogo deve comprovar
 
 - loop com início, progressão e fim;
@@ -203,6 +205,15 @@ Uma sessão fria altera um comportamento limitado do starter, executa um cenári
 - build reproduzível e sessão fria.
 
 Motion visual simples (`tween`, `spring`, `path`, `snap`) pode nascer no módulo de apresentação se o jogo o exigir. Ele não deve introduzir física autoritativa nem conceitos genéricos sem consumidor.
+
+### Evidência parcial — ENG-016
+
+- `examples/card-roguelite` implementa início, dois encontros, recompensa, vitória, derrota e reinício;
+- custos, efeitos e encontros pertencem ao conteúdo JSONC; IDs numéricos de ação e estado pertencem somente ao manifest;
+- BrowserHost e harness carregam o mesmo chunk composto por `runtime-web`;
+- cenários de vitória, derrota e energia/bloqueio verificam estado final e replay;
+- o BrowserHost compila a apresentação Three.js do jogo;
+- não foi extraído um framework genérico de cartas sem segundo consumidor.
 
 ### Gate de saída
 
@@ -442,7 +453,7 @@ O roadmap completo só recebe `PASS` depois dos cinco jogos, das capacidades obr
 
 ## 21. Próxima prioridade
 
-O próximo marco da engine é a **Fase 2 — Primeiro jogo real e loop visual completo**, começando pelo `ENG-016`, o loop jogável do card roguelite. Em seguida vêm o `UiViewModel` real do BrowserHost e captura raster do cenário visual.
+O próximo item da **Fase 2 — Primeiro jogo real e loop visual completo** é o `ENG-017`: produzir `UiViewModel` e `RenderedUiSnapshot` reais no BrowserHost. Em seguida vem o `ENG-018`, captura raster e cenário visual.
 
 Física avançada, mundo procedural, Mass Runtime, multiplayer, construção procedural e Forges permanecem fora do marco corrente, mas são fases posteriores obrigatórias.
 

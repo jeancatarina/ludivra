@@ -1,0 +1,26 @@
+{
+  "id": "runtime.content-binding",
+  "status": "experimental",
+  "version": "0.1.0",
+  "owner": "runtime-web",
+  "targets": ["native-headless", "browser", "electron"],
+  "contracts": [
+    "schemas/game.schema.json",
+    "schemas/card-roguelite.schema.json"
+  ],
+  "examples": [
+    "examples/card-roguelite/content/run.jsonc"
+  ],
+  "dependencies": ["runtime.lua-gameplay"],
+  "verification": ["pnpm test:card-roguelite"],
+  "limitations": [
+    {
+      "code": "CONTENT_PACK_NOT_IMPLEMENTED",
+      "message": "Validated JSONC is composed into the Lua authoring chunk; the production binary content-pack compiler is not implemented yet."
+    },
+    {
+      "code": "CONTENT_NULL_NOT_SUPPORTED",
+      "message": "The experimental Lua content binding rejects JSON null instead of assigning it ambiguous Lua nil semantics."
+    }
+  ]
+}

@@ -9,6 +9,7 @@ interface GameManifest {
     gameplay: string;
     presentation: string;
   };
+  content?: Array<{ id: string; schema: string; source: string }>;
   inputs: Array<{
     id: string;
     label: string;
@@ -49,6 +50,18 @@ function gamePlugin(projectDirectory: string): Plugin {
         withinProject(projectDirectory, manifest.entrypoints.gameplay),
         "utf8"
       );
+      const contentDocuments: Array<{ id: string; value: unknown }> = [];
+      for (const descriptor of manifest.content ?? []) {
+        const contentErrors: import("jsonc-parser").ParseError[] = [];
+        const value = parse(
+          await readFile(withinProject(projectDirectory, descriptor.source), "utf8"),
+          contentErrors
+        );
+        if (contentErrors.length > 0) {
+          throw new Error(`invalid content ${descriptor.source}: JSONC error ${contentErrors[0]?.error}`);
+        }
+        contentDocuments.push({ id: descriptor.id, value });
+      }
       const audioSources: string[] = [];
       for (const audio of manifest.audio ?? []) {
         if (audio.source === undefined) continue;
@@ -62,6 +75,7 @@ function gamePlugin(projectDirectory: string): Plugin {
       }
       return `export const manifest = ${JSON.stringify(manifest)};\n` +
         `export const gameplaySource = ${JSON.stringify(gameplay)};\n` +
+        `export const contentDocuments = ${JSON.stringify(contentDocuments)};\n` +
         `export const audioSources = {${audioSources.join(",")}};`;
     }
   };

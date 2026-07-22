@@ -12,3 +12,4 @@
 | [0008](docs/adr/0008-mandatory-scale-and-procedural-capabilities.md) | aceito | Capacidades obrigatórias de escala, multiplayer, construção e Forges |
 | [0009](docs/adr/0009-canonical-state-and-run-evidence.md) | aceito | Estado canônico derivado, catálogo validado e evidência por execução |
 | [0010](docs/adr/0010-local-control-protocol-and-scenario-harness.md) | aceito | Control protocol local, scenario harness e captura semântica |
+| [0011](docs/adr/0011-card-roguelite-content-and-authority.md) | aceito | Vertical slice de card roguelite, conteúdo JSONC e autoridade Lua |

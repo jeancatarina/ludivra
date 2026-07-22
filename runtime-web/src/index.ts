@@ -41,6 +41,84 @@ export interface LogicalInput {
   sequence: bigint;
 }
 
+export interface GameplayContentDocument {
+  id: string;
+  value: unknown;
+}
+
+export interface GameplayManifestBinding {
+  inputs: ReadonlyArray<{ id: string; actionId: number }>;
+  inspection: { integerStates: ReadonlyArray<{ id: string; key: number }> };
+}
+
+export function createGameplayManifestDocument(
+  manifest: GameplayManifestBinding
+): GameplayContentDocument {
+  return {
+    id: "ludivra.game",
+    value: {
+      inputs: manifest.inputs.map(({ id, actionId }) => ({ id, actionId })),
+      inspection: {
+        integerStates: manifest.inspection.integerStates.map(({ id, key }) => ({ id, key }))
+      }
+    }
+  };
+}
+
+function luaString(value: string): string {
+  let encoded = '"';
+  for (const character of value) {
+    const code = character.codePointAt(0) ?? 0;
+    if (character === '"') encoded += '\\"';
+    else if (character === "\\") encoded += "\\\\";
+    else if (character === "\n") encoded += "\\n";
+    else if (character === "\r") encoded += "\\r";
+    else if (character === "\t") encoded += "\\t";
+    else if (code < 32 || code === 127) encoded += `\\x${code.toString(16).padStart(2, "0")}`;
+    else encoded += character;
+  }
+  return `${encoded}"`;
+}
+
+function luaValue(value: unknown, ancestors: Set<object>): string {
+  if (value === null) throw new Error("gameplay content does not support null values");
+  if (typeof value === "string") return luaString(value);
+  if (typeof value === "boolean") return value ? "true" : "false";
+  if (typeof value === "number") {
+    if (!Number.isFinite(value)) throw new Error("gameplay content numbers must be finite");
+    return Object.is(value, -0) ? "0" : String(value);
+  }
+  if (typeof value !== "object") throw new Error(`unsupported gameplay content value: ${typeof value}`);
+  if (ancestors.has(value)) throw new Error("gameplay content must not contain cycles");
+  ancestors.add(value);
+  try {
+    if (Array.isArray(value)) {
+      return `{${value.map((entry) => luaValue(entry, ancestors)).join(",")}}`;
+    }
+    return `{${Object.keys(value).sort().map((key) =>
+      `[${luaString(key)}]=${luaValue((value as Record<string, unknown>)[key], ancestors)}`
+    ).join(",")}}`;
+  } finally {
+    ancestors.delete(value);
+  }
+}
+
+export function composeGameplaySource(
+  gameplaySource: string,
+  documents: readonly GameplayContentDocument[]
+): string {
+  const ordered = [...documents].sort((left, right) => left.id < right.id ? -1 : left.id > right.id ? 1 : 0);
+  const ids = new Set<string>();
+  for (const document of ordered) {
+    if (ids.has(document.id)) throw new Error(`duplicate gameplay content id: ${document.id}`);
+    ids.add(document.id);
+  }
+  const content = `{${ordered.map((document) =>
+    `[${luaString(document.id)}]=${luaValue(document.value, new Set())}`
+  ).join(",")}}`;
+  return `local CONTENT = ${content}\n${gameplaySource}`;
+}
+
 const ok = 0;
 const configSize = 24;
 const inputSize = 24;

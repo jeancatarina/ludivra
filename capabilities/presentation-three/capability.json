@@ -1,11 +1,11 @@
 {
   "id": "presentation.three",
   "status": "experimental",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "owner": "renderer-three",
   "targets": ["browser", "electron"],
   "contracts": ["presentation-protocol/src/index.ts"],
-  "examples": ["examples/first-game"],
+  "examples": ["examples/first-game", "examples/card-roguelite"],
   "dependencies": [],
   "verification": ["pnpm --filter @ludivra/renderer-three build", "pnpm game -- build --project examples/first-game --target web --format json"],
   "limitations": [

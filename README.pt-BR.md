@@ -2,7 +2,7 @@
 
 # Ludivra
 
-[![Version](https://img.shields.io/badge/version-0.6.0-7c5cff)](https://github.com/jeancatarina/ludivra)
+[![Version](https://img.shields.io/badge/version-0.7.0-7c5cff)](https://github.com/jeancatarina/ludivra)
 [![Status](https://img.shields.io/badge/status-experimental-f59e0b)](BACKLOG.md)
 [![License](https://img.shields.io/badge/license-MIT-22c55e)](LICENSE)
 
@@ -46,6 +46,8 @@ Electron gera o aplicativo desktop/Steam
 - logs estruturados e Crashpad local;
 - CLI com saída legível por pessoas ou agentes;
 - control protocol local, cenários declarativos, replay, captura semântica e trace causal;
+- conteúdo JSONC validado e ligado deterministicamente ao Lua em sandbox;
+- jogo de prova card roguelite com vitória, derrota, recompensa, energia, bloqueio, save e replay;
 - pacote desktop com smoke test, checksums, SBOM e provenance.
 
 ## Quem pode usar
@@ -66,10 +68,11 @@ No momento, a engine é consumida diretamente pelo repositório clonado. Ainda n
 | Assinatura e notarização | Responsabilidade do proprietário do jogo |
 | Áudio semântico, música e partículas | Experimental, funcional no Browser e Electron |
 | Harness headless e sessão fria | Experimental, funcional e automatizado |
+| Jogo de prova card roguelite | ENG-016 concluído; snapshot real do BrowserHost e captura raster pendentes |
 | Android e iOS | Planejados |
 | Consoles | Rota arquitetural futura, sem backend público |
 
-Não trate a versão 0.6.0 como uma engine estável para produção sem avaliar essas limitações.
+Não trate a versão 0.7.0 como uma engine estável para produção sem avaliar essas limitações.
 
 ## Tutorial: seu primeiro jogo
 
@@ -148,7 +151,7 @@ Edite `../meu-primeiro-jogo/game.jsonc`:
   "schemaVersion": 2,
   "id": "meu-primeiro-jogo",
   "name": "Meu Primeiro Jogo",
-  "engine": { "version": "0.6.0" },
+  "engine": { "version": "0.7.0" },
   "targets": ["browser", "desktop", "native-headless"],
   "entrypoints": {
     "gameplay": "scripts/gameplay.lua",
@@ -383,6 +386,12 @@ Todos os comandos devem ser executados na raiz da engine.
 Use `--format json` para obter resultados estruturados apropriados para automação e agentes.
 
 Veja [Cenários, controle e evidência](docs/recipes/scenario-harness.md) para o formato do bundle e o fluxo de reprodução.
+
+O primeiro jogo de prova real está em `examples/card-roguelite`. Execute todos os gates determinísticos com:
+
+```sh
+pnpm test:card-roguelite
+```
 
 ## Arquitetura do repositório
 

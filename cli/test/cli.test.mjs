@@ -1,9 +1,10 @@
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { resolve } from "node:path";
 import test from "node:test";
+import { fileURLToPath } from "node:url";
 import { normalizeRepositoryPath, validateCmakeGraph, validateWorkspaceGraph } from "../dist/commands/validate.js";
 import { createContractValidator } from "../dist/contract-validator.js";
 
@@ -168,6 +169,30 @@ test("validate rejects duplicate semantic presentation event IDs", () => {
     const missingAsset = runCli(["validate", "--project", project, "--format", "json"]);
     assert.equal(missingAsset.execution.status, 2);
     assert.ok(missingAsset.result.diagnostics.some(({ code }) => code === "AUDIO_SOURCE_MISSING"));
+  } finally {
+    rmSync(temporaryRoot, { recursive: true, force: true });
+  }
+});
+
+test("validate rejects card content that references an absent manifest action", () => {
+  const temporaryRoot = mkdtempSync(resolve(tmpdir(), "ludivra-card-content-"));
+  const project = resolve(temporaryRoot, "card-game");
+  try {
+    cpSync(resolve(fileURLToPath(new URL("../..", import.meta.url)), "examples/card-roguelite"), project, {
+      recursive: true,
+      filter: (source) => {
+        const normalized = source.replaceAll("\\", "/");
+        return !normalized.includes("/.ludivra") && !normalized.includes("/reports/runs/run_");
+      }
+    });
+    assert.equal(runCli(["status", "--project", project, "--format", "json"]).execution.status, 0);
+    const manifestPath = resolve(project, "game.jsonc");
+    const manifest = JSON.parse(readFileSync(manifestPath, "utf8"));
+    manifest.inputs = manifest.inputs.filter(({ id }) => id !== "play-strike");
+    writeFileSync(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`);
+    const validated = runCli(["validate", "--project", project, "--format", "json"]);
+    assert.equal(validated.execution.status, 2);
+    assert.ok(validated.result.diagnostics.some(({ code }) => code === "CONTENT_CARD_CONTRACT_INVALID"));
   } finally {
     rmSync(temporaryRoot, { recursive: true, force: true });
   }

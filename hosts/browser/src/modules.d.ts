@@ -1,6 +1,9 @@
 declare module "virtual:ludivra-game" {
   export const manifest: {
     name: string;
+    inspection: {
+      integerStates: Array<{ id: string; label: string; key: number }>;
+    };
     inputs: Array<{
       id: string;
       label: string;
@@ -36,6 +39,7 @@ declare module "virtual:ludivra-game" {
     }>;
   };
   export const gameplaySource: string;
+  export const contentDocuments: Array<{ id: string; value: unknown }>;
   export const audioSources: Record<number, string>;
 }
 

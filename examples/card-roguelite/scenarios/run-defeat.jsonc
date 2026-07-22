@@ -1,0 +1,22 @@
+{
+  "schemaVersion": 1,
+  "id": "ember-vault.run-defeat",
+  "requirements": ["ENG-016", "CARD-RUN-002"],
+  "seed": 42,
+  "timeoutMs": 10000,
+  "steps": [
+    { "operation": "act", "action": "start-run" },
+    { "operation": "act", "action": "end-turn" },
+    { "operation": "act", "action": "end-turn" },
+    { "operation": "act", "action": "end-turn" },
+    { "operation": "act", "action": "end-turn" },
+    { "operation": "act", "action": "end-turn" },
+    { "operation": "inspect" }
+  ],
+  "assertions": [
+    { "type": "integer-equals", "key": 1, "equals": 4 },
+    { "type": "integer-equals", "key": 2, "equals": 0 },
+    { "type": "integer-equals", "key": 7, "equals": 1 },
+    { "type": "replay-verifies" }
+  ]
+}

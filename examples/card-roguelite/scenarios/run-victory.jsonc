@@ -1,0 +1,26 @@
+{
+  "schemaVersion": 1,
+  "id": "ember-vault.run-victory",
+  "requirements": ["ENG-016", "CARD-RUN-001"],
+  "seed": 42,
+  "timeoutMs": 10000,
+  "steps": [
+    { "operation": "act", "action": "start-run" },
+    { "operation": "act", "action": "play-strike" },
+    { "operation": "act", "action": "play-strike" },
+    { "operation": "act", "action": "choose-reward" },
+    { "operation": "act", "action": "play-surge" },
+    { "operation": "act", "action": "end-turn" },
+    { "operation": "act", "action": "play-surge" },
+    { "operation": "inspect" },
+    { "operation": "metrics" }
+  ],
+  "assertions": [
+    { "type": "integer-equals", "key": 1, "equals": 3 },
+    { "type": "integer-equals", "key": 2, "equals": 15 },
+    { "type": "integer-equals", "key": 3, "equals": 0 },
+    { "type": "integer-equals", "key": 7, "equals": 2 },
+    { "type": "integer-equals", "key": 8, "equals": 4 },
+    { "type": "replay-verifies" }
+  ]
+}

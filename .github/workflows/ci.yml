@@ -50,7 +50,9 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: pnpm build:cli
+      - run: pnpm build:packages
       - run: tools/deps/bootstrap-emsdk.sh
       - run: pnpm test:wasm-equivalence
       - run: pnpm test:harness
       - run: pnpm test:cold-session
+      - run: pnpm test:card-roguelite

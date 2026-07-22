@@ -27,6 +27,7 @@ const requiredFiles = [
   "contracts/project-state.schema.json",
   "contracts/presentation-events.schema.json",
   "contracts/run-manifest.schema.json",
+  "schemas/card-roguelite.schema.json",
   "schemas/scenario.schema.json",
   "runtime-c-api/include/ludivra/runtime.h",
   "toolchain.lock"
@@ -45,6 +46,7 @@ const jsonFiles = [
   "contracts/project-state.schema.json",
   "contracts/presentation-events.schema.json",
   "contracts/run-manifest.schema.json",
+  "schemas/card-roguelite.schema.json",
   "schemas/game.schema.json",
   "schemas/scenario.schema.json",
   "toolchain.lock"
@@ -59,6 +61,7 @@ const contractSchemaFiles = [
   "contracts/project-state.schema.json",
   "contracts/presentation-events.schema.json",
   "contracts/run-manifest.schema.json",
+  "schemas/card-roguelite.schema.json",
   "schemas/game.schema.json",
   "schemas/scenario.schema.json"
 ] as const;
@@ -279,6 +282,7 @@ export async function validateCmakeGraph(root: string, diagnostics: Diagnostic[]
 export async function runValidate(arguments_: string[] = []): Promise<CommandOutcome> {
   const root = await findEngineRoot();
   const diagnostics: Diagnostic[] = [];
+  let contentFilesChecked = 0;
 
   for (const file of requiredFiles) {
     try {
@@ -445,12 +449,83 @@ export async function runValidate(arguments_: string[] = []): Promise<CommandOut
           const manifest = game as {
             id: string;
             name: string;
-            inputs: Array<{ id: string }>;
-            inspection: { integerStates: Array<{ key: number }> };
+            content?: Array<{ id: string; schema: string; source: string }>;
+            inputs: Array<{ id: string; actionId: number }>;
+            inspection: { integerStates: Array<{ id: string; key: number }> };
             scenarios: string[];
             audio?: Array<{ id: string; eventId: number; source?: string }>;
             effects?: Array<{ id: string; eventId: number }>;
           };
+          const manifestActions = new Map(manifest.inputs.map(({ id, actionId }) => [id, actionId]));
+          const declaredStateKeys = new Set(manifest.inspection.integerStates.map(({ key }) => key));
+          const manifestActionIds = manifest.inputs.map(({ actionId }) => actionId);
+          if (manifestActions.size !== manifest.inputs.length || new Set(manifestActionIds).size !== manifestActionIds.length) {
+            diagnostics.push({ code: "INPUT_CONTRACT_DUPLICATE", severity: "error", message: "Manifest input IDs and actionIds must be unique", file: gamePath });
+          }
+          const stateIds = manifest.inspection.integerStates.map(({ id }) => id);
+          if (new Set(stateIds).size !== stateIds.length || declaredStateKeys.size !== manifest.inspection.integerStates.length) {
+            diagnostics.push({ code: "INSPECTION_STATE_DUPLICATE", severity: "error", message: "Inspection state IDs and keys must be unique", file: gamePath });
+          }
+          const contentIds = new Set<string>();
+          for (const descriptor of manifest.content ?? []) {
+            if (contentIds.has(descriptor.id)) {
+              diagnostics.push({ code: "CONTENT_ID_DUPLICATE", severity: "error", message: `Content ID is duplicated: ${descriptor.id}`, file: gamePath });
+              continue;
+            }
+            contentIds.add(descriptor.id);
+            const contentPath = resolve(project, descriptor.source);
+            const relation = relative(project, contentPath);
+            if (relation.startsWith("..") || isAbsolute(relation)) {
+              diagnostics.push({ code: "CONTENT_PATH_OUTSIDE_PROJECT", severity: "error", message: `Content escapes the game project: ${descriptor.source}`, file: gamePath });
+              continue;
+            }
+            const contentErrors: ParseError[] = [];
+            try {
+              const [actualProject, actualContent] = await Promise.all([realpath(project), realpath(contentPath)]);
+              const actualRelation = relative(actualProject, actualContent);
+              if (actualRelation.startsWith("..") || isAbsolute(actualRelation)) {
+                diagnostics.push({ code: "CONTENT_PATH_OUTSIDE_PROJECT", severity: "error", message: `Content symlink escapes the game project: ${descriptor.source}`, file: contentPath });
+                continue;
+              }
+              const document = parse(await readFile(actualContent, "utf8"), contentErrors) as {
+                $schema?: string;
+                id?: string;
+                cards?: Array<{ id: string; action: string }>;
+                rooms?: Array<{ id: string }>;
+              };
+              const contentValidator = schemaValidator.getSchema(descriptor.schema);
+              if (contentValidator === undefined) {
+                diagnostics.push({ code: "CONTENT_SCHEMA_UNKNOWN", severity: "error", message: `No registered schema for content: ${descriptor.schema}`, file: contentPath });
+                continue;
+              }
+              if (contentErrors.length > 0 || !contentValidator(document)) {
+                diagnostics.push({
+                  code: "CONTENT_SCHEMA_INVALID",
+                  severity: "error",
+                  message: contentErrors.length > 0
+                    ? "Content is not valid JSONC"
+                    : contentValidator.errors?.map((error) => `${error.instancePath} ${error.message}`).join("; ") ?? "Content is invalid",
+                  file: contentPath
+                });
+                continue;
+              }
+              contentFilesChecked += 1;
+              if (document.id !== descriptor.id || document.$schema !== descriptor.schema) {
+                diagnostics.push({ code: "CONTENT_DESCRIPTOR_MISMATCH", severity: "error", message: `Content descriptor does not match document ${descriptor.id}`, file: contentPath });
+              }
+              const cardIds = (document.cards ?? []).map(({ id }) => id);
+              const cardActions = (document.cards ?? []).map(({ action }) => action);
+              if (new Set(cardIds).size !== cardIds.length || new Set(cardActions).size !== cardActions.length || cardActions.some((action) => !manifestActions.has(action))) {
+                diagnostics.push({ code: "CONTENT_CARD_CONTRACT_INVALID", severity: "error", message: "Card IDs/actions must be unique and reference declared content actions", file: contentPath });
+              }
+              const roomIds = (document.rooms ?? []).map(({ id }) => id);
+              if (new Set(roomIds).size !== roomIds.length) {
+                diagnostics.push({ code: "CONTENT_ROOM_ID_DUPLICATE", severity: "error", message: "Room IDs must be unique", file: contentPath });
+              }
+            } catch (error) {
+              diagnostics.push({ code: "CONTENT_UNREADABLE", severity: "error", message: error instanceof Error ? error.message : `Unable to read ${descriptor.source}`, file: contentPath });
+            }
+          }
           for (const [collection, entries] of [
             ["audio", manifest.audio ?? []],
             ["effects", manifest.effects ?? []]
@@ -609,6 +684,7 @@ export async function runValidate(arguments_: string[] = []): Promise<CommandOut
       requiredFilesChecked: requiredFiles.length,
       jsonFilesChecked: jsonFiles.length,
       contractSchemasChecked: contractSchemaFiles.length,
+      contentFilesChecked,
       generationChecks: generationChecks.length,
       workspacePackagesChecked,
       cmakeTargetsChecked,

@@ -1,7 +1,7 @@
 {
   "_generated": "tools/contracts/generate-capabilities.mjs",
   "schemaVersion": 1,
-  "engineVersion": "0.6.0",
+  "engineVersion": "0.7.0",
   "capabilities": [
     {
       "id": "feedback.audio-effects",
@@ -108,7 +108,7 @@
     {
       "id": "presentation.three",
       "status": "experimental",
-      "version": "0.1.0",
+      "version": "0.2.0",
       "owner": "renderer-three",
       "targets": [
         "browser",
@@ -118,7 +118,8 @@
         "presentation-protocol/src/index.ts"
       ],
       "examples": [
-        "examples/first-game"
+        "examples/first-game",
+        "examples/card-roguelite"
       ],
       "dependencies": [],
       "verification": [
@@ -129,6 +130,85 @@
         {
           "code": "PRESENTATION_NATIVE_RENDERER_UNAVAILABLE",
           "message": "The current renderer is Three.js on web technology hosts; native visual hosts are not implemented."
+        }
+      ]
+    },
+    {
+      "id": "proof.card-roguelite-loop",
+      "status": "experimental",
+      "version": "0.1.0",
+      "owner": "examples/card-roguelite",
+      "targets": [
+        "native-headless",
+        "browser",
+        "electron"
+      ],
+      "contracts": [
+        "schemas/game.schema.json",
+        "schemas/card-roguelite.schema.json",
+        "schemas/scenario.schema.json"
+      ],
+      "examples": [
+        "examples/card-roguelite/content/run.jsonc",
+        "examples/card-roguelite/scenarios/run-victory.jsonc"
+      ],
+      "dependencies": [
+        "feedback.audio-effects",
+        "operability.control-harness",
+        "presentation.three",
+        "runtime.content-binding",
+        "runtime.lua-gameplay",
+        "runtime.save-replay"
+      ],
+      "verification": [
+        "pnpm test:card-roguelite"
+      ],
+      "limitations": [
+        {
+          "code": "CARD_BROWSER_UI_SNAPSHOT_NOT_AVAILABLE",
+          "message": "The real BrowserHost UiViewModel and RenderedUiSnapshot remain in ENG-017."
+        },
+        {
+          "code": "CARD_RASTER_CAPTURE_NOT_AVAILABLE",
+          "message": "Raster capture and its visual scenario remain in ENG-018."
+        },
+        {
+          "code": "CARD_FRAMEWORK_NOT_EXTRACTED",
+          "message": "The loop is intentionally game-specific until a second game proves a reusable card contract."
+        }
+      ]
+    },
+    {
+      "id": "runtime.content-binding",
+      "status": "experimental",
+      "version": "0.1.0",
+      "owner": "runtime-web",
+      "targets": [
+        "native-headless",
+        "browser",
+        "electron"
+      ],
+      "contracts": [
+        "schemas/game.schema.json",
+        "schemas/card-roguelite.schema.json"
+      ],
+      "examples": [
+        "examples/card-roguelite/content/run.jsonc"
+      ],
+      "dependencies": [
+        "runtime.lua-gameplay"
+      ],
+      "verification": [
+        "pnpm test:card-roguelite"
+      ],
+      "limitations": [
+        {
+          "code": "CONTENT_PACK_NOT_IMPLEMENTED",
+          "message": "Validated JSONC is composed into the Lua authoring chunk; the production binary content-pack compiler is not implemented yet."
+        },
+        {
+          "code": "CONTENT_NULL_NOT_SUPPORTED",
+          "message": "The experimental Lua content binding rejects JSON null instead of assigning it ambiguous Lua nil semantics."
         }
       ]
     },

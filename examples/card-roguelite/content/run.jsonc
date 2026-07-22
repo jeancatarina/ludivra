@@ -1,0 +1,52 @@
+{
+  "$schema": "https://ludivra.dev/schemas/card-roguelite/v1",
+  "schemaVersion": 1,
+  "id": "ember-vault.run",
+  "phases": {
+    "idle": 0,
+    "combat": 1,
+    "reward": 2,
+    "victory": 3,
+    "defeat": 4
+  },
+  "run": {
+    "maxHealth": 20,
+    "startingEnergy": 3,
+    "rewardHeal": 3
+  },
+  "cards": [
+    {
+      "id": "card.strike",
+      "label": "Golpe",
+      "action": "play-strike",
+      "cost": 1,
+      "effect": { "type": "damage", "value": 5 }
+    },
+    {
+      "id": "card.guard",
+      "label": "Guarda",
+      "action": "play-guard",
+      "cost": 1,
+      "effect": { "type": "block", "value": 4 }
+    },
+    {
+      "id": "card.surge",
+      "label": "Surto",
+      "action": "play-surge",
+      "cost": 2,
+      "effect": { "type": "damage", "value": 8 }
+    }
+  ],
+  "rooms": [
+    {
+      "id": "room.ash-warden",
+      "label": "Portão de Cinzas",
+      "enemy": { "name": "Sentinela de Cinzas", "health": 10, "attack": 4 }
+    },
+    {
+      "id": "room.ember-heart",
+      "label": "Câmara da Brasa",
+      "enemy": { "name": "Coração Incandescente", "health": 16, "attack": 5 }
+    }
+  ]
+}

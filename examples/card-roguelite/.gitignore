@@ -1,0 +1,3 @@
+.ludivra/project-state.json
+reports/runs/*
+!reports/runs/.gitkeep

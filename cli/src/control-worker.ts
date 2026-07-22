@@ -5,7 +5,8 @@ import { readFile, realpath } from "node:fs/promises";
 import { createInterface } from "node:readline";
 import { isAbsolute, relative, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
-import { LudivraRuntime, type PresentationEvent, type RuntimeModuleFactory } from "@ludivra/runtime-web";
+import { composeGameplaySource, createGameplayManifestDocument, LudivraRuntime, type GameplayContentDocument, type PresentationEvent, type RuntimeModuleFactory } from "@ludivra/runtime-web";
+import { parse, type ParseError } from "jsonc-parser";
 import { createContractValidator } from "./contract-validator.js";
 import {
   CONTROL_PROTOCOL_VERSION,
@@ -82,7 +83,24 @@ const [actualProject, actualGameplay] = await Promise.all([realpath(projectDirec
 const gameplayRelation = relative(actualProject, actualGameplay);
 if (gameplayRelation.startsWith("..") || isAbsolute(gameplayRelation)) throw new Error("CONTROL_PROJECT_PATH_ESCAPE");
 const gameplaySource = await readFile(actualGameplay, "utf8");
-const contentHash = createHash("sha256").update(manifestText).update("\0").update(gameplaySource).digest("hex");
+const contentDocuments: GameplayContentDocument[] = [];
+const contentSources: string[] = [];
+for (const descriptor of manifest.content ?? []) {
+  const candidate = withinProject(descriptor.source);
+  const actualContent = await realpath(candidate);
+  const contentRelation = relative(actualProject, actualContent);
+  if (contentRelation.startsWith("..") || isAbsolute(contentRelation)) throw new Error("CONTROL_PROJECT_PATH_ESCAPE");
+  const source = await readFile(actualContent, "utf8");
+  const errors: ParseError[] = [];
+  const value = parse(source, errors);
+  if (errors.length > 0) throw new Error("CONTROL_CONTENT_JSONC_INVALID");
+  contentDocuments.push({ id: descriptor.id, value });
+  contentSources.push(source);
+}
+const composedGameplaySource = composeGameplaySource(gameplaySource, [createGameplayManifestDocument(manifest), ...contentDocuments]);
+const contentHasher = createHash("sha256").update(manifestText).update("\0").update(gameplaySource);
+for (const source of contentSources) contentHasher.update("\0").update(source);
+const contentHash = contentHasher.digest("hex");
 const moduleUrl = pathToFileURL(resolve(engineRoot, "runtime-wasm/generated/ludivra-runtime.mjs")).href;
 const moduleFactory = (await import(moduleUrl)).default as RuntimeModuleFactory;
 let runtime: LudivraRuntime | undefined;
@@ -243,7 +261,7 @@ async function handle(request: ControlRequest): Promise<ControlResponse> {
       runtime?.destroy();
       const payload = request.payload as { scenarioId: string; seed: number };
       runtime = await LudivraRuntime.create(moduleFactory, { tickRateHz: 60, maxPendingInputs: 4096, seed: BigInt(payload.seed) });
-      runtime.loadGameplay(gameplaySource);
+      runtime.loadGameplay(composedGameplaySource);
       scenarioId = payload.scenarioId;
       actionSequence = 0n;
       timelineSequence = 0;

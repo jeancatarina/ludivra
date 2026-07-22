@@ -1,9 +1,9 @@
 import type { PresentationState } from "@ludivra/presentation-protocol";
 import { createThreeRenderer } from "@ludivra/renderer-three";
-import { LudivraRuntime } from "@ludivra/runtime-web";
+import { composeGameplaySource, createGameplayManifestDocument, LudivraRuntime } from "@ludivra/runtime-web";
 import { createGamePresenter } from "@game/presentation";
 import createLudivraModule from "@ludivra/runtime-module";
-import { audioSources, gameplaySource, manifest } from "virtual:ludivra-game";
+import { audioSources, contentDocuments, gameplaySource, manifest } from "virtual:ludivra-game";
 import { createAudioFeedback } from "./audio-feedback";
 import { createDesktopCheckpointManager } from "./desktop-checkpoint";
 import { presentEffect } from "./effect-feedback";
@@ -24,12 +24,19 @@ const runtime = await LudivraRuntime.create(
   createLudivraModule,
   { tickRateHz: 60, maxPendingInputs: 4096, seed: 42n }
 );
-runtime.loadGameplay(gameplaySource);
+const boundContentDocuments = [createGameplayManifestDocument(manifest), ...contentDocuments];
+runtime.loadGameplay(composeGameplaySource(gameplaySource, boundContentDocuments));
 const desktop = await createDesktopCheckpointManager(runtime);
 status.textContent = `Kernel WASM · tick ${runtime.tick()}${desktop === null ? "" : " · autosave desktop"}`;
 
 const renderer = createThreeRenderer(canvas);
-const presenter = createGamePresenter(renderer);
+const contentById = new Map(boundContentDocuments.map((document) => [document.id, document.value]));
+const presenter = createGamePresenter(renderer, {
+  content<T>(id: string): T {
+    if (!contentById.has(id)) throw new Error(`presentation content does not exist: ${id}`);
+    return contentById.get(id) as T;
+  }
+});
 const audio = createAudioFeedback(manifest.audio ?? [], audioSources);
 const effects = new Map((manifest.effects ?? []).map((definition) => [definition.eventId, definition]));
 const audioVisibility = (): void => {

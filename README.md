@@ -2,7 +2,7 @@
 
 # Ludivra
 
-[![Version](https://img.shields.io/badge/version-0.6.0-7c5cff)](https://github.com/jeancatarina/ludivra)
+[![Version](https://img.shields.io/badge/version-0.7.0-7c5cff)](https://github.com/jeancatarina/ludivra)
 [![Status](https://img.shields.io/badge/status-experimental-f59e0b)](BACKLOG.md)
 [![License](https://img.shields.io/badge/license-MIT-22c55e)](LICENSE)
 
@@ -46,6 +46,8 @@ Electron packages the desktop/Steam application
 - structured logs and local Crashpad reporting;
 - CLI output designed for both people and AI agents;
 - local control protocol, declarative scenarios, replay, semantic capture, and causal traces;
+- validated JSONC gameplay content bound deterministically into sandboxed Lua;
+- a playable card roguelite proof with victory, defeat, reward, energy, block, save, and replay coverage;
 - desktop packages with smoke tests, checksums, SBOM, and provenance.
 
 ## Who can use it?
@@ -66,10 +68,11 @@ For now, the engine is consumed directly from a cloned repository. There is no s
 | Signing and notarization | Responsibility of the game owner |
 | Semantic audio, music, and particle effects | Experimental, functional in Browser and Electron |
 | Headless harness and cold session | Experimental, functional, and automated |
+| Card roguelite gameplay proof | ENG-016 complete; real BrowserHost UI snapshot and raster capture pending |
 | Android and iOS | Planned |
 | Consoles | Future architectural path; no public backend |
 
-Do not treat version 0.6.0 as a production-stable engine without evaluating these limitations.
+Do not treat version 0.7.0 as a production-stable engine without evaluating these limitations.
 
 ## Tutorial: create your first game
 
@@ -148,7 +151,7 @@ Edit `../my-first-game/game.jsonc`:
   "schemaVersion": 2,
   "id": "my-first-game",
   "name": "My First Game",
-  "engine": { "version": "0.6.0" },
+  "engine": { "version": "0.7.0" },
   "targets": ["browser", "desktop", "native-headless"],
   "entrypoints": {
     "gameplay": "scripts/gameplay.lua",
@@ -383,6 +386,12 @@ Run all commands from the engine root directory.
 Use `--format json` for structured output designed for automation and AI agents.
 
 See [Scenarios, control, and evidence](docs/recipes/scenario-harness.md) for the bundle layout and replay workflow.
+
+The first real gameplay proof is in `examples/card-roguelite`. Run all of its deterministic gates with:
+
+```sh
+pnpm test:card-roguelite
+```
 
 ## Repository architecture
 

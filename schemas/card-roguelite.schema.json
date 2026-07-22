@@ -1,0 +1,95 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ludivra.dev/schemas/card-roguelite/v1",
+  "title": "Ludivra card roguelite vertical slice content",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["$schema", "schemaVersion", "id", "phases", "run", "cards", "rooms"],
+  "properties": {
+    "$schema": { "const": "https://ludivra.dev/schemas/card-roguelite/v1" },
+    "schemaVersion": { "const": 1 },
+    "id": { "type": "string", "pattern": "^[a-z][a-z0-9.-]*$" },
+    "phases": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["idle", "combat", "reward", "victory", "defeat"],
+      "properties": {
+        "idle": { "const": 0 },
+        "combat": { "const": 1 },
+        "reward": { "const": 2 },
+        "victory": { "const": 3 },
+        "defeat": { "const": 4 }
+      }
+    },
+    "run": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["maxHealth", "startingEnergy", "rewardHeal"],
+      "properties": {
+        "maxHealth": { "type": "integer", "minimum": 1, "maximum": 999 },
+        "startingEnergy": { "type": "integer", "minimum": 1, "maximum": 20 },
+        "rewardHeal": { "type": "integer", "minimum": 0, "maximum": 999 }
+      }
+    },
+    "cards": {
+      "type": "array",
+      "minItems": 3,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "label", "action", "cost", "effect"],
+        "properties": {
+          "id": { "type": "string", "pattern": "^card\\.[a-z][a-z0-9-]*$" },
+          "label": { "type": "string", "minLength": 1 },
+          "action": { "enum": ["play-strike", "play-guard", "play-surge"] },
+          "cost": { "type": "integer", "minimum": 0, "maximum": 20 },
+          "effect": {
+            "oneOf": [
+              {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["type", "value"],
+                "properties": {
+                  "type": { "const": "damage" },
+                  "value": { "type": "integer", "minimum": 1, "maximum": 999 }
+                }
+              },
+              {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["type", "value"],
+                "properties": {
+                  "type": { "const": "block" },
+                  "value": { "type": "integer", "minimum": 1, "maximum": 999 }
+                }
+              }
+            ]
+          }
+        }
+      }
+    },
+    "rooms": {
+      "type": "array",
+      "minItems": 2,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "label", "enemy"],
+        "properties": {
+          "id": { "type": "string", "pattern": "^room\\.[a-z][a-z0-9-]*$" },
+          "label": { "type": "string", "minLength": 1 },
+          "enemy": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["name", "health", "attack"],
+            "properties": {
+              "name": { "type": "string", "minLength": 1 },
+              "health": { "type": "integer", "minimum": 1, "maximum": 9999 },
+              "attack": { "type": "integer", "minimum": 0, "maximum": 999 }
+            }
+          }
+        }
+      }
+    }
+  }
+}

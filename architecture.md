@@ -4,7 +4,7 @@
 
 | Campo | Valor |
 |---|---|
-| Versão do documento | 3.2 |
+| Versão do documento | 3.3 |
 | Status | Arquitetura proposta |
 | Escopo inicial | Web, Steam/desktop, Android e iOS |
 | Rota futura | Hosts e renderers nativos para consoles |
@@ -437,6 +437,10 @@ Produção carrega content packs, não milhares de JSONC. O pack guarda versão 
 ### 10.2 Compatibilidade
 
 Mudanças de schema são classificadas como aditivas, migráveis ou incompatíveis. Migrations são puras, versionadas, testadas e executáveis pela CLI. Conteúdo compilado nunca é migrado in-place; ele é regenerado das fontes.
+
+### 10.3 Binding experimental antes do content pack
+
+Enquanto o content pack binário ainda não existe, documentos registrados em `game.jsonc` podem ser validados e compostos em uma tabela Lua local pelo binding definido no [ADR 0011](docs/adr/0011-card-roguelite-content-and-authority.md). Essa ponte é permitida apenas como implementação experimental text-first: o JSONC continua canônico, hosts usam o mesmo compositor determinístico e valores do documento nunca são interpretados como código. Ela não substitui o pipeline de content pack nem autoriza formatos sem schema.
 
 ## 11. Bridge native/WebAssembly
 

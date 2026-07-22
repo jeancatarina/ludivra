@@ -1,6 +1,6 @@
 {
   "name": "ludivra",
-  "version": "0.6.0",
+  "version": "0.7.0",
   "private": true,
   "packageManager": "pnpm@11.7.0",
   "devDependencies": {
@@ -20,8 +20,9 @@
     "test:native": "ctest --preset dev",
     "test:harness": "node tools/tests/scenario-harness.mjs",
     "test:cold-session": "node tools/tests/cold-session.mjs",
+    "test:card-roguelite": "node tools/tests/card-roguelite.mjs",
     "test:wasm-equivalence": "pnpm build:native && pnpm build:wasm && pnpm --filter @ludivra/runtime-web build && node tools/tests/wasm-equivalence.mjs",
-    "test": "pnpm build && pnpm test:cli && pnpm test:desktop && pnpm test:native && pnpm test:wasm-equivalence && pnpm test:harness && pnpm test:cold-session",
+    "test": "pnpm build && pnpm test:cli && pnpm test:desktop && pnpm test:native && pnpm test:wasm-equivalence && pnpm test:harness && pnpm test:cold-session && pnpm test:card-roguelite",
     "game": "node cli/dist/index.js"
   }
 }

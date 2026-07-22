@@ -9,6 +9,7 @@ export interface GameManifest {
   name: string;
   targets: string[];
   entrypoints: { gameplay: string; presentation: string };
+  content?: Array<{ id: string; schema: string; source: string }>;
   inputs: Array<{ id: string; label: string; actionId: number; keys: string[] }>;
   inspection: { integerStates: Array<{ id: string; label: string; key: number }> };
   scenarios: string[];

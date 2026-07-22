@@ -1,0 +1,150 @@
+{
+  "schemaVersion": 2,
+  "id": "ember-vault",
+  "name": "Cofre das Brasas",
+  "engine": { "version": "0.7.0" },
+  "targets": ["browser", "desktop", "native-headless"],
+  "entrypoints": {
+    "gameplay": "scripts/gameplay.lua",
+    "presentation": "presentation/index.ts"
+  },
+  "content": [
+    {
+      "id": "ember-vault.run",
+      "schema": "https://ludivra.dev/schemas/card-roguelite/v1",
+      "source": "content/run.jsonc"
+    }
+  ],
+  "inputs": [
+    { "id": "start-run", "label": "Iniciar expedição", "actionId": 1, "keys": ["Enter"] },
+    { "id": "play-strike", "label": "Golpe · 1 energia", "actionId": 2, "keys": ["Digit1"] },
+    { "id": "play-guard", "label": "Guarda · 1 energia", "actionId": 3, "keys": ["Digit2"] },
+    { "id": "play-surge", "label": "Surto · 2 energias", "actionId": 4, "keys": ["Digit3"] },
+    { "id": "end-turn", "label": "Encerrar turno", "actionId": 5, "keys": ["Space"] },
+    { "id": "choose-reward", "label": "Aceitar brasa", "actionId": 6, "keys": ["KeyE"] },
+    { "id": "restart", "label": "Reiniciar expedição", "actionId": 7, "keys": ["KeyR"] }
+  ],
+  "inspection": {
+    "integerStates": [
+      { "id": "phase", "label": "Fase", "key": 1 },
+      { "id": "player.health", "label": "Vida", "key": 2 },
+      { "id": "enemy.health", "label": "Vida inimiga", "key": 3 },
+      { "id": "energy", "label": "Energia", "key": 4 },
+      { "id": "block", "label": "Bloqueio", "key": 5 },
+      { "id": "turn", "label": "Turno", "key": 6 },
+      { "id": "room", "label": "Encontro", "key": 7 },
+      { "id": "cards.played", "label": "Cartas jogadas", "key": 8 },
+      { "id": "card.last", "label": "Última carta", "key": 9 }
+    ]
+  },
+  "scenarios": [
+    "scenarios/run-victory.jsonc",
+    "scenarios/run-defeat.jsonc",
+    "scenarios/guard-and-energy.jsonc"
+  ],
+  "audio": [
+    {
+      "id": "music.ember-vault",
+      "eventId": 1,
+      "bus": "music",
+      "loop": true,
+      "autoplay": true,
+      "volume": 0.07,
+      "origin": "generated",
+      "license": "project_owned",
+      "synth": { "waveform": "sine", "frequency": 98, "durationMs": 1200 }
+    },
+    {
+      "id": "audio.card.damage",
+      "eventId": 2,
+      "bus": "effects",
+      "loop": false,
+      "autoplay": false,
+      "volume": 0.3,
+      "origin": "generated",
+      "license": "project_owned",
+      "synth": { "waveform": "sawtooth", "frequency": 520, "durationMs": 90 }
+    },
+    {
+      "id": "audio.card.block",
+      "eventId": 3,
+      "bus": "effects",
+      "loop": false,
+      "autoplay": false,
+      "volume": 0.25,
+      "origin": "generated",
+      "license": "project_owned",
+      "synth": { "waveform": "triangle", "frequency": 330, "durationMs": 120 }
+    },
+    {
+      "id": "audio.enemy.attack",
+      "eventId": 4,
+      "bus": "effects",
+      "loop": false,
+      "autoplay": false,
+      "volume": 0.28,
+      "origin": "generated",
+      "license": "project_owned",
+      "synth": { "waveform": "square", "frequency": 150, "durationMs": 140 }
+    },
+    {
+      "id": "audio.run.victory",
+      "eventId": 5,
+      "bus": "effects",
+      "loop": false,
+      "autoplay": false,
+      "volume": 0.34,
+      "origin": "generated",
+      "license": "project_owned",
+      "synth": { "waveform": "triangle", "frequency": 880, "durationMs": 260 }
+    },
+    {
+      "id": "audio.run.defeat",
+      "eventId": 6,
+      "bus": "effects",
+      "loop": false,
+      "autoplay": false,
+      "volume": 0.3,
+      "origin": "generated",
+      "license": "project_owned",
+      "synth": { "waveform": "sawtooth", "frequency": 110, "durationMs": 300 }
+    }
+  ],
+  "effects": [
+    {
+      "id": "effect.card.impact",
+      "eventId": 1,
+      "type": "particle-burst",
+      "color": 16739638,
+      "count": 60,
+      "size": 0.12,
+      "speed": 2.1,
+      "lifetimeMs": 650,
+      "gravity": 1.4
+    },
+    {
+      "id": "effect.card.guard",
+      "eventId": 2,
+      "type": "particle-burst",
+      "color": 4909823,
+      "count": 40,
+      "size": 0.1,
+      "speed": 1.2,
+      "lifetimeMs": 700,
+      "gravity": -0.2
+    },
+    {
+      "id": "effect.run.victory",
+      "eventId": 3,
+      "type": "particle-burst",
+      "color": 16766720,
+      "count": 180,
+      "size": 0.16,
+      "speed": 3.2,
+      "lifetimeMs": 1800,
+      "gravity": 0.8
+    }
+  ],
+  "steam": { "appId": null, "depotId": null },
+  "desktop": { "updates": { "enabled": false, "feedUrl": null } }
+}

@@ -1,0 +1,41 @@
+{
+  "id": "proof.card-roguelite-loop",
+  "status": "experimental",
+  "version": "0.1.0",
+  "owner": "examples/card-roguelite",
+  "targets": ["native-headless", "browser", "electron"],
+  "contracts": [
+    "schemas/game.schema.json",
+    "schemas/card-roguelite.schema.json",
+    "schemas/scenario.schema.json"
+  ],
+  "examples": [
+    "examples/card-roguelite/content/run.jsonc",
+    "examples/card-roguelite/scenarios/run-victory.jsonc"
+  ],
+  "dependencies": [
+    "feedback.audio-effects",
+    "operability.control-harness",
+    "presentation.three",
+    "runtime.content-binding",
+    "runtime.lua-gameplay",
+    "runtime.save-replay"
+  ],
+  "verification": [
+    "pnpm test:card-roguelite"
+  ],
+  "limitations": [
+    {
+      "code": "CARD_BROWSER_UI_SNAPSHOT_NOT_AVAILABLE",
+      "message": "The real BrowserHost UiViewModel and RenderedUiSnapshot remain in ENG-017."
+    },
+    {
+      "code": "CARD_RASTER_CAPTURE_NOT_AVAILABLE",
+      "message": "Raster capture and its visual scenario remain in ENG-018."
+    },
+    {
+      "code": "CARD_FRAMEWORK_NOT_EXTRACTED",
+      "message": "The loop is intentionally game-specific until a second game proves a reusable card contract."
+    }
+  ]
+}

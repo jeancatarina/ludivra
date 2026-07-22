@@ -75,4 +75,11 @@ export interface GamePresenter {
   destroy(): void;
 }
 
-export type CreateGamePresenter = (renderer: PresentationRenderer) => GamePresenter;
+export interface PresentationContext {
+  content<T = unknown>(id: string): T;
+}
+
+export type CreateGamePresenter = (
+  renderer: PresentationRenderer,
+  context: PresentationContext
+) => GamePresenter;
