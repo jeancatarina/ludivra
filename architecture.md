@@ -4,7 +4,7 @@
 
 | Campo | Valor |
 |---|---|
-| Versão do documento | 2.2 |
+| Versão do documento | 3.0 |
 | Status | Arquitetura proposta |
 | Escopo inicial | Web, Steam/desktop, Android e iOS |
 | Rota futura | Hosts e renderers nativos para consoles |
@@ -94,7 +94,7 @@ Criar, testar e empacotar são operações normais. Publicar, comprar, assinar, 
 
 ## 4. Objetivos e não objetivos
 
-### 4.1 Objetivos iniciais
+### 4.1 Objetivos do programa
 
 - produzir um vertical slice por meio de uma sessão remota;
 - permitir que sessões novas continuem o trabalho apenas pelo repositório;
@@ -103,7 +103,14 @@ Criar, testar e empacotar são operações normais. Publicar, comprar, assinar, 
 - gerar builds para browser, desktop/Steam, Android e iOS;
 - fornecer inspeção textual e visual suficiente para o agente avaliar o jogo;
 - provar reuso com dois jogos materialmente diferentes;
+- entregar, de forma modular, runtime espacial e mundo procedural virtualmente extensível dentro de budgets declarados;
+- comprovar Mass Runtime e apresentação escalável em um survivor-like;
+- integrar física 2D/3D por adapters e multiplayer player-hosted para experiências casuais;
+- entregar construção procedural baseada em grafo e geometria incremental;
+- fornecer Visual, World, Construction, Physics e Audio Forges reproduzíveis em authoring/build time;
 - preservar uma rota tecnicamente testada para hosts nativos futuros.
+
+Os dois primeiros jogos formam um gate intermediário de reutilização. A visão completa exige os cinco jogos e as capacidades definidas no [ADR 0008](docs/adr/0008-mandatory-scale-and-procedural-capabilities.md). “Obrigatória” qualifica a entrega do programa, não a composição de cada jogo: capabilities avançadas permanecem opt-in e jogos que não as declaram não devem pagar seu custo relevante.
 
 ### 4.2 Gêneros prioritários
 
@@ -112,7 +119,11 @@ Criar, testar e empacotar são operações normais. Publicar, comprar, assinar, 
 - dungeon crawlers e roguelites;
 - jogos narrativos e de gerenciamento;
 - 2D, 2.5D e 3D estilizado;
-- ação single-player de complexidade moderada.
+- ação single-player de complexidade moderada;
+- survivor-likes com multidões em níveis de simulação;
+- party brawlers baseados em física e multiplayer player-hosted;
+- sandboxes procedurais extensos;
+- jogos de construção procedural em runtime.
 
 Suporte a um gênero significa que há capacidades, exemplos, cenários, perfis de desempenho e receitas que o comprovam. Não é uma afirmação genérica de compatibilidade.
 
@@ -1185,7 +1196,7 @@ Um vertical slice inclui começo, loop, fim, vitória/conclusão, derrota/falha,
 
 ### 33.3 Engine comprovada
 
-A Ludivra só será considerada uma engine reutilizável quando:
+A fundação da Ludivra só será considerada reutilizável quando:
 
 1. dois jogos materialmente diferentes forem construídos sem copiar a implementação interna do primeiro;
 2. ambos consumirem a mesma release da engine e capacidades compartilhadas justificáveis;
@@ -1193,11 +1204,21 @@ A Ludivra só será considerada uma engine reutilizável quando:
 4. o harness produzir evidência técnica e visual integralmente apresentável no chat;
 5. native e WASM reproduzirem o mesmo corpus lógico de replays.
 
+### 33.4 Visão completa comprovada
+
+A premissa completa da Ludivra só será considerada entregue quando, além do gate de reutilização:
+
+1. card roguelite, survivor-like, physics party brawler, procedural indie sandbox e procedural diorama builder estiverem concluídos como jogos de prova;
+2. runtime espacial, mundo procedural, Mass Runtime, física por adapters, multiplayer player-hosted e construção procedural passarem seus cenários e performance gates;
+3. Visual, World, Construction, Physics e Audio Forges produzirem specs, manifests, previews e validação reproduzíveis;
+4. jogos que não declarem uma capability avançada não carregarem seu custo relevante;
+5. uma sessão fria conseguir alterar, executar, observar, diagnosticar e verificar cada jogo de prova.
+
 ## 34. Roadmap orientado a riscos
 
-A sequência, os critérios de promoção e as trilhas condicionais são mantidos em [ROADMAP.md](ROADMAP.md). Este documento continua sendo a autoridade para boundaries, objetivos e critérios de comprovação; o roadmap não pode alterá-los sem a mudança arquitetural e, quando aplicável, o ADR exigido.
+A sequência, os critérios de promoção, as fases obrigatórias e a rota futura são mantidos em [ROADMAP.md](ROADMAP.md). Este documento continua sendo a autoridade para boundaries, objetivos e critérios de comprovação; o roadmap não pode alterá-los sem a mudança arquitetural e, quando aplicável, o ADR exigido.
 
-A separação evita duas listas de fases divergentes. O roadmap deve preservar a ordem de risco estabelecida aqui: contratos e evidência, simulação portátil, loop visual observável, primeiro jogo real, distribuição nos targets iniciais, segundo uso para extração e somente então expansões justificadas por jogos e benchmarks.
+A separação evita duas listas de fases divergentes. O roadmap deve preservar a ordem de risco estabelecida aqui: contratos e evidência, simulação portátil, loop visual observável, primeiro jogo real, distribuição nos targets iniciais, segundo uso para extração e então as capacidades obrigatórias de escala e criação, sempre guiadas pelos jogos e benchmarks correspondentes.
 
 ## 35. Riscos principais e mitigação
 
@@ -1274,4 +1295,4 @@ entrega evidências e build no chat
 outra sessão continua apenas pelo Git
 ```
 
-Quando esse fluxo funcionar de ponta a ponta para dois jogos diferentes, com equivalência lógica native/WASM e sem operação manual obrigatória fora do chat, a arquitetura terá cumprido seu propósito.
+Quando esse fluxo funcionar de ponta a ponta para dois jogos diferentes, com equivalência lógica native/WASM e sem operação manual obrigatória fora do chat, a fundação terá comprovado reutilização. A arquitetura terá cumprido sua visão completa somente após os cinco jogos e as capacidades obrigatórias do [ADR 0008](docs/adr/0008-mandatory-scale-and-procedural-capabilities.md) passarem pelos mesmos critérios de evidência.

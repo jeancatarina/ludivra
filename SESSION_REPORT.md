@@ -2,20 +2,19 @@
 
 ## Resultado
 
-Roadmap 1.0 revisado e incorporado à documentação canônica da Ludivra em 2026-07-21.
+Roadmap 1.1 e arquitetura 3.0 corrigidos em 2026-07-21 para tornar obrigatórias as capacidades de escala e criação procedural da visão completa.
 
 ## Implementado
 
-- `ROADMAP.md` passou a ser a fonte de sequência, gates de promoção e trilhas condicionais;
-- `architecture.md` 2.2 preserva as fronteiras e aponta para o roadmap, sem manter uma segunda lista de fases;
-- mundos procedurais, multidões, física, multiplayer, construção e forges foram preservados como capabilities ativadas por jogos e evidência, não obrigações do kernel;
-- estado canônico, artifact manifests e harness foram colocados antes das expansões de domínio;
-- `BACKLOG.md` foi reconciliado com o marco atual e separa validação cross-platform de assinatura/notarização;
-- READMEs em inglês e português agora tornam o roadmap descobrível.
+- ADR 0008 aceitou runtime espacial, mundo procedural, Mass Runtime, física por adapters, multiplayer player-hosted, construção procedural e cinco Forges como compromissos obrigatórios;
+- as capabilities continuam modulares e opt-in por jogo, sem custo universal nem promoção automática ao kernel;
+- os cinco jogos de prova passaram a ser obrigatórios e sequenciados;
+- dois jogos continuam sendo o gate intermediário de reutilização, mas não encerram o roadmap;
+- `architecture.md`, `ROADMAP.md`, `DECISIONS.md` e `BACKLOG.md` foram reconciliados com a nova premissa.
 
 ## Evidências
 
-- `pnpm game -- validate --format json`: PASS, run `run_badcfb12-f6e7-4cdb-bb21-d2258abfd891`;
+- `pnpm game -- validate --format json`: PASS, run `run_8ae3fd21-13ad-4dac-a77c-ca07997f3ae3`;
 - `pnpm test`: PASS;
 - equivalência native/WASM: PASS, hash `a16b3a84c7581c0a`;
 - `git diff --check`: PASS.

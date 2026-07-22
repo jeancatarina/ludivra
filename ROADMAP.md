@@ -4,10 +4,10 @@
 
 | Campo | Valor |
 |---|---|
-| Versão | 1.0 |
+| Versão | 1.1 |
 | Data-base | 2026-07-21 |
 | Estado | ativo |
-| Escopo | sequência, critérios de promoção e trilhas condicionais |
+| Escopo | sequência, critérios de promoção, fases obrigatórias e rota futura |
 
 ## 1. Autoridade e finalidade
 
@@ -29,7 +29,7 @@ O roadmap é deliberadamente evolutivo. “Definitivo” significaria congelar h
 
 A unidade principal de trabalho continua sendo uma alteração versionada que outra sessão consegue descobrir, executar, observar, verificar e continuar apenas pelo repositório e pelas evidências produzidas.
 
-A Ludivra estará comprovada como engine reutilizável quando atender aos critérios de `architecture.md`, seção 33.3:
+A Ludivra terá comprovado sua fundação reutilizável quando atender aos critérios de `architecture.md`, seção 33.3:
 
 - dois jogos materialmente diferentes usando a mesma release da engine;
 - capacidades compartilhadas extraídas de usos reais, sem cópia de internals;
@@ -37,25 +37,27 @@ A Ludivra estará comprovada como engine reutilizável quando atender aos crité
 - evidência lógica e visual produzida pelo harness;
 - equivalência lógica native/WebAssembly sobre o corpus de replays aplicável.
 
-Mundos extensos, multidões, construção procedural, física avançada e multiplayer podem ampliar essa prova. Eles não substituem o critério mínimo nem entram automaticamente no núcleo.
+Esse é um gate intermediário, não o fim do roadmap. A visão completa exige obrigatoriamente runtime espacial, mundo procedural, Mass Runtime, física por adapters, multiplayer player-hosted, construção procedural e os cinco Forges, comprovados pelos cinco jogos definidos no [ADR 0008](docs/adr/0008-mandatory-scale-and-procedural-capabilities.md).
+
+Essas capabilities são obrigatórias para a engine completa, mas modulares por projeto. Um card game não carrega chunks, solver físico ou rede que não declarou; obrigatoriedade de entrega não significa custo universal de runtime nem promoção automática ao kernel.
 
 ## 3. Correções incorporadas nesta revisão
 
 | Problema da proposta consolidada | Correção adotada |
 |---|---|
-| Transformava “AI-first”, mundos infinitos, mass simulation, construção e forges em pilares igualmente obrigatórios | AI operability e autoria textual permanecem fundamentos; os demais são capacidades condicionais a jogos, medições e ADRs |
-| Exigia chunks, streaming e LOD de todos os jogos | Runtime espacial será opt-in; um card game não carregará complexidade de mundo infinito sem necessidade |
+| Confundia capacidades obrigatórias da engine com dependências obrigatórias de todo jogo | Runtime espacial, Mass Runtime, física, multiplayer, construção e Forges são entregas obrigatórias, mas capabilities opt-in por projeto |
+| Exigia chunks, streaming e LOD de todos os jogos | Runtime espacial será obrigatório no portfólio e comprovado pelo sandbox; um card game não carregará sua complexidade |
 | Colocava renderer depois de física, mundo e multiplayer | O loop visual e o harness vêm antes das expansões que precisam ser observadas |
 | Colocava persistência e replay depois de mundo e física | Save, replay, hashes e equivalência permanecem fundação anterior a sistemas difíceis de reproduzir |
 | Propunha uma engine física própria por enumeração de features | Ludivra define autoridade e contratos semânticos; solvers 2D/3D entram por adapters aprovados |
-| Tratava cinco jogos como requisito mínimo simultâneo | Dois jogos diferentes comprovam a engine; jogos adicionais promovem trilhas específicas |
+| Tratava cinco jogos como trabalho simultâneo | Os cinco jogos são obrigatórios, mas sequenciados; o segundo já comprova reutilização e os demais comprovam as capacidades avançadas |
 | Criava muitos índices `.ludivra` potencialmente concorrentes | Um estado de projeto gerado aponta para catálogos proprietários; novos índices só surgem por necessidade medida |
 | Tornava desktop o host universal e proibia localhost | O target é explícito ou definido pelo projeto; transporte e carregamento são detalhes seguros do host |
 | Chamava CSS de contrato | CSS é fonte textual de apresentação; contratos públicos continuam em schemas e protocolos versionados |
 | Exigia todos os IDs de correlação em todo dado | Cada registro usa `runId` e os identificadores causalmente aplicáveis; campos irrelevantes não são fabricados |
 | Proibia binário como única verdade de forma ampla demais | Autoria permanece textual; saves, replays e estado do usuário podem ser binários versionados, inspecionáveis e migráveis |
 | Exigia as oito dimensões completas até para capability planejada | Maturidade e aplicabilidade são explícitas; somente capability que deixe de ser experimental precisa de todos os gates aplicáveis em `PASS` |
-| Prometia geração visual e sonora autônoma como parte do runtime | Forges são ferramentas opcionais de authoring/build time, com origem, licença, receita e validação |
+| Misturava geração visual e sonora com responsabilidades do runtime | Os cinco Forges são obrigatórios em authoring/build time, com origem, licença, receita e validação, sem autoridade no runtime |
 | Fazia alegações de escala sem hardware nem baseline | Toda promoção de escala exige cenário, perfil, hardware, versão, variância e budget aprovado |
 
 ## 4. Invariantes transversais
@@ -229,97 +231,108 @@ Cada target declarado possui pacote e smoke test no sistema correspondente. Targ
 
 O primeiro jogo executa, persiste, suspende e retoma em Android e iOS dentro de budgets medidos. Ausência de serviço de plataforma produz resultado explícito e fallback testado quando permitido.
 
-## 11. Fase 5 — Segundo jogo e extração de capacidades
+## 11. Fase 5 — Survivor-like, Mass Runtime e reuso
 
-**Objetivo:** comprovar reuso sem transformar peculiaridades do primeiro jogo em API da engine.
+**Objetivo:** entregar o segundo jogo obrigatório, comprovar reutilização e sustentar milhares de agentes por dados e apresentação em lote.
 
-O segundo jogo será escolhido por diferença material de dinâmica, não por uma lista fixa. Estratégia, gerenciamento, dungeon crawler ou ação moderada são candidatos compatíveis com o posicionamento atual.
+### Entregas
 
-### Regra de promoção
+- spatial grid e queries com escopo explícito;
+- armazenamento contíguo e operações massivas apenas onde profiling comprovar necessidade;
+- agentes completos, simplificados e agregados com transições observáveis;
+- damage fields e comandos em lote;
+- projeção por buffers, instancing, batching, pooling e budgets;
+- degradação exclusivamente visual;
+- benchmarks 2D e 3D em hardware de referência.
 
-1. primeiro uso permanece no jogo;
-2. segundo uso diferente revela o núcleo comum;
-3. somente a API mínima comum vira capability;
-4. terceiro uso estabiliza ou revisa a API;
-5. promoção ao kernel exige inadequação medida em Lua/TypeScript e equivalência native/WASM.
+Lua configura comportamentos e reage a eventos agregados. Callback Lua completo por inimigo por frame não será o caminho de escala. A API comum com o card roguelite só será extraída quando os dois usos realmente compartilharem semântica.
 
 ### Gate de saída
 
-Dois jogos consomem a mesma release, compartilham somente capacidades justificadas e passam por sessões frias independentes. Este é o primeiro ponto em que a Ludivra pode ser chamada de engine reutilizável segundo a arquitetura.
+Card roguelite e survivor-like consomem a mesma release, passam por sessões frias independentes e comprovam a fundação reutilizável. O survivor-like mantém gameplay completo onde importa, horda visual escalável e causa diagnosticável para violações de budget.
 
-## 12. Fase 6 — Trilhas condicionais de escala e criação procedural
+## 12. Fase 6 — Runtime espacial, mundo procedural e sandbox
 
-As trilhas seguintes não são uma sequência obrigatória nem um pacote único. Uma trilha é ativada por um jogo aprovado, possui owner próprio e deve entregar um vertical slice estreito antes de generalizar.
+**Objetivo:** entregar o terceiro jogo obrigatório, um procedural indie sandbox, e provar um mundo virtualmente extensível por viagens longas com memória estável.
 
-### 12.1 Runtime espacial e mundo procedural
+### Entregas
 
-**Gatilho:** sandbox, mapa extenso ou outro jogo demonstra que scene graph e carregamento atuais não atendem memória ou latência.
-
-Primeira prova:
-
-- coordenadas e particionamento internos, sem expor a implementação na API pública;
+- coordenadas e particionamento internos, sem fixar a implementação na API pública;
 - chunks opt-in com lifecycle, seed, base gerada e deltas;
 - jobs fora do tick com commit em boundary determinístico;
-- streaming, descarte e persistência medidos;
-- floating origin somente quando a precisão exigir;
-- mundo pequeno primeiro; infinito é propriedade emergente de estabilidade, não tipo obrigatório.
+- geração por seed, ID, versão, coordenada e content hash;
+- streaming, descarte, cache e persistência por regiões medidos;
+- simulation LOD e catch-up determinístico;
+- floating origin quando a prova de precisão exigir;
+- voxel estilizado inicial com biomas, cavernas, recursos, estruturas pequenas e edição persistente.
 
-Representação de coordenadas, tamanho de chunk, storage de região, algoritmo procedural e política de versionamento exigem protótipo e ADR quando alterarem contratos duráveis. Ordem de carregamento, hardware, relógio e conclusão de jobs não podem mudar o estado lógico.
+Representação de coordenadas, tamanho de chunk, storage de região, algoritmo procedural e versionamento exigem protótipo e ADR quando alterarem contratos duráveis. Ordem de carregamento, hardware, relógio e conclusão de jobs não podem mudar o estado lógico.
 
-### 12.2 Motion, física e multidões
+O runtime espacial é obrigatório na engine completa, mas continua opt-in. Jogos pequenos mantêm as coordenadas superiores e o streaming desativados sem carregar o custo de um mundo infinito.
 
-**Gatilho:** um jogo real exige interação física ou quantidade de agentes acima do budget do runtime existente.
+### Gate de saída
+
+O sandbox passa por geração, viagem além do conteúdo inicialmente residente, descarte, save por deltas, crash recovery, migration e sessão fria. A memória estabiliza, chunks descartados liberam recursos, o mundo continua se estendendo sob demanda e o primeiro chunk divergente pode ser localizado por hash.
+
+## 13. Fase 7 — Motion, física, multiplayer e party brawler
+
+**Objetivo:** entregar o quarto jogo obrigatório, um physics party brawler player-hosted.
+
+### Motion e física
 
 - motion visual permanece na apresentação;
 - gameplay físico usa comandos, autoridade explícita e snapshots;
 - solvers 2D/3D são dependências por adapter, nunca classes do backend na API pública;
 - física visual não decide regra;
-- física autoritativa cross-platform só promete o nível de determinismo comprovado;
-- mass simulation começa por dados contíguos, queries espaciais e atualização em lote quando profiling justificar;
-- callback Lua completo por agente por frame é rejeitado quando exceder budget;
-- agregação e simulation LOD preservam semântica declarada pelo jogo, não uma aproximação universal invisível.
+- física autoritativa cross-platform promete somente o nível de determinismo comprovado;
+- rigid bodies, controllers, constraints, ragdolls, agarrões e breakables entram na ordem exigida pelo jogo;
+- Physics Forge produz colliders, massa, joints, grab points e cenários validados.
 
-Ragdolls, active ragdolls, agarrões, breakables e hordas gigantes são incrementos separados. Nenhum deles entra no kernel apenas para preencher uma checklist.
-
-### 12.3 Multiplayer player-hosted
-
-**Gatilho:** um jogo co-op ou casual single-player já está estável, reproduzível e mensurado.
-
-Ordem mínima:
+### Multiplayer player-hosted
 
 1. protocolo de input e snapshot sobre transporte local;
-2. host-authoritative em uma sala pequena;
+2. host-authoritative em sala pequena;
 3. late join e reconexão;
-4. interest management somente quando o volume exigir;
+4. interest management mensurado;
 5. transportes externos por adapters;
-6. host migration apenas após snapshot completo e cenários de falha.
+6. host migration após snapshot completo e cenários de falha.
 
 Relay é transporte, não servidor de gameplay. WebRTC, Steam Networking, UDP ou serviços de convite dependem de ADR, licença, segurança e targets. Física host-authoritative não implica igualdade bit a bit entre plataformas; replay registra as informações necessárias para diagnosticar divergência.
 
-Essa trilha não promete multiplayer competitivo, rollback universal, anticheat forte ou MMO.
+Esta fase não promete multiplayer competitivo, rollback universal, anticheat forte ou MMO.
 
-### 12.4 Construção procedural
+### Gate de saída
 
-**Gatilho:** um diorama builder ou sandbox precisa editar construções em runtime.
+O brawler comprova física 3D, multiplayer casual, reconexão e host migration dentro dos budgets aprovados. A IA reproduz divergências, localiza o primeiro tick e diferencia falha lógica, física, de transporte e de apresentação.
 
-Primeira prova:
+## 14. Fase 8 — Construção procedural e diorama builder
+
+**Objetivo:** entregar o quinto jogo obrigatório, um procedural diorama builder com autoria em runtime.
+
+### Entregas
 
 - `Construction Graph` textual e versionado como fonte semântica;
-- comandos semânticos com undo/redo e replay;
-- compiler de geometria limitado a extrusão, aberturas e telhados necessários ao slice;
+- comandos semânticos com undo/redo, replay e multiplayer-ready data;
+- compiler de geometria incremental para footprints, volumes, paredes, aberturas e telhados do slice;
 - rebuild local baseado em dependências explícitas;
-- picking, handles e snapping como capabilities de runtime;
+- regras contextuais de Building Chemistry com causa rastreável;
+- constraint solver especializado, nunca universal;
+- picking, handles, splines, brushes e snapping como capabilities de runtime;
+- terrain sculpting e decoração contextual dentro de budgets;
 - todo derivado aponta para node, regra, asset e comando de origem.
 
-“Building Chemistry” é um conjunto versionado de regras de domínio, não um solver universal. Booleanas, splines, terrain sculpting, decoração contextual e constraints entram incrementalmente com casos reais e diagnósticos próprios.
+Booleanas, splines, telhados, terreno e decoração entram incrementalmente pelos casos do jogo. A obrigação é comprovar o conjunto descrito pelo vertical slice, não implementar toda operação geométrica imaginável.
 
-### 12.5 Forges de authoring
+### Gate de saída
 
-**Gatilho:** custo repetido e mensurado de produção de assets ou conteúdo que uma ferramenta reproduzível possa reduzir.
+Mover uma parede reconstrói apenas a região afetada; mesh, collider, terreno e decoração permanecem correlacionados; undo/redo e replay reproduzem o mesmo grafo; e uma sessão fria explica cada consequência.
 
-Visual, World, Construction, Physics e Audio Forge são ferramentas independentes. Um forge:
+## 15. Fase 9 — Forges obrigatórios
 
-- roda em authoring/build time por padrão;
+**Objetivo:** consolidar Visual, World, Construction, Physics e Audio Forges usados pelos cinco jogos.
+
+Os Forges são ferramentas independentes e obrigatórias de authoring/build time. Cada um:
+
 - recebe spec textual e parâmetros versionados;
 - produz arquivos convencionais, manifest, hashes, origem/licença, preview e relatório;
 - registra toolchain, seed e receita de regeneração quando possível;
@@ -327,39 +340,55 @@ Visual, World, Construction, Physics e Audio Forge são ferramentas independente
 - não torna serviço externo obrigatório para executar o jogo;
 - não promete reconstrução idêntica quando o gerador externo não a oferece.
 
-Cada forge precisa de consumidor real, avaliação de dependências e decisão própria. A engine não implementará modelagem, rigging, síntese musical ou geração de imagem completas apenas para evitar ferramentas existentes.
+### Provas obrigatórias
 
-### Gate comum das trilhas
+| Forge | Consumidor mínimo | Evidência |
+|---|---|---|
+| Visual Forge | personagens, props ou sprites dos jogos | preview, LOD/collision quando aplicável e validação de asset |
+| World Forge | procedural indie sandbox | chunks de amostra, seams, distribuição e budget |
+| Construction Forge | procedural diorama builder | estilo, regras, constraints e geometria de amostra |
+| Physics Forge | physics party brawler | collider, massa, joints, estabilidade e cenários físicos |
+| Audio Forge | ao menos dois jogos | master/stems ou SFX, análise, loop e manifest |
 
-Uma trilha só pode deixar de ser experimental depois de:
+Cada Forge precisa de owner, avaliação de dependências e contratos próprios. A Ludivra pode integrar ferramentas existentes; não precisa reimplementar modelagem, rigging, síntese musical ou geração de imagem completas.
 
-- dois usos materialmente diferentes quando reutilização for alegada;
-- cenário e diagnóstico no boundary público;
-- observabilidade proporcional ao domínio;
-- budget aprovado em hardware de referência;
-- documentação de limitações e fallback;
-- prova de que jogos sem a capability não pagam seu custo relevante.
+### Gate de saída
 
-## 13. Fase 7 — Diagnóstico nativo e consoles
+Os cinco Forges produzem artefatos reproduzíveis e inspecionáveis usados por jogos reais. Arquivo opaco sem spec, origem, licença, manifest, preview e validação falha o gate.
+
+## 16. Gate comum das capacidades obrigatórias
+
+Uma capability avançada só pode deixar de ser experimental depois de:
+
+- cumprir o jogo de prova que a possui;
+- possuir cenário e diagnóstico no boundary público;
+- oferecer observabilidade proporcional ao domínio;
+- passar budget aprovado em hardware de referência;
+- documentar limites e fallback;
+- demonstrar que jogos sem a capability não pagam seu custo relevante;
+- ter dois usos materialmente diferentes quando reutilização além do jogo proprietário for alegada.
+
+Obrigatoriedade no roadmap não permite marcar a capability como pronta antecipadamente. Até o gate passar, o status correto continua experimental, `NOT_AVAILABLE`, `NOT_RUN` ou `INCONCLUSIVE` conforme o caso.
+
+## 17. Rota futura — Diagnóstico nativo e consoles
 
 Um host nativo visual mínimo pode ser criado para replay, input, áudio básico e profiling fora do stack web quando essa independência trouxer valor mensurável.
 
-Consoles permanecem uma rota futura. O trabalho só começa com acesso oficial, justificativa comercial, infraestrutura privada e conformidade do kernel já comprovada. Renderer, UI, áudio, cooker e host serão substituíveis; Three.js, DOM, Electron e Capacitor não são prometidos nesses targets.
+Consoles permanecem uma rota futura, não uma fase obrigatória para concluir o roadmap atual. O trabalho só começa com acesso oficial, justificativa comercial, infraestrutura privada e conformidade do kernel já comprovada. Renderer, UI, áudio, cooker e host serão substituíveis; Three.js, DOM, Electron e Capacitor não são prometidos nesses targets.
 
-## 14. Portfólio de jogos de prova
+## 18. Portfólio obrigatório de jogos de prova
 
-| Jogo | Papel | Obrigatoriedade |
-|---|---|---|
-| Card roguelite | fecha o primeiro vertical slice e a operação por chat | obrigatório |
-| Segundo jogo materialmente diferente | prova extração e reuso | obrigatório |
-| Survivor-like | ativa e mede Mass Runtime e apresentação em lote | condicional |
-| Physics party brawler | ativa física avançada e multiplayer player-hosted | condicional |
-| Procedural indie sandbox | ativa runtime espacial, chunks e mundo procedural | condicional |
-| Procedural diorama builder | ativa Construction Graph e compiler incremental | condicional |
+| Jogo | Papel obrigatório |
+|---|---|
+| Card roguelite | fecha o primeiro vertical slice, determinismo, UI, saves, replays e operação por chat |
+| Survivor-like | prova segundo uso, Mass Runtime, spatial grid e apresentação em lote |
+| Procedural indie sandbox | prova chunks, streaming, mundo procedural, deltas e simulation LOD |
+| Physics party brawler | prova física 3D e multiplayer player-hosted |
+| Procedural diorama builder | prova Construction Graph, geometria incremental e autoria em runtime |
 
-Um jogo condicional só entra no backlog quando sua trilha for escolhida. Ele não é usado para justificar APIs antes da implementação do próprio slice.
+Todos os cinco jogos são obrigatórios. Eles são implementados em sequência para que cada capability nasça de um consumidor real. Nenhum jogo justifica antecipadamente APIs que seu vertical slice ainda não usa.
 
-## 15. Performance e alegações de escala
+## 19. Performance e alegações de escala
 
 Perfis iniciais pertencem aos targets realmente suportados. `desktop-low`, `desktop-medium`, `desktop-high`, `mobile-low` e `mobile-high` podem existir quando houver dispositivos e baselines correspondentes.
 
@@ -378,7 +407,7 @@ Benchmarks como hordas, voxel travel, host migration, geometry rebuild ou planet
 
 Degradação de apresentação pode reduzir resolução, sombras, partículas, LOD e pós-processamento. Ela não pode alterar silenciosamente gameplay, economia, colisão autoritativa ou resultado de replay.
 
-## 16. Definition of Done do roadmap
+## 20. Definition of Done do roadmap
 
 Uma entrega só avança de fase quando:
 
@@ -392,19 +421,21 @@ Uma entrega só avança de fase quando:
 
 Uma capability que deixe de ser experimental deve cobrir as oito dimensões de operabilidade que forem aplicáveis. Uma capability experimental pode ter dimensões incompletas, desde que o manifest e o relatório não escondam isso.
 
-## 17. Próxima prioridade
+O roadmap completo só recebe `PASS` depois dos cinco jogos, das capacidades obrigatórias de escala, do multiplayer player-hosted, da construção procedural e dos cinco Forges. O gate intermediário de dois jogos prova reutilização, mas não encerra o programa.
+
+## 21. Próxima prioridade
 
 O próximo marco da engine é a **Fase 0 — Fechar a fundação verificável**, começando pelo artifact manifest por execução e pela reconciliação do estado canônico do projeto. Isso cria a evidência necessária para o harness e evita construir novos sistemas sobre status manuais ou divergentes.
 
-Depois desse marco, a única prioridade seguinte é a **Fase 1 — Harness e ciclo de operabilidade por chat**. Física avançada, mundo infinito, mass simulation, multiplayer, construção procedural e forges permanecem fora do P0.
+Depois desse marco, a única prioridade seguinte é a **Fase 1 — Harness e ciclo de operabilidade por chat**. Física avançada, mundo procedural, Mass Runtime, multiplayer, construção procedural e Forges permanecem fora do P0, mas são fases posteriores obrigatórias.
 
-## 18. Política de evolução
+## 22. Política de evolução
 
 Futuras revisões devem alterar a seção afetada e registrar no diff:
 
 - evidência nova que motivou a mudança;
-- fase ou trilha promovida, adiada ou removida;
+- fase promovida, reordenada ou adiada;
 - impacto sobre backlog e capabilities;
 - ADR necessário, se houver.
 
-Uma trilha pode ser removida se deixar de servir aos jogos e à premissa da engine. Preservar hipóteses sem consumidor não é compatibilidade; contratos publicados, saves, replays e dados do usuário seguem suas políticas próprias de versionamento e migração.
+Uma capacidade obrigatória definida no ADR 0008 não pode ser removida por repriorização local. Sua remoção exige nova decisão arquitetural explícita, atualização do ADR, dos jogos de prova e dos critérios de conclusão. Ordem, backend e representação interna podem evoluir com evidência; contratos publicados, saves, replays e dados do usuário seguem suas políticas próprias de versionamento e migração.

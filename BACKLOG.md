@@ -19,3 +19,5 @@
 | ENG-015 | alta | planejado | Automatizar a sessão fria sobre o starter |
 
 Ordem do marco corrente: `ENG-005` → `ENG-011` → `ENG-004` → `ENG-006`. Depois: `ENG-012` → `ENG-014` → `ENG-015`. O roadmap canônico está em [ROADMAP.md](ROADMAP.md).
+
+Após o marco corrente, o backlog será detalhado uma fase por vez para o card roguelite, survivor-like, procedural indie sandbox, physics party brawler, procedural diorama builder e os cinco Forges. Esses marcos são obrigatórios pelo [ADR 0008](docs/adr/0008-mandatory-scale-and-procedural-capabilities.md), ainda que suas tarefas internas só sejam abertas quando a fase anterior passar pelo gate.
