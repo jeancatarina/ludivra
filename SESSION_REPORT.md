@@ -2,40 +2,30 @@
 
 ## Resultado
 
-Ludivra 0.4.0 com fundação desktop/Steam e pipeline semântico de áudio, música e partículas implementados em 2026-07-18.
+Roadmap 1.0 revisado e incorporado à documentação canônica da Ludivra em 2026-07-21.
 
 ## Implementado
 
-- saves e replays binários, versionados, checksummed e transacionais no kernel;
-- C ABI e bridge WASM para salvar, restaurar, exportar e verificar replay;
-- autosave desktop, backup, reconciliação Steam Cloud e checkpoint no fechamento;
-- preload sandboxed gerado pelo contrato IPC, sem Node.js no renderer;
-- storage, lifecycle, logs, Crashpad, update opt-in e adapters Steam no processo principal;
-- pacote Electron com smoke test do renderer/WASM/storage, hashes, SBOM e provenance;
-- scripts SteamPipe quando App ID e Depot ID estiverem configurados.
-- comandos Lua semânticos para tocar/parar áudio e disparar efeitos;
-- protocolo de eventos gerado, ordenado e em lote entre C++, C ABI, WebAssembly e TypeScript;
-- Web Audio com buses de música, ambiência e efeitos, arquivos ou synth declarativo;
-- bursts determinísticos de partículas no adapter Three.js, com orçamento e descarte;
-- schemas, validação de IDs/assets, starter audiovisual e tutorial bilíngue.
+- `ROADMAP.md` passou a ser a fonte de sequência, gates de promoção e trilhas condicionais;
+- `architecture.md` 2.2 preserva as fronteiras e aponta para o roadmap, sem manter uma segunda lista de fases;
+- mundos procedurais, multidões, física, multiplayer, construção e forges foram preservados como capabilities ativadas por jogos e evidência, não obrigações do kernel;
+- estado canônico, artifact manifests e harness foram colocados antes das expansões de domínio;
+- `BACKLOG.md` foi reconciliado com o marco atual e separa validação cross-platform de assinatura/notarização;
+- READMEs em inglês e português agora tornam o roadmap descobrível.
 
 ## Evidências
 
-- `pnpm test:native`: PASS;
-- `pnpm test:wasm-equivalence`: PASS, hash `a16b3a84c7581c0a`;
-- `pnpm test:desktop`: PASS;
-- `game package --target steam-macos`: PASS com smoke do aplicativo empacotado;
-- `game validate --project examples/first-game`: PASS;
-- preview BrowserHost: eventos de música/som acionados após gesto, burst de partículas inspecionado visualmente e console sem erros.
+- `pnpm game -- validate --format json`: PASS, run `run_badcfb12-f6e7-4cdb-bb21-d2258abfd891`;
+- `pnpm test`: PASS;
+- equivalência native/WASM: PASS, hash `a16b3a84c7581c0a`;
+- `git diff --check`: PASS.
 
 ## Não executado
 
-- Steam real: `NOT_CONFIGURED`, sem App ID/Depot ID e sem upload;
-- assinatura/notarização: `NOT_RUN`, exige identidade e credenciais do usuário;
-- Windows/Linux: `NOT_RUN`, exige runners nos respectivos sistemas;
-- áudio nativo fora do Browser/Electron: `NOT_IMPLEMENTED`;
-- efeitos avançados (trails, decals, pós-processamento e grafos): `NOT_IMPLEMENTED`.
+- captura visual: `NOT_APPLICABLE`, mudança exclusivamente documental;
+- package e smoke por plataforma: `NOT_APPLICABLE`, nenhum host ou empacotamento foi alterado;
+- assinatura, notarização e publicação: `NOT_APPLICABLE`, fora do escopo e dependentes de autoridade explícita.
 
 ## Próxima prioridade
 
-ENG-009 — assinatura/notarização macOS e validação dos pacotes Windows/Linux em runners nativos.
+`ENG-005` — produzir artifact manifest por execução da CLI.

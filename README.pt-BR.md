@@ -319,7 +319,7 @@ Implemente um vertical slice pequeno. Antes de concluir, valide, teste, execute,
 inspecione o resultado e atualize o relatório da sessão com evidências e limitações.
 ```
 
-Para mudanças na própria engine, agentes devem começar por [AGENTS.md](AGENTS.md). As fronteiras técnicas estão em [architecture.md](architecture.md), e os gates obrigatórios em [docs/guardrails/](docs/guardrails/).
+Para mudanças na própria engine, agentes devem começar por [AGENTS.md](AGENTS.md). As fronteiras técnicas estão em [architecture.md](architecture.md), a sequência de evolução em [ROADMAP.md](ROADMAP.md), e os gates obrigatórios em [docs/guardrails/](docs/guardrails/).
 
 ## Referência da CLI
 
@@ -372,7 +372,7 @@ ludivra/
 - Android, iOS e consoles ainda não possuem hosts utilizáveis;
 - o starter demonstra a arquitetura, não um jogo comercial pronto.
 
-O trabalho planejado está em [BACKLOG.md](BACKLOG.md). Não esconda uma limitação com fallback silencioso.
+O plano de evolução está em [ROADMAP.md](ROADMAP.md), e o trabalho executável do marco corrente em [BACKLOG.md](BACKLOG.md). Não esconda uma limitação com fallback silencioso.
 
 ## Como contribuir
 

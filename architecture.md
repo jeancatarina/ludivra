@@ -4,7 +4,7 @@
 
 | Campo | Valor |
 |---|---|
-| Versão do documento | 2.1 |
+| Versão do documento | 2.2 |
 | Status | Arquitetura proposta |
 | Escopo inicial | Web, Steam/desktop, Android e iOS |
 | Rota futura | Hosts e renderers nativos para consoles |
@@ -1195,69 +1195,9 @@ A Ludivra só será considerada uma engine reutilizável quando:
 
 ## 34. Roadmap orientado a riscos
 
-### Fase 0 — Contratos executáveis
+A sequência, os critérios de promoção e as trilhas condicionais são mantidos em [ROADMAP.md](ROADMAP.md). Este documento continua sendo a autoridade para boundaries, objetivos e critérios de comprovação; o roadmap não pode alterá-los sem a mudança arquitetural e, quando aplicável, o ADR exigido.
 
-- monorepo, toolchain lock e CI;
-- licença open source, política de contribuição e segurança;
-- schemas iniciais e envelope da CLI;
-- C ABI mínima;
-- scenario format e artifact manifest;
-- testes de fronteira de dependências.
-
-### Fase 1 — Simulação portátil mínima
-
-- kernel C++ e runner native headless;
-- build WebAssembly;
-- Lua sandbox;
-- fixed tick, comandos, eventos, RNG e hash de estado;
-- save, replay e equivalência native/WASM;
-- CLI `doctor`, `validate`, `test`, `simulate` e `inspect`.
-
-### Fase 2 — Loop visual e primeiro vertical slice
-
-- presentation protocol;
-- bridge em buffers;
-- renderer Three.js e BrowserHost;
-- UI view model e árvore semântica;
-- input abstrato e áudio;
-- harness de captura;
-- primeiro card roguelite, ainda sem extrair kit genérico.
-
-### Fase 3 — Desktop comercial
-
-- ElectronHost;
-- empacotamento e atualização;
-- Steam adapters;
-- crash reports, cloud save e achievements;
-- budgets e processo de release reproduzível.
-
-### Fase 4 — Mobile
-
-- hosts Capacitor Android/iOS;
-- touch, layout adaptativo e safe areas;
-- lifecycle, checkpoints e perda de contexto;
-- serviços de loja e perfis de hardware;
-- suites reais em dispositivos.
-
-### Fase 5 — Reuso comprovado
-
-- segundo jogo de gênero ou dinâmica diferente;
-- extração das capacidades usadas por ambos;
-- revisão das APIs a partir das diferenças reais.
-
-### Fase 6 — Diagnóstico nativo visual
-
-- renderer mínimo nativo de primitivas;
-- input e áudio básicos;
-- UI de diagnóstico;
-- replay visual e profiling fora do stack web.
-
-### Fase 7 — Console, somente com justificativa
-
-- acesso oficial e infraestrutura privada;
-- renderer/UI/audio/host nativos;
-- cooker por plataforma;
-- testes de conformidade, memória, suspend/resume e certificação.
+A separação evita duas listas de fases divergentes. O roadmap deve preservar a ordem de risco estabelecida aqui: contratos e evidência, simulação portátil, loop visual observável, primeiro jogo real, distribuição nos targets iniciais, segundo uso para extração e somente então expansões justificadas por jogos e benchmarks.
 
 ## 35. Riscos principais e mitigação
 

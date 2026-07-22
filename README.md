@@ -319,7 +319,7 @@ Implement a small vertical slice. Before finishing, validate, test, run, and ins
 Update the session report with evidence, limitations, and one recommended next step.
 ```
 
-Agents modifying the engine itself must start with [AGENTS.md](AGENTS.md). Technical boundaries are defined in [architecture.md](architecture.md), and mandatory gates live in [docs/guardrails/](docs/guardrails/).
+Agents modifying the engine itself must start with [AGENTS.md](AGENTS.md). Technical boundaries are defined in [architecture.md](architecture.md), the evolution sequence lives in [ROADMAP.md](ROADMAP.md), and mandatory gates live in [docs/guardrails/](docs/guardrails/).
 
 ## CLI reference
 
@@ -372,7 +372,7 @@ ludivra/
 - Android, iOS, and consoles do not have usable hosts yet;
 - the starter demonstrates the architecture; it is not a production-ready commercial game.
 
-Planned work is tracked in [BACKLOG.md](BACKLOG.md). Never hide a limitation behind a silent fallback.
+The evolution plan lives in [ROADMAP.md](ROADMAP.md), and executable work for the current milestone is tracked in [BACKLOG.md](BACKLOG.md). Never hide a limitation behind a silent fallback.
 
 ## Contributing
 
