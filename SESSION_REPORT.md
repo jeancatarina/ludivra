@@ -2,7 +2,7 @@
 
 ## Resultado
 
-Ludivra 0.7.0 com o `ENG-016` da Fase 2 implementado em 2026-07-22.
+Ludivra 0.7.0 com o `ENG-016` implementado como fixture antecipada de integração em 2026-07-22. O ADR 0012 reorganiza o trabalho restante por capacidades técnicas e reserva os cinco jogos completos para a Fase 12.
 
 ## Implementado
 
@@ -19,7 +19,8 @@ Ludivra 0.7.0 com o `ENG-016` da Fase 2 implementado em 2026-07-22.
 - `examples/card-roguelite` implementa início, dois encontros, recompensa, vitória, derrota e reinício;
 - `composeGameplaySource` liga documentos validados ao mesmo chunk Lua no BrowserHost e no control worker;
 - os cenários de vitória, derrota e energia/bloqueio verificam estados finais e replay;
-- o BrowserHost compila a apresentação Three.js do jogo de prova.
+- o BrowserHost compila a apresentação Three.js da fixture card roguelite;
+- o ADR 0012 define o roadmap feature-first e reclassifica jogos completos como provas integradas finais.
 
 ## Evidências locais
 
@@ -41,4 +42,4 @@ Ludivra 0.7.0 com o `ENG-016` da Fase 2 implementado em 2026-07-22.
 
 ## Próxima prioridade
 
-`ENG-017` — produzir `UiViewModel` e `RenderedUiSnapshot` reais no BrowserHost.
+`ENG-017` — produzir `UiViewModel` e `RenderedUiSnapshot` reais no BrowserHost e avançar o gate da Fase 3.

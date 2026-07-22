@@ -4,7 +4,7 @@
 
 | Campo | Valor |
 |---|---|
-| Versão do documento | 3.3 |
+| Versão do documento | 3.4 |
 | Status | Arquitetura proposta |
 | Escopo inicial | Web, Steam/desktop, Android e iOS |
 | Rota futura | Hosts e renderers nativos para consoles |
@@ -758,7 +758,20 @@ Uma capacidade é um pacote versionado que pode conter Lua, schemas, conteúdo, 
 
 Exemplos: `cards.deck`, `inventory.core`, `dialogue.branching`, `combat.turn_based`, `movement.action`.
 
-### 22.1 Regra de extração
+### 22.1 Fundações de infraestrutura
+
+Uma capability de infraestrutura exigida por esta arquitetura — por exemplo control protocol, Chunk Runtime, Mass Runtime, buffers de projeção ou adapter físico — pode começar experimental antes de um jogo completo quando possuir:
+
+- owner e fronteira explícitos;
+- contrato mínimo com produtor e consumidor técnicos reais;
+- fixture e cenário fechados;
+- inspeção e diagnóstico proporcionais ao domínio;
+- benchmark ou gate de target quando aplicável;
+- nenhuma API de gênero especulativa.
+
+Essa implementação prova a fundação técnica, não suporte completo a um gênero. A promoção de maturidade depende da integração nos jogos de prova aplicáveis, conforme o [ADR 0012](docs/adr/0012-feature-first-roadmap-and-proof-games.md).
+
+### 22.2 Regra de extração de domínio
 
 ```text
 primeiro uso real ─> permanece no jogo
@@ -923,7 +936,7 @@ capture / start_video / stop_video / metrics / shutdown
 
 O transporte pode ser stdio, socket local ou WebSocket de loopback e é detalhe de adapter. O contrato e os payloads são os mesmos. A CLI é dona do processo, aguarda readiness, aplica timeouts e sempre tenta encerramento limpo.
 
-A primeira implementação aprovada usa JSON Lines por `stdio`, conforme [ADR 0010](docs/adr/0010-local-control-protocol-and-scenario-harness.md). O vocabulário executável está em `contracts/control-protocol.schema.json`; cenários declarativos seguem `schemas/scenario.schema.json`. O adapter inicial é headless/WASM e produz captura SVG semântica. Captura de pixels do BrowserHost permanece um gate distinto da Fase 2 e não pode ser inferida pela captura headless.
+A primeira implementação aprovada usa JSON Lines por `stdio`, conforme [ADR 0010](docs/adr/0010-local-control-protocol-and-scenario-harness.md). O vocabulário executável está em `contracts/control-protocol.schema.json`; cenários declarativos seguem `schemas/scenario.schema.json`. O adapter inicial é headless/WASM e produz captura SVG semântica. Captura de pixels do BrowserHost permanece um gate distinto da Fase 3 do roadmap feature-first e não pode ser inferida pela captura headless.
 
 Esse endpoint:
 
@@ -1170,9 +1183,9 @@ A engine publica CLI, runtime native/WASM, SDK Lua, schemas, pacotes TypeScript,
 3. executar `game status --project . --format json` e inspecionar o último run compatível;
 4. consultar capacidades existentes;
 5. converter o pedido em critérios observáveis;
-6. escolher uma mudança limitada ou um vertical slice;
-7. implementar primeiro no jogo;
-8. alterar a engine apenas diante de lacuna reutilizável comprovada;
+6. escolher uma mudança limitada na capability da fase ativa ou um vertical slice;
+7. para uma fundação de infraestrutura obrigatória, implementar o menor contrato técnico exigido pelo roadmap com fixture, cenário e diagnóstico;
+8. para uma abstração de domínio, implementar primeiro no jogo e extrair somente após usos diferentes comprovarem a API comum;
 9. executar validação e testes rápidos durante o desenvolvimento;
 10. rodar cenários e simulações relevantes;
 11. executar o jogo pelo harness;
@@ -1228,7 +1241,7 @@ A premissa completa da Ludivra só será considerada entregue quando, além do g
 
 A sequência, os critérios de promoção, as fases obrigatórias e a rota futura são mantidos em [ROADMAP.md](ROADMAP.md). Este documento continua sendo a autoridade para boundaries, objetivos e critérios de comprovação; o roadmap não pode alterá-los sem a mudança arquitetural e, quando aplicável, o ADR exigido.
 
-A separação evita duas listas de fases divergentes. O roadmap deve preservar a ordem de risco estabelecida aqui: contratos e evidência, simulação portátil, loop visual observável, primeiro jogo real, distribuição nos targets iniciais, segundo uso para extração e então as capacidades obrigatórias de escala e criação, sempre guiadas pelos jogos e benchmarks correspondentes.
+A separação evita duas listas de fases divergentes. O roadmap deve preservar a ordem de risco estabelecida aqui: estado e contratos, execução e controle, observabilidade causal, autoria text-first, fundações espaciais e de escala, física e rede, apresentação escalável, construção, Forges, diagnóstico e performance, e por fim os cinco jogos como provas integradas. Fixtures técnicas e protótipos podem surgir antes; eles não substituem o gate final dos jogos. O sequenciamento feature-first é definido pelo [ADR 0012](docs/adr/0012-feature-first-roadmap-and-proof-games.md).
 
 ## 35. Riscos principais e mitigação
 

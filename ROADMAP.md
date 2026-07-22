@@ -1,442 +1,706 @@
-# Roadmap da Ludivra
+# Roadmap técnico da Ludivra
 
-> Plano de execução da engine: situação atual, sequência obrigatória, entregas restantes e critérios de promoção.
+> Sequência feature-first para construir uma engine AI-first, text-first, observável, reparável, procedural e preparada para escala.
 
 | Campo | Valor |
 |---|---|
-| Versão do roadmap | 2.0 |
+| Versão do roadmap | 3.0 |
 | Data-base | 2026-07-22 |
 | Release atual | 0.7.0 |
-| Fase atual | Fase 2 — Primeiro jogo real e loop visual completo |
-| Próxima entrega | `ENG-017` — `UiViewModel` e `RenderedUiSnapshot` reais no BrowserHost |
-| Estado geral | 2 fases concluídas, 1 em andamento e 7 planejadas |
+| Prioridade atual | Fechar o P0 das Fases 2–3 — runner, controle e observabilidade real |
+| Próxima entrega | `ENG-017`, seguida de `ENG-018` |
+| Decisão de sequência | [ADR 0012](docs/adr/0012-feature-first-roadmap-and-proof-games.md) |
+| Prova final | Fase 12 — cinco jogos e sessões frias |
 
-## 1. Leitura rápida
+## 1. Objetivo do programa
 
-A Ludivra está construindo primeiro a capacidade de uma IA **descobrir, executar, observar e verificar** um jogo; depois amplia a engine com distribuição, escala, mundo procedural, física, multiplayer, construção e Forges.
+A Ludivra deverá permitir que uma IA crie e evolua jogos completos usando fontes textuais, contratos semânticos, comandos reproduzíveis, cenários automatizados e evidências ligadas ao estado do repositório.
 
-O trabalho atual ainda não é a validação final do portfólio. O card roguelite existente é o primeiro consumidor real da engine e está incompleto como prova visual: o loop lógico foi entregue, mas a UI semântica real do BrowserHost e a captura raster ainda faltam.
+A unidade de entrega é:
 
-```text
-CONCLUÍDO                         AGORA                         DEPOIS
+> Uma alteração versionada, executável, observável, diagnosticável, verificável e continuável por outra sessão de IA.
 
-Fase 0 ─ Fundação 0.5.0     ┐
-                            ├─> Fase 2 ─ Card roguelite ─> Desktop ─> Mobile
-Fase 1 ─ Harness 0.6.0      ┘          ENG-017 agora                    │
-                                                                         ▼
-Survivor-like ─> Sandbox procedural ─> Brawler ─> Diorama ─> Forges finais
-```
+O roadmap constrói primeiro as capacidades da engine. Os jogos completos aparecem na Fase 12 para provar que essas capacidades funcionam integradas. Exemplos e protótipos podem existir antes como fixtures técnicas; eles não contam como jogos concluídos.
 
-O roadmap completo termina somente quando os cinco jogos de prova e todas as capacidades obrigatórias passarem por seus gates. Um jogo aparecer antes da última fase porque é usado para desenvolver e validar a capacidade correspondente; isso não significa que o portfólio final esteja concluído.
-
-## 2. Como interpretar este documento
+## 2. Como ler o roadmap
 
 ### 2.1 Estados
 
 | Estado | Significado |
 |---|---|
-| `CONCLUÍDA` | O gate da fase passou e há evidência correspondente |
-| `EM ANDAMENTO` | A fase possui entregas concluídas, mas seu gate ainda não passou |
-| `PLANEJADA` | A fase é obrigatória, porém ainda não é o marco ativo |
-| `ROTA FUTURA` | É desejável, mas não faz parte da conclusão do roadmap atual |
+| `CONCLUÍDA` | O gate técnico da fase passou no escopo declarado |
+| `EM ANDAMENTO` | É a prioridade ativa e ainda possui gate aberto |
+| `PARCIAL` | Existem componentes úteis, mas a fase não passou seu gate |
+| `PLANEJADA` | A capability ainda não possui implementação material |
+| `NOT_AVAILABLE` | O target ou operação ainda não existe |
+| `NOT_RUN` | Existe implementação, mas falta execução no ambiente exigido |
 
-Para capacidades e verificações, permanecem válidos `PASS`, `FAIL`, `NOT_RUN`, `NOT_AVAILABLE`, `NOT_APPLICABLE` e `INCONCLUSIVE`. Somente `PASS` comprova uma alegação.
+Os estados são baseados em evidência. Código compilando, protótipo visual ou teste isolado não promove uma fase automaticamente.
 
-### 2.2 Níveis de planejamento
+### 2.2 Termos
 
-| Nível | Função | Fonte canônica |
-|---|---|---|
-| Arquitetura | Define premissa, fronteiras e critérios globais | [architecture.md](architecture.md) |
-| ADR | Registra uma decisão durável aprovada | [docs/adr](docs/adr) |
-| Roadmap | Ordena fases, dependências e gates | este documento |
-| Backlog | Lista o trabalho executável do marco ativo | [BACKLOG.md](BACKLOG.md) |
-| Estado e evidência | Registra o que realmente foi executado | `.ludivra/project-state.json` e `reports/runs/` |
-
-O roadmap não substitui schemas, protocolos ou guardrails. Mudanças públicas, dependências de runtime e decisões difíceis de reverter continuam exigindo o processo definido em [AGENTS.md](AGENTS.md).
-
-### 2.3 Termos usados no roadmap
-
-| Termo | Significado neste documento |
+| Termo | Significado |
 |---|---|
-| Gate | conjunto de condições que precisa passar antes de encerrar uma fase |
-| Capability | capacidade modular da engine, ativada somente pelos projetos que a declaram |
-| Jogo de prova | jogo real usado para desenvolver e comprovar uma ou mais capacidades |
-| Vertical slice | fluxo jogável com começo, loop, fim, controles, feedback e evidência |
-| Sessão fria | nova sessão de IA, sem memória anterior, trabalhando apenas pelo repositório |
-| Host | aplicação que executa o runtime em browser, desktop, mobile ou modo headless |
+| Capability | capacidade modular da engine, opt-in por projeto |
+| Fixture técnica | consumidor mínimo usado para testar um contrato ou boundary |
+| Gate | condições obrigatórias para encerrar uma fase |
+| Jogo de prova | integração completa usada na Fase 12 |
+| Sessão fria | IA sem memória anterior operando apenas pelo repositório |
+| Artifact bundle | manifest, diagnósticos, métricas, traces, capturas e builds de um run |
 
-## 3. Painel de progresso
+### 2.3 Fontes canônicas
 
-| Fase | Marco | Estado | Entregue | Falta para o gate |
+| Assunto | Fonte |
+|---|---|
+| Fronteiras e premissa | [architecture.md](architecture.md) |
+| Decisões duráveis | [DECISIONS.md](DECISIONS.md) e ADRs |
+| Ordem e gates | este roadmap |
+| Tarefas do marco ativo | [BACKLOG.md](BACKLOG.md) |
+| Estado executado | `.ludivra/project-state.json` e `reports/runs/` |
+
+## 3. Visão geral das fases
+
+| Fase | Fundação técnica | Estado atual | Evidência existente | Principal lacuna |
 |---|---|---|---|---|
-| 0 | Fundação verificável | `CONCLUÍDA` em 0.5.0 | estado canônico, capabilities, manifests, fitness functions e CI | — |
-| 1 | Operabilidade por chat | `CONCLUÍDA` em 0.6.0 | control protocol, harness, replay, captura semântica e sessão fria | — |
-| 2 | Card roguelite e loop visual | `EM ANDAMENTO` em 0.7.0 | `ENG-016`: loop lógico e cenários | `ENG-017` e `ENG-018` |
-| 3 | Desktop comercial e Steam | `PLANEJADA` | ElectronHost e package experimental | validação nativa, smoke instalado e supply chain |
-| 4 | Mobile | `PLANEJADA` | contratos portáveis existentes | hosts Android/iOS e dispositivos reais |
-| 5 | Survivor-like e Mass Runtime | `PLANEJADA` | — | segundo jogo, escala e reuso comprovados |
-| 6 | Sandbox e mundo procedural | `PLANEJADA` | — | runtime espacial, chunks, streaming e persistência mundial |
-| 7 | Brawler, física e multiplayer | `PLANEJADA` | — | adapters físicos e salas player-hosted |
-| 8 | Diorama e construção procedural | `PLANEJADA` | — | grafo, geometria incremental e autoria em runtime |
-| 9 | Forges obrigatórios | `PLANEJADA` | recursos locais de áudio/asset ainda não constituem Forges completos | cinco Forges usados e validados |
+| 1 | Estado canônico e catálogo | `CONCLUÍDA` | `game status`, catálogo e manifests de run | nenhuma no gate atual |
+| 2 | Context Engine, CLI e Development Runner | `EM ANDAMENTO` | CLI, BrowserHost e ElectronHost experimentais | cache/watch e lifecycle incremental |
+| 3 | Control Plane e observabilidade causal | `EM ANDAMENTO` | harness headless, replay, SVG e sessão fria | UI e raster reais do BrowserHost |
+| 4 | Autoria text-first | `PARCIAL` | Lua, JSONC, schemas e content binding | UI declarativa e content pack |
+| 5 | Runtime espacial e mundo procedural | `PLANEJADA` | — | modelo espacial, chunks, jobs e streaming |
+| 6 | Motion, física e Mass Simulation | `PLANEJADA` | primitivas visuais não autoritativas | motion formal, adapters físicos e Mass Runtime |
+| 7 | Persistência, replay e multiplayer | `PARCIAL` | saves e replays lógicos | persistência mundial e rede player-hosted |
+| 8 | Renderer, UI e áudio escaláveis | `PARCIAL` | Three.js, Web Audio e partículas simples | buffers, instancing, LOD, UI real e budgets |
+| 9 | Construction Runtime | `PLANEJADA` | — | grafo, solver e compiler incremental |
+| 10 | Forges procedurais | `PLANEJADA` | receitas locais isoladas não formam Forges | cinco pipelines completos e rastreáveis |
+| 11 | Diagnose, Repair, Verify e performance | `PARCIAL` | diagnósticos, gates e artifact bundles básicos | reparo controlado e benchmarks oficiais |
+| 12 | Cinco jogos de prova e sessões frias | `PLANEJADA` | card roguelite antecipado como fixture | integração final dos cinco jogos |
 
-### 3.1 Backlog conhecido
-
-O backlog possui 18 itens identificados: 14 concluídos e 4 planejados.
-
-| Grupo | Itens |
-|---|---|
-| Concluídos | `ENG-001`–`ENG-008`, `ENG-010`–`ENG-012`, `ENG-014`–`ENG-016` |
-| Marco atual | `ENG-017`, depois `ENG-018` |
-| Marco desktop posterior | `ENG-009` e `ENG-013` |
-
-Detalhes, prioridades e descrições ficam somente em [BACKLOG.md](BACKLOG.md), evitando uma segunda lista executável neste arquivo.
+O histórico contém trabalho feito fora dessa ordem. `PARCIAL` registra esse fato sem fingir que o gate da fase passou.
 
 ## 4. Caminho crítico
 
-Cada fase depende do gate da fase anterior. Trabalho exploratório pode ocorrer para reduzir risco, mas não promove a fase nem permite pular o gate.
-
 ```text
-F0 Fundação
-   ↓
-F1 Harness e observabilidade
-   ↓
-F2 Primeiro jogo e prova visual
-   ↓
-F3 Desktop comercial
-   ↓
-F4 Mobile
-   ↓
-F5 Segundo jogo e Mass Runtime
-   ↓
-F6 Mundo procedural
-   ↓
-F7 Física e multiplayer
-   ↓
-F8 Construção procedural
-   ↓
-F9 Consolidação dos cinco Forges
-   ↓
-ROADMAP COMPLETO: cinco jogos + capacidades obrigatórias + sessão fria
+P0 — OPERABILIDADE
+
+1. Estado canônico
+        ↓
+2. CLI e Development Runner
+        ↓
+3. Control Plane e observabilidade real
+        ↓
+4. Autoria text-first completa
+
+P1 — FUNDAÇÕES DE ESCALA
+
+5. Runtime espacial e mundo procedural
+        ↓
+6. Motion, física e Mass Simulation
+        ↓
+7. Persistência mundial, replay e multiplayer
+        ↓
+8. Renderer, UI e áudio escaláveis
+
+P2 — CRIAÇÃO PROCEDURAL E AUTONOMIA
+
+9. Construction Runtime
+        ↓
+10. Forges procedurais
+        ↓
+11. Diagnose–Repair–Verify e performance gates
+
+P3 — COMPROVAÇÃO
+
+12. Cinco jogos de prova + sessões frias
 ```
 
-## 5. Marco atual — Fase 2
+Observabilidade e diagnóstico básico são transversais: nenhuma fase pode adiar toda a sua inspeção para a Fase 11. A Fase 11 consolida reparo, comparação de evidências, benchmarks oficiais e hardening, não corrige retroativamente capabilities cegas.
 
-### Fase 2 — Primeiro jogo real e loop visual completo
-
-| Campo | Valor |
-|---|---|
-| Estado | `EM ANDAMENTO` |
-| Release parcial | 0.7.0 |
-| Consumidor | `examples/card-roguelite` |
-| Dependências | Fases 0 e 1 concluídas |
-| Próximo item | `ENG-017` |
-
-**Objetivo:** entregar um card roguelite pequeno, completo e modificável por uma sessão nova, sem extrair antecipadamente um framework genérico de cartas.
-
-**Já foi feito — `ENG-016`:**
-
-- começo, dois encontros, recompensa, vitória, derrota e reinício;
-- gameplay determinístico em Lua;
-- custos, efeitos e encontros em JSONC validado;
-- IDs numéricos de ação e estado pertencentes apenas ao manifest;
-- mesmo chunk de gameplay no BrowserHost e no control worker;
-- cenários de vitória, derrota e energia/bloqueio;
-- replay e equivalência lógica aplicáveis;
-- apresentação Three.js mínima compilável.
-
-**Ainda falta:**
-
-1. `ENG-017` — produzir `UiViewModel` e `RenderedUiSnapshot` a partir do BrowserHost real;
-2. `ENG-018` — produzir captura raster vinculada ao run e um cenário visual reproduzível;
-3. comprovar UI legível, acessível e navegável, não apenas controles HTML e primitivas gráficas;
-4. executar o gate completo do vertical slice e registrar suas limitações.
-
-**Gate de saída:** uma sessão fria modifica o jogo, executa o loop completo, inspeciona estado lógico e UI renderizada, produz screenshots reais e replay, e entrega build reproduzível. O loop lógico isolado e a captura SVG headless não satisfazem esse gate.
-
-## 6. Fases concluídas
-
-### Fase 0 — Fundação verificável
+## 5. Fase 1 — Estado canônico e catálogo de capacidades
 
 | Campo | Valor |
 |---|---|
 | Estado | `CONCLUÍDA` |
-| Release | 0.5.0 |
+| Release de referência | 0.5.0 |
+| Owner principal | CLI e contratos de estado |
 
-**Objetivo:** tornar o estado da engine descobrível e verificável sem relato manual.
+### Objetivo
 
-**Entregue:**
+Dar à IA uma representação única, navegável e regenerável do estado da engine e do projeto.
 
-- kernel C++20, Lua sandbox, runner nativo e WebAssembly;
-- equivalência lógica native/WASM;
-- schemas, saves e replays versionados;
-- CLI estruturada e catálogo gerado de capabilities;
-- `.ludivra/project-state.json` como índice canônico regenerável;
-- artifact manifests com commit, dirty state, versões e hashes;
-- fitness functions de packages, imports, CMake e arquivos gerados;
-- CI com matriz nativa e gate WebAssembly.
+### Entregue
 
-**Gate comprovado:** uma sessão nova consegue identificar o que existe, qual maturidade foi declarada e quais evidências ainda correspondem ao commit atual.
+- `.ludivra/project-state.json` regenerado por `game status`;
+- commit, dirty state, worktree hash, engine, projeto e último run compatível;
+- `CAPABILITIES.json` gerado e validado;
+- manifests de capability com owner, versão, targets, contratos, exemplos, verificação e limitações;
+- manifests de run com comando, versões, target, hashes e artefatos;
+- schemas e fitness functions para divergência de arquivos gerados, packages e CMake;
+- estados de capability explícitos, sem converter experimental em estável por inferência.
 
-### Fase 1 — Harness e operabilidade por chat
+### Decisão de escopo
 
-| Campo | Valor |
-|---|---|
-| Estado | `CONCLUÍDA` no escopo aprovado |
-| Release | 0.6.0 |
-| ADR principal | [ADR 0010](docs/adr/0010-local-control-protocol-and-scenario-harness.md) |
+Não serão criados `module-index`, `target-index`, `diagnostic-index` e outros arquivos concorrentes enquanto consultas sobre o catálogo e o estado composto forem suficientes. Índices novos exigem consumidor e necessidade medida.
 
-**Objetivo:** fechar o ciclo `executar → controlar → observar → diagnosticar → verificar` antes de ampliar o domínio da engine.
+### Gate concluído
 
-**Entregue:**
+Uma sessão nova encontra o estado, as capabilities, as limitações e a evidência compatível sem pesquisar o repositório inteiro.
 
-- control protocol local por stdio com token efêmero e lifecycle pertencente à CLI;
-- operações fechadas de health, cenário, ação, espera, inspeção, captura, métricas, replay e shutdown;
-- `game context`, `simulate`, `capture`, `replay`, `report` e `run --control`;
-- scenario harness com assertions fechadas;
-- timeline causal mínima;
-- captura SVG e snapshots semânticos do adapter headless;
-- artifact bundle, replay e sessão fria automatizada do starter.
-
-**Limite aprovado:** pixels e snapshots reais do BrowserHost pertencem à Fase 2. A captura semântica headless não é evidência de renderização raster.
-
-## 7. Fases planejadas
-
-### Fase 3 — Desktop comercial e Steam
+## 6. Fase 2 — Context Engine, CLI e Development Runner
 
 | Campo | Valor |
 |---|---|
-| Estado | `PLANEJADA` |
-| Depende de | Fase 2 |
-| Backlog já aberto | `ENG-009`, `ENG-013` |
+| Estado | `EM ANDAMENTO` |
+| Owners principais | CLI, BrowserHost e ElectronHost |
+| Dependência | Fase 1 |
 
-**Objetivo:** promover o ElectronHost experimental a caminho distribuível e verificável.
+### Objetivo
 
-**Entregas obrigatórias:**
+Fazer da CLI a interface operacional oficial entre IA, engine, hosts e toolchain.
 
-- bundle empacotado sem servidor de desenvolvimento;
-- smoke test do aplicativo empacotado/instalado;
-- pacotes macOS, Windows e Linux validados nos sistemas correspondentes;
-- lifecycle, storage e crash report com políticas explícitas;
-- adapters Steam opcionais por contratos de plataforma;
-- SBOM, provenance, hashes e verificação de licenças;
-- receitas separadas para assinatura, notarização e SteamPipe.
+### Entregue
 
-**Gate de saída:** cada target declarado possui pacote e smoke test executado no sistema correspondente. Assinatura, notarização e publicação continuam dependentes de autorização e credenciais do usuário.
+- `game doctor`, `context`, `status`, `inspect`, `new`, `validate` e `test`;
+- `game simulate`, `capture`, `replay` e `report` com implementações reais no adapter disponível;
+- `game run`, `build` e `package` para os targets experimentais suportados;
+- BrowserHost iniciado pela CLI com WASM e bundle Vite;
+- ElectronHost com bundle local, lifecycle, storage e adapters Steam opcionais;
+- saída JSON estruturada com `runId`, status, diagnósticos, artefatos e próximas ações;
+- build WebAssembly e pacotes TypeScript reproduzíveis por lockfiles.
 
-### Fase 4 — Mobile
+### Falta
 
-| Campo | Valor |
-|---|---|
-| Estado | `PLANEJADA` |
-| Depende de | Fase 3 |
+- cache incremental por famílias de artefato e invalidação explicável;
+- watch mode com rebuild limitado ao módulo afetado;
+- hardening do lifecycle de processos em todos os hosts;
+- comandos futuros apenas quando sua capability proprietária existir; não serão criados stubs de `world`, `physics`, `network` ou `construction`.
 
-**Objetivo:** provar que kernel, protocolos e host permanecem separados em Android e iOS.
+Smoke tests distribuíveis, assinatura e notarização pertencem ao hardening de targets da Fase 11; não bloqueiam o Development Runner local.
 
-**Entregas obrigatórias:**
+### Gate de saída
 
-- hosts Capacitor para Android e iOS;
-- touch, safe areas, orientação e layout adaptativo;
-- pause/resume, background, pressão de memória e perda de contexto;
-- checkpoint atômico durante lifecycle;
-- adapters opcionais de haptics, identidade, commerce e cloud;
-- perfis e testes em dispositivos reais de referência.
+Uma sessão executa, interrompe, reconstrói e inspeciona um projeto com comandos reproduzíveis; caches declaram causa de hit/miss; processos não ficam órfãos; cada target alegado possui execução no sistema correspondente.
 
-**Gate de saída:** o card roguelite executa, persiste, suspende e retoma em Android e iOS dentro de budgets medidos.
-
-### Fase 5 — Survivor-like, Mass Runtime e reuso
+## 7. Fase 3 — AI Control Plane e observabilidade causal
 
 | Campo | Valor |
 |---|---|
-| Estado | `PLANEJADA` |
-| Depende de | Fase 4 |
-| Jogo de prova | Survivor-like |
+| Estado | `EM ANDAMENTO` |
+| Owners principais | CLI, control protocol, harness e BrowserHost |
+| Backlog ativo | `ENG-017` → `ENG-018`; depois retorno aos gaps `ENG-019`–`ENG-020` da Fase 2 |
+| ADR de base | [ADR 0010](docs/adr/0010-local-control-protocol-and-scenario-harness.md) |
 
-**Objetivo:** entregar o segundo jogo, comprovar reutilização e sustentar populações grandes por dados e apresentação em lote.
+### Objetivo
 
-**Entregas obrigatórias:**
+Permitir que a IA controle uma execução real, veja o que ocorreu e rastreie um defeito do input até a apresentação.
 
-- spatial grid e queries com escopo explícito;
-- armazenamento contíguo quando profiling justificar;
-- agentes completos, simplificados e agregados;
-- damage fields e comandos em lote;
-- instancing, batching, pooling e budgets;
-- degradação exclusivamente visual;
-- benchmarks 2D e 3D em hardware de referência.
+### Entregue
 
-**Gate de saída:** card roguelite e survivor-like usam a mesma release e passam por sessões frias independentes. Esse é o gate intermediário de reutilização da engine, não o fim do roadmap.
+- protocolo local versionado, fechado e transportado por stdio;
+- token efêmero, timeout, processo filho e shutdown pertencentes à CLI;
+- `health`, `load_scenario`, `act`, `wait_for`, `inspect`, `capture`, `metrics`, `verify_replay` e `shutdown`;
+- snapshots lógicos, hash, replay, métricas e timeline causal mínima;
+- scenario harness com assertions fechadas por schema;
+- artifact bundle e captura SVG semântica no adapter headless/WASM;
+- sessão fria automatizada sobre o starter;
+- bloqueio de `eval`, shell, script arbitrário, filesystem irrestrito e proxy de rede.
 
-### Fase 6 — Runtime espacial, mundo procedural e sandbox
+### Falta agora
 
-| Campo | Valor |
-|---|---|
-| Estado | `PLANEJADA` |
-| Depende de | Fase 5 |
-| Jogo de prova | Procedural indie sandbox |
+1. `ENG-017` — `UiViewModel` e `RenderedUiSnapshot` produzidos pelo BrowserHost real;
+2. `ENG-018` — captura raster real vinculada ao run e cenário visual reproduzível;
+3. correlação BrowserHost entre input, tick, estado, projector, DOM/Three.js e frame capturado;
+4. inspeção de bounds, clipping, foco, texto resolvido, acessibilidade e ações disponíveis;
+5. captura de erros do renderer, assets, shaders, áudio e lifecycle no mesmo run;
+6. vídeo e profiling somente quando houver contrato e consumidor material.
 
-**Objetivo:** provar um mundo virtualmente extensível durante viagens longas com memória estável.
+### Correlação mínima
 
-**Entregas obrigatórias:**
+Todo registro usa `runId`, tick e sequência. IDs de entidade, visual, chunk, job, construção ou conexão aparecem apenas quando causalmente aplicáveis.
 
-- runtime espacial opt-in;
-- chunks com lifecycle, seed, base gerada e deltas;
-- jobs assíncronos com commit em boundary determinístico;
-- geração dependente apenas de seed, versão, coordenada e content hash;
-- streaming, descarte, cache e persistência por regiões;
-- simulation LOD e catch-up determinístico;
-- floating origin quando a prova de precisão exigir;
-- sandbox voxel estilizado com edição persistente.
+### Gate de saída
 
-**Gate de saída:** geração, viagem, descarte, save por deltas, crash recovery e migration passam; memória estabiliza e o primeiro chunk divergente pode ser localizado por hash.
+Ao observar um defeito nos pixels do BrowserHost, a IA consegue relacioná-lo ao estado lógico, ação, evento, projector e origem aplicáveis, reproduzi-lo por cenário e anexar evidência real ao artifact bundle.
 
-### Fase 7 — Motion, física, multiplayer e party brawler
+## 8. Fase 4 — Autoria text-first de gameplay, UI e conteúdo
 
 | Campo | Valor |
 |---|---|
-| Estado | `PLANEJADA` |
-| Depende de | Fase 6 |
-| Jogo de prova | Physics party brawler |
+| Estado | `PARCIAL` |
+| Owners principais | kernel, Lua SDK, schemas, content compiler e presentation protocol |
+| Dependência | Fase 3 |
 
-**Objetivo:** comprovar física 3D por adapters e multiplayer casual player-hosted.
+### Objetivo
 
-**Entregas obrigatórias:**
+Permitir que a maior parte de um jogo seja criada por Lua, JSONC, CSS e TypeScript públicos, sem alterar internals da engine.
 
-- motion visual separado da autoridade lógica;
-- comandos, snapshots e autoridade física explícita;
-- solvers 2D/3D por adapters aprovados;
-- rigid bodies, controllers, constraints, ragdolls, grabs e breakables exigidos pelo jogo;
-- input e snapshots sobre transporte local;
-- salas pequenas host-authoritative;
-- late join, reconexão, interest management e host migration;
-- Physics Forge mínimo consumido pelo jogo.
+### Entregue
 
-**Gate de saída:** o brawler passa por cenários de física, multiplayer, reconexão e migração; divergências são localizáveis por tick e camada. Não há promessa de multiplayer competitivo, rollback universal, MMO ou igualdade física bit a bit entre plataformas.
+- Lua 5.4.8 sandboxed com tempo e RNG lógicos;
+- command buffer, estado inteiro inspecionável e fixed ticks;
+- JSON Schema e validação semântica do manifest e conteúdo atual;
+- gameplay, conteúdo e apresentação separados por boundaries;
+- content binding experimental comum ao BrowserHost e ao worker;
+- protocolo de apresentação e eventos semânticos de áudio/efeito;
+- saves e replays cobrindo o estado autoritativo atual.
 
-### Fase 8 — Construção procedural e diorama builder
+### Falta
+
+- SDK Lua público para entidades, componentes, tags, relações, recursos, timers, queries e comandos sem expor internals;
+- compilador de content pack versionado, com mapa de símbolos e origem para diagnóstico;
+- UI declarativa baseada em `UiViewModel`, intents e schemas;
+- estilos CSS registrados como apresentação, não como contrato público;
+- projectors read-only declarados e medidos separadamente;
+- localização, navegação, foco, touch targets e breakpoints validados;
+- escape hatches graduais: JSONC → capability → Lua/projector → TypeScript → extensão nativa aprovada;
+- migrations de schema e conteúdo compilado regenerável.
+
+### Restrições
+
+Lua não acessa renderer, DOM, host, filesystem, rede, relógio civil ou SDKs de plataforma. TypeScript de apresentação não decide gameplay. JSONC validado não executa expressões Lua ou JavaScript.
+
+### Gate de saída
+
+Uma sessão nova cria regras, conteúdo, tela, apresentação e cenário usando apenas APIs públicas; valida, executa e inspeciona o resultado sem tocar no kernel ou nos internals dos hosts.
+
+## 9. Fase 5 — Runtime espacial e mundo procedural
 
 | Campo | Valor |
 |---|---|
 | Estado | `PLANEJADA` |
-| Depende de | Fase 7 |
-| Jogo de prova | Procedural diorama builder |
+| Owners previstos | spatial runtime, world runtime e job system |
+| Dependência | Fase 4 |
 
-**Objetivo:** entregar autoria em runtime baseada em representação semântica e geometria derivada.
+### Objetivo
 
-**Entregas obrigatórias:**
+Criar uma fundação opt-in comum para mapas pequenos, mundos extensos e sandboxes virtualmente infinitos.
 
-- `Construction Graph` textual e versionado;
-- comandos semânticos com undo/redo e replay;
-- compiler incremental de footprints, volumes, paredes, aberturas e telhados;
-- rebuild local por dependências explícitas;
-- Building Chemistry rastreável;
-- constraint solver especializado;
-- picking, handles, splines, brushes e snapping;
-- terrain sculpting e decoração dentro de budgets;
-- rastreabilidade de cada derivado até nó, regra, asset e comando.
+### Entregas técnicas
 
-**Gate de saída:** uma edição reconstrói somente a região afetada; mesh, collider, terreno e decoração permanecem correlacionados; undo/redo e replay reproduzem o mesmo grafo.
+- posição global composta por dimensão, região, chunk e posição local;
+- conversões e precisão testadas sem expor a estrutura interna como API permanente;
+- chunks com coordenada, seed derivada, generator version, base, deltas, entidades, collider, mesh, LOD, hash e persistência;
+- lifecycle explícito: `UNLOADED`, `REQUESTED`, `GENERATING`, `READY_FOR_MESH`, `MESHING`, `RESIDENT`, `DIRTY`, `SAVING`, `EVICTABLE`;
+- jobs assíncronos de geração, meshing, pathfinding, compressão e I/O;
+- commit de resultados de jobs em boundary determinístico, independente da ordem de conclusão;
+- spatial partitioning interno substituível: grid, sparse grid, quadtree, octree, BVH ou region index;
+- Procedural World Graph por seed, generator ID/version, dimensão, coordenada e content hash;
+- World Simulation LOD: ativo, simplificado, agregado e não carregado;
+- catch-up por tempo lógico e regras agregadas;
+- floating origin quando o teste de precisão justificar;
+- inspeção de regiões, chunks, jobs, cache, hashes, geração, meshing e descarte.
 
-### Fase 9 — Consolidação dos Forges obrigatórios
+### Cenários e diagnósticos mínimos
+
+- viagem longa com memória estabilizada;
+- teleport entre regiões;
+- ordem de jobs permutada com mesmo hash lógico;
+- seam entre chunks;
+- chunk descartado sem recursos residentes;
+- `WORLD_GENERATOR_NON_DETERMINISTIC`, `WORLD_CHUNK_HASH_MISMATCH`, `WORLD_CHUNK_LEAK`, `WORLD_SEAM_DETECTED` e `WORLD_JOB_BLOCKED_TICK`.
+
+### Gate de saída
+
+O runtime gera, carrega, descarta e regenera chunks determinísticos; viagens longas estabilizam memória; jogos que não declaram a capability não carregam seu custo relevante.
+
+## 10. Fase 6 — Motion, física e Mass Simulation
 
 | Campo | Valor |
 |---|---|
 | Estado | `PLANEJADA` |
-| Depende de | Fase 8 e consumidores reais dos cinco jogos |
+| Owners previstos | motion, physics adapters e mass runtime |
+| Dependência | Fase 5 |
 
-**Objetivo:** consolidar Visual, World, Construction, Physics e Audio Forges como ferramentas independentes de authoring/build time.
+### Objetivo
 
-Um Forge mínimo pode nascer na fase do jogo que o consome. A Fase 9 estabiliza somente o que já possui consumidor real; ela não cria cinco plataformas especulativas de uma vez.
+Fornecer movimento sem solver, integração física substituível e simulação de populações em níveis de detalhe.
 
-| Forge | Consumidor mínimo | Evidência exigida |
+### Motion System
+
+- `motion.tween`, `spring`, `path`, `ballistic`, `snap`, `follow` e `orbit`;
+- tempo lógico ou de apresentação declarado por operação;
+- cancelamento, conclusão, interrupção e causa inspecionáveis;
+- motion visual sem autoridade sobre a regra.
+
+### Física por adapters
+
+- contratos semânticos para corpos, colliders, contatos, triggers, joints, raycasts e constraints;
+- autoridade explícita: `presentation`, `gameplay` ou `host`;
+- solvers 2D e 3D avaliados por licença, targets, estabilidade e observabilidade;
+- caixas, círculos/esferas, cápsulas, convex hulls e meshes estáticos conforme o adapter;
+- character controllers, ragdolls, grabs e breakables somente após os fundamentos;
+- snapshots de corpos, contatos, forças, velocidades, sleeping e divergência;
+- nenhuma promessa de determinismo competitivo cross-platform sem prova específica.
+
+### Mass Runtime
+
+- armazenamento SoA/contíguo para dados massivos;
+- spatial hashing e queries limitadas;
+- movimento, steering, separação, dano em área e despawn em lote;
+- Lua configura comportamento e recebe eventos agregados, sem callback completo por agente por frame;
+- níveis: entidade completa, agente simplificado, grupo agregado, instância visual e densidade/partícula;
+- promoção e rebaixamento observáveis e dentro de budget;
+- damage fields com shape, intervalo e efeito declarativos.
+
+### Gates e diagnósticos
+
+- cenários de movimento bloqueado, tunneling, autoridade divergente e horda excedendo budget;
+- `PHYSICS_AUTHORITY_MISMATCH`, `PHYSICS_COLLIDER_INVALID`, `PHYSICS_DIVERGENCE`;
+- `MASS_ENTITY_BUDGET_EXCEEDED`, `MASS_LUA_PER_ENTITY_CALLBACK`, `MASS_SPATIAL_QUERY_TOO_BROAD`, `MASS_PROMOTION_SPIKE`.
+
+### Gate de saída
+
+A IA explica por que uma entidade não se moveu, um corpo atravessou um collider ou uma população excedeu budget; a simulação massiva permanece separada de sua projeção visual.
+
+## 11. Fase 7 — Persistência, replays e multiplayer player-hosted
+
+| Campo | Valor |
+|---|---|
+| Estado | `PARCIAL` |
+| Owners principais | kernel, storage e network runtime futuro |
+| Dependências | Fases 5 e 6 |
+
+### Já entregue
+
+- saves lógicos versionados com envelope, checksum e content hash;
+- migrations e fixtures básicas;
+- replays com inputs, checkpoints e hashes;
+- equivalência lógica native/WASM e localização de divergência no corpus atual;
+- storage/lifecycle experimental no ElectronHost.
+
+### Persistência mundial restante
+
+- seed, generator version, deltas, entidades persistentes, resumos regionais, Construction Graphs e terrain edits;
+- region storage com escrita atômica, journal, checksums, compactação e recuperação após crash;
+- inspeção, compactação e migration por CLI;
+- crescimento de save e compatibilidade entre versões medidos;
+- o mundo base regenerável não será duplicado integralmente no save.
+
+### Multiplayer restante
+
+- salas player-hosted e host-authoritative;
+- protocolo lógico de input, snapshot, correção e interesse;
+- transporte local primeiro; WebRTC, Steam Networking, P2P de plataforma e UDP somente por adapters aprovados;
+- relay apenas como fallback de transporte, nunca servidor de gameplay;
+- sincronização procedural por seed, generator version, content hash, chunk hashes e deltas;
+- late join, reconexão e host migration;
+- snapshots de sala, jogadores, latência, perda, correções, interesse e migração;
+- limite explícito para co-op, partidas casuais e sandboxes entre amigos.
+
+### Diagnósticos mínimos
+
+- `NETWORK_WORLD_HASH_MISMATCH`, `NETWORK_CHUNK_DELTA_BACKLOG`, `ROOM_PHYSICS_DIVERGENCE`, `HOST_MIGRATION_FAILED`;
+- cenário que encontre o primeiro tick, evento ou chunk divergente entre host e cliente.
+
+### Gate de saída
+
+Save local e mundial sobrevivem a crash e migration; replay encontra a primeira divergência; uma sala casual suporta conexão, late join, reconexão e migração dentro dos limites declarados.
+
+## 12. Fase 8 — Renderer, UI, áudio e apresentação escalável
+
+| Campo | Valor |
+|---|---|
+| Estado | `PARCIAL` |
+| Owners principais | presentation protocol, renderer-three, UI renderer e hosts |
+| Dependências | Fases 3, 4, 5, 6 e 7 |
+
+### Já entregue
+
+- protocolo semântico de apresentação;
+- renderer Three.js experimental para browser/Electron;
+- primitivas 3D, câmera, atmosfera e transformações;
+- Web Audio por IDs semânticos, buses básicos e eventos;
+- partículas em burst com budget simples;
+- separação entre estado lógico e representação visual.
+
+### Renderer escalável restante
+
+- buffers contíguos entre simulação, projector e GPU;
+- sprites e quads instanciados, atlases e sorting controlado;
+- instanced meshes, materiais compartilhados, LOD e impostors;
+- culling por célula/lote e pooling;
+- terrain streaming para tiles, voxel e heightfield conforme capability declarada;
+- greedy meshing e rebuild parcial para voxel;
+- GPU particles com fallback CPU limitado;
+- degradação automática de resolução, sombras, partículas, animação e pós-processamento sem alterar gameplay;
+- snapshots de scene graph, visibilidade, culling, LOD, draw calls, triângulos, memória e shaders.
+
+### UI restante
+
+- `UiViewModel` como intenção e `RenderedUiSnapshot` como resultado real;
+- renderer declarativo acessível;
+- bounds, clipping, foco, contraste, texto resolvido, locale e ações;
+- navegação completa por teclado, controle e touch;
+- transições UI–mundo sem duplicar estado autoritativo;
+- baselines raster por backend, perfil e viewport.
+
+### Áudio restante
+
+- prioridade, deduplicação, spatial intent e música adaptativa;
+- budgets de vozes e memória;
+- captura de waveform/espectro e eventos não resolvidos;
+- fallback observável para backend indisponível.
+
+### Gate de saída
+
+A IA diferencia objeto inexistente, fora da câmera, cullado, transparente, asset ausente, shader/material inválido e erro lógico; apresentação massiva permanece dentro dos budgets aprovados.
+
+## 13. Fase 9 — Procedural Construction Runtime
+
+| Campo | Valor |
+|---|---|
+| Estado | `PLANEJADA` |
+| Owners previstos | construction runtime, geometry compiler e authoring toolkit |
+| Dependências | Fases 5, 6 e 8 |
+
+### Objetivo
+
+Permitir construção procedural interativa cuja fonte de verdade seja um grafo semântico, nunca a mesh derivada.
+
+### Entregas técnicas
+
+- `Construction Graph` versionado com volumes, footprints, paredes, pisos, telhados, aberturas, caminhos, cercas, escadas, fundações, decoração e constraints;
+- comandos semânticos de edição com IDs estáveis, undo/redo e replay;
+- Building Chemistry para encontros, cruzamentos, fundações, portas, arcos, quinas e decoração contextual;
+- constraint solver especializado para espaçamento, alinhamento, continuidade, suporte, interseções e prioridades;
+- Geometry Compiler incremental com extrusão, offset, triangulação, booleanas controladas, telhados, UV procedural e cache por hash;
+- rebuild apenas da região e das dependências afetadas;
+- terrain sculpting: raise, lower, smooth, flatten, paint, path e water;
+- picking, hover, drag, handles, gizmos, brushes, splines e snapping semântico;
+- decoração instanciada com seeds locais, máscaras, exclusão, budgets e LOD;
+- rastreabilidade de mesh, collider e decoração até construction, node, rule, asset, região e comando.
+
+### Diagnósticos mínimos
+
+- footprint inválido, self-intersection, wall gap, boolean failure, roof unresolved, constraint conflict e rebuild acima do budget;
+- interseção com terreno, caminho íngreme, fundação sem suporte e decoração flutuante/densa.
+
+### Gate de saída
+
+Mover uma parede reconstrói apenas a região necessária; undo/redo e replay reproduzem o mesmo grafo; a IA explica cada consequência derivada.
+
+## 14. Fase 10 — Procedural Forges
+
+| Campo | Valor |
+|---|---|
+| Estado | `PLANEJADA` |
+| Owners previstos | ferramentas independentes de authoring/build time |
+| Dependências | Fases 4–9 conforme o Forge |
+
+### Contrato comum
+
+Todo Forge recebe spec textual e produz:
+
+- receita e seed quando aplicável;
+- arquivos convencionais;
+- manifest, hashes, toolchain e parâmetros;
+- origem e licença;
+- preview;
+- métricas, diagnósticos e validation report;
+- instrução de regeneração quando possível.
+
+Nenhum Forge entrega apenas arquivo opaco. Serviços externos podem ser adapters de authoring, mas não serão obrigatórios para executar o jogo.
+
+### Visual Forge
+
+- sprites, low-poly, materiais, texturas, rig, animações, colliders, LOD e impostors;
+- skeleton-first e personagens modulares quando aplicável;
+- previews, thumbnails e turntable;
+- geração ocorre em authoring/build time.
+
+### World Forge
+
+- terrenos, biomas, cavernas, rios, ilhas, vegetação, recursos, estruturas, clima e distribuição;
+- valida seams, rios interrompidos, estruturas flutuantes, recursos inacessíveis, densidade, variedade e budget.
+
+### Construction Forge
+
+- estilos arquitetônicos, paredes, telhados, aberturas, escadas, arcos, fundações, regras de união, decoração, constraints e presets de ferramentas.
+
+### Physics Forge
+
+- colliders, massa, centro de massa, joints, ragdolls, grab points, breakables, weapon profiles e cenários de estabilidade.
+
+### Audio Forge
+
+- `MusicSpec`, `SfxSpec`, instrumentos, osciladores, ruído, envelopes, filtros, sequenciador, buses e automação;
+- música adaptativa, estados, transições, stingers, SFX, ambiência, loops e stems;
+- valida duração, BPM, tonalidade estimada, LUFS, peak, clipping, dinâmica, espectro e continuidade de loop;
+- renderer local sem serviço externo obrigatório.
+
+### Gate de saída
+
+Os cinco Forges produzem artefatos rastreáveis usados nas fixtures e preparados para os jogos finais, com previews e relatórios verificáveis.
+
+## 15. Fase 11 — Diagnose, Repair, Verify e performance gates
+
+| Campo | Valor |
+|---|---|
+| Estado | `PARCIAL` |
+| Owners principais | CLI, harness, diagnósticos e benchmark registry |
+| Dependência | Gates de observabilidade das fases anteriores |
+
+### Já entregue
+
+- diagnósticos estruturados com códigos estáveis em validação e runtime atual;
+- artifact manifests e relatórios por run;
+- replay, hashes e timeline mínima;
+- cenários, sessão fria e CI native/WASM;
+- algumas classificações explícitas de `NOT_AVAILABLE`, `NOT_RUN` e limitações.
+
+### Falta
+
+- fluxo `detectar → reproduzir → minimizar → rastrear → formular hipótese → dry-run → aplicar → regressão → comparar evidências`;
+- `game diagnose`, `explain`, `fix --dry-run`, `fix --apply` e `verify` somente com operações reais e schemas fechados;
+- classificação de reparo: `automatic-safe`, `automatic-with-review`, `suggestion-only`, `human-required`;
+- nenhum patch automático para decisão artística, segredo, assinatura, publicação, exclusão de dados ou decisão comercial;
+- registry de métricas e performance profiles por target;
+- benchmarks oficiais para cards, hordas, partículas, física, chunks, mundo, construção e multiplayer quando as capabilities existirem;
+- baselines aprovadas atualizadas somente por diff intencional;
+- profiles com hardware, OS, target, backend, resolução, warm-up, amostras, P50/P95/P99, variância e budget;
+- hardening dos targets browser, desktop, Android e iOS conforme o escopo de release;
+- SBOM, provenance, licença e smoke instalado para distribuição.
+
+### Gate de saída
+
+A IA não relata apenas “FPS baixo” ou “falhou”: identifica sistema, archetype, chunk, batch, asset, construção, transporte ou efeito responsável; qualquer reparo aplicado possui cenário de regressão e comparação de evidências.
+
+## 16. Fase 12 — Cinco jogos de prova e sessões frias
+
+| Campo | Valor |
+|---|---|
+| Estado | `PLANEJADA` |
+| Dependência | Fases 1–11 |
+| Regra | jogos validam integração; não são proprietários das fundações |
+
+### Situação atual
+
+`examples/card-roguelite` existe como fixture antecipada. Ele comprova parte de gameplay, conteúdo, save e replay, mas não passou o gate de jogo final porque UI real, captura raster e demais critérios integrados ainda faltam.
+
+Nenhum dos cinco jogos está marcado como concluído.
+
+### Jogo A — Card roguelite
+
+Comprova determinismo, conteúdo text-first, UI declarativa, saves, replays, motion visual, áudio, captura real, build e operação por sessão fria.
+
+### Jogo B — Survivor-like
+
+Comprova spatial grid, Mass Runtime, damage fields, níveis de simulação, instancing, partículas e performance profiles. A meta é gameplay completo onde importa e percepção de horda massiva, não um milhão de agentes completos.
+
+### Jogo C — Physics party brawler
+
+Comprova física 3D, ragdolls, grabs, breakables, multiplayer player-hosted, snapshots, reconexão, host migration e diagnóstico de divergência.
+
+### Jogo D — Procedural indie sandbox
+
+Comprova chunks, streaming, geração, jobs, persistência por deltas, region storage, floating origin, simulation LOD e sincronização procedural. O MVP permanece estilizado, limitado e mensurável.
+
+### Jogo E — Procedural diorama builder
+
+Comprova Construction Graph, splines, Building Chemistry, constraints, geometry compiler incremental, terrain sculpting, runtime authoring, decoração e causal trace.
+
+### Sessão fria obrigatória por jogo
+
+Uma IA sem memória anterior deverá:
+
+1. ler o estado canônico;
+2. descobrir capabilities e limitações;
+3. localizar contratos, conteúdo e cenários;
+4. implementar uma alteração limitada;
+5. executar e controlar o runtime;
+6. observar lógica, UI e pixels;
+7. diagnosticar e corrigir um defeito reproduzível;
+8. verificar replay, regressão e performance aplicável;
+9. produzir build e artifact bundle;
+10. deixar o próximo passo para outra sessão.
+
+### Gate de saída
+
+Os cinco jogos passam pelos gates funcionais, visuais, de target e performance aplicáveis usando releases compatíveis da engine. Só então o roadmap completo recebe `PASS`.
+
+## 17. Target matrix
+
+| Target | Estado atual | Para alegar suporte |
 |---|---|---|
-| Visual | personagens, props ou sprites dos jogos | spec, preview, manifest, origem/licença e validação |
-| World | sandbox | chunks de amostra, seams, distribuição e budget |
-| Construction | diorama builder | estilo, regras, constraints e geometria de amostra |
-| Physics | party brawler | collider, massa, joints, estabilidade e cenários |
-| Audio | ao menos dois jogos | receita, master/stems ou SFX, análise, loop e manifest |
+| Native headless | experimental e executado em CI | equivalência e corpus de replays continuam verdes |
+| Browser | experimental | Control Plane real, captura raster, budgets e fallback gráfico |
+| Electron/macOS | experimental | pacote instalado, smoke, lifecycle e política de assinatura |
+| Electron/Windows | `NOT_RUN` como pacote distribuível | build e smoke em runner Windows |
+| Electron/Linux | `NOT_RUN` como pacote distribuível | build e smoke em runner Linux |
+| Android | `NOT_AVAILABLE` | host, lifecycle, touch, persistência e dispositivo real |
+| iOS | `NOT_AVAILABLE` | host, lifecycle, touch, persistência e dispositivo real |
+| Consoles | rota futura | acesso oficial, infraestrutura privada e host/renderer nativos |
 
-**Gate de saída:** os cinco Forges produzem artefatos reproduzíveis e inspecionáveis usados pelos jogos. Arquivo opaco sem spec, origem, licença, manifest, preview e relatório falha o gate.
+Publicação, assinatura, notarização, compra e envio a lojas nunca são autorizados por este roadmap.
 
-## 8. Jogos de prova
+## 18. Definition of Done de uma capability
 
-Os jogos não formam uma tarefa única deixada para o final. Cada jogo guia a implementação de uma fase e impede abstração sem consumidor. A conclusão final, porém, exige que todos estejam completos em conjunto.
+Uma capability só deixa de ser experimental quando os itens aplicáveis respondem `PASS`:
 
-| Ordem | Jogo | Fase proprietária | Estado | O que comprova |
-|---|---|---|---|---|
-| 1 | Card roguelite | Fase 2 | `EM ANDAMENTO` | determinismo, conteúdo, UI, replay e operação por chat |
-| 2 | Survivor-like | Fase 5 | `PLANEJADO` | segundo uso, Mass Runtime e apresentação em lote |
-| 3 | Procedural indie sandbox | Fase 6 | `PLANEJADO` | chunks, streaming, geração, deltas e simulation LOD |
-| 4 | Physics party brawler | Fase 7 | `PLANEJADO` | física 3D e multiplayer player-hosted |
-| 5 | Procedural diorama builder | Fase 8 | `PLANEJADO` | construção semântica, geometria incremental e autoria em runtime |
+```text
+Discover
+Author
+Execute
+Observe
+Diagnose
+Repair
+Verify
+Continue
+```
 
-**Gate final do portfólio:** os cinco jogos passam por sessões frias, usam releases compatíveis, produzem evidência lógica e visual e exercitam todas as capacidades obrigatórias aplicáveis.
+Checklist obrigatório:
 
-## 9. Capacidades obrigatórias e modularidade
+- owner, versão, targets e limites;
+- schema ou contrato público;
+- fixture e exemplo;
+- comandos de execução e inspeção;
+- snapshots, métricas e traces aplicáveis;
+- diagnósticos estáveis;
+- cenário funcional;
+- artifact bundle;
+- performance gate quando necessário;
+- documentação para sessão fria;
+- integração no jogo de prova aplicável antes de estabilidade.
 
-As capacidades abaixo são obrigatórias para concluir a engine, conforme [ADR 0008](docs/adr/0008-mandatory-scale-and-procedural-capabilities.md):
+`NOT_RUN`, `NOT_AVAILABLE` e `INCONCLUSIVE` nunca equivalem a `PASS`.
 
-- runtime espacial e mundo procedural;
-- Mass Runtime e apresentação escalável;
-- física por adapters;
-- multiplayer player-hosted;
-- construção procedural;
-- Visual, World, Construction, Physics e Audio Forges.
+## 19. Garantias transversais
 
-Elas são **obrigatórias no programa** e **opt-in em cada projeto**. Um card game não deve carregar chunks, solver físico ou rede que não declarou. Nenhuma fase pode remover essas entregas por repriorização local.
+- nenhuma autoridade de gameplay, save, replay, física, mundo, construção ou rede fica invisível;
+- nenhuma capability é entregue sem controle, inspeção, diagnóstico e cenário proporcionais;
+- autoria permanece textual; binários gerados possuem manifest, hash, origem, licença e receita quando possível;
+- jobs assíncronos não alteram a ordem lógica por tempo de conclusão;
+- apresentação derivada não decide silenciosamente o estado autoritativo;
+- otimizações não usadas por um projeto não impõem seu custo relevante;
+- escala nunca é alegada sem cenário, hardware, target, perfil e métricas;
+- reparo nunca é declarado concluído sem regressão;
+- quando faltar evidência, o resultado correto é `INCONCLUSIVE` com investigação seguinte.
 
-Uma capability avançada só deixa de ser experimental depois de possuir consumidor real, cenário, diagnóstico, observabilidade, budget medido, limites declarados e prova de que projetos que não a usam não pagam seu custo relevante.
+## 20. Próxima sequência executável
 
-## 10. Critérios comuns de promoção
+```text
+ENG-017  BrowserHost UiViewModel + RenderedUiSnapshot reais
+    ↓
+ENG-018  captura raster + cenário visual + artifact bundle
+    ↓
+ENG-019  cache/watch incremental e invalidação explicável
+    ↓
+ENG-020  lifecycle e encerramento limpo do Development Runner
+    ↓
+fechar gates P0 das Fases 2–3
+    ↓
+detalhar e concluir a Fase 4 antes do runtime espacial
+```
 
-Uma fase só recebe `CONCLUÍDA` quando:
+O card roguelite continuará como fixture para `ENG-017` e `ENG-018`. Depois disso, o trabalho retorna às fundações técnicas; não será iniciado outro jogo completo antes da Fase 12.
 
-1. o gate específico da fase passou;
-2. os gates aplicáveis de [change-gates.md](docs/guardrails/change-gates.md) estão `PASS`;
-3. contratos públicos possuem implementação e teste de boundary;
-4. limitações e estados não executados estão registrados;
-5. a sessão fria aplicável consegue descobrir e repetir a evidência;
-6. o backlog aponta para a próxima fase ou entrega;
-7. nenhuma capability foi promovida apenas porque o código compila.
+## 21. Regra de evolução
 
-Toda alegação de desempenho declara commit, cenário, host, target, backend, hardware, OS, resolução, perfil, warm-up, amostras, variância, métricas e budget. Benchmarks só se tornam oficiais junto da capability correspondente.
+Cada revisão deve atualizar, no mesmo change set:
 
-## 11. Definição de conclusão do roadmap
+- estado da fase e evidência que passou seu gate;
+- backlog do marco ativo;
+- capabilities e limitações afetadas;
+- ADR quando ordem, boundary, schema, protocolo ou dependência durável mudar;
+- target matrix quando houver execução material nova.
 
-O roadmap completo recebe `PASS` somente quando:
-
-- as fases 0–9 estiverem concluídas;
-- os cinco jogos de prova estiverem completos;
-- native e WebAssembly reproduzirem o mesmo corpus lógico aplicável;
-- runtime espacial, Mass Runtime, física, multiplayer e construção passarem por cenários e performance gates;
-- os cinco Forges produzirem specs, manifests, previews e validação;
-- capabilities avançadas permanecerem opt-in e sem custo relevante para jogos que não as declaram;
-- uma sessão fria conseguir alterar, executar, observar, diagnosticar e verificar cada jogo.
-
-Dois jogos comprovam reutilização da fundação. Eles não comprovam a visão completa.
-
-## 12. Fora do roadmap obrigatório
-
-Um host nativo visual e ports para consoles permanecem em `ROTA FUTURA`. Esse trabalho só começa quando houver valor medido e, para consoles, acesso oficial, justificativa comercial, infraestrutura privada e conformidade já comprovada.
-
-O roadmap atual não promete:
-
-- editor visual completo;
-- renderer ou solver físico próprios;
-- multiplayer competitivo ou MMO;
-- mundo aberto fotorrealista AAA;
-- um milhão de agentes completos;
-- port automático para consoles;
-- publicação autônoma em lojas;
-- correção automática universal ou julgamento definitivo de diversão.
-
-## 13. Manutenção deste roadmap
-
-Ao promover ou reordenar uma fase, a revisão deve atualizar:
-
-- cabeçalho e painel de progresso;
-- marco atual e próxima entrega;
-- evidência que passou o gate;
-- backlog afetado;
-- capability e ADR relacionados, quando aplicável.
-
-Futuras revisões não podem remover pilares obrigatórios do ADR 0008. Ordem, backend e representação interna podem mudar com evidência; contratos publicados, saves, replays e dados do usuário seguem versionamento e migration próprios.
+As capacidades obrigatórias do [ADR 0008](docs/adr/0008-mandatory-scale-and-procedural-capabilities.md) não podem ser removidas por repriorização. O [ADR 0012](docs/adr/0012-feature-first-roadmap-and-proof-games.md) exige que elas sejam construídas como fundações técnicas e comprovadas em conjunto pelos jogos finais.

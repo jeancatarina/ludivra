@@ -3,6 +3,7 @@
 - Status: aceito
 - Data: 2026-07-21
 - Revisão: após os cinco jogos de prova ou antes de estabilizar a API 1.0
+- Sequenciamento: complementado pelo [ADR 0012](0012-feature-first-roadmap-and-proof-games.md)
 
 ## Contexto
 
@@ -24,7 +25,7 @@ O programa completo da Ludivra deverá entregar e comprovar:
 
 Essas capacidades são obrigatórias no roadmap, mas permanecem modulares e opt-in por projeto. Um jogo que não as declara não deve carregar sua dependência, complexidade operacional ou custo relevante de runtime.
 
-Cinco jogos serão provas obrigatórias: card roguelite, survivor-like, physics party brawler, procedural indie sandbox e procedural diorama builder. Cada capacidade nasce no jogo que a exige, permanece experimental enquanto possui um único uso e só promove APIs reutilizáveis segundo os gates de extração, observabilidade, portabilidade e performance.
+Cinco jogos serão provas obrigatórias: card roguelite, survivor-like, physics party brawler, procedural indie sandbox e procedural diorama builder. Conforme o ADR 0012, fundações de infraestrutura podem nascer de contratos, fixtures técnicas, cenários e benchmarks antes dos jogos completos. Abstrações de domínio continuam no primeiro jogo até existir um segundo uso diferente. Nenhuma capability é promovida a estável sem as provas integradas, os gates de observabilidade, portabilidade e performance aplicáveis.
 
 Solvers físicos, transportes de rede e geradores externos continuam detalhes de adapters ou toolchain. Esta decisão não autoriza uma engine física própria, dependência específica, serviço comercial, publicação autônoma nem abstração genérica prematura.
 

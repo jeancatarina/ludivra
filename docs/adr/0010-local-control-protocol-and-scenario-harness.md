@@ -3,6 +3,7 @@
 - Status: aceito
 - Data: 2026-07-22
 - Revisão: antes de alterar operações, transporte ou schemaVersion do protocolo v1
+- Sequenciamento atual: o escopo visual pendente pertence à Fase 3 do [ADR 0012](0012-feature-first-roadmap-and-proof-games.md)
 
 ## Contexto
 
@@ -45,7 +46,7 @@ A mudança de estado registrada como etapa `command` será explicitamente marcad
 
 ### Captura visual
 
-Na Fase 1, a captura será SVG produzida pelo renderer semântico headless. Ela comprova composição, texto, bounds e vínculo com o estado sem afirmar equivalência com pixels do Three.js. Screenshot raster e `RenderedUiSnapshot` do BrowserHost são gates da Fase 2.
+Na implementação inicial, a captura será SVG produzida pelo renderer semântico headless. Ela comprova composição, texto, bounds e vínculo com o estado sem afirmar equivalência com pixels do Three.js. Screenshot raster e `RenderedUiSnapshot` do BrowserHost são gates da Fase 3 no roadmap feature-first.
 
 ## Consequências
 

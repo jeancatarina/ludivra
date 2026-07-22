@@ -68,7 +68,7 @@ No momento, a engine é consumida diretamente pelo repositório clonado. Ainda n
 | Assinatura e notarização | Responsabilidade do proprietário do jogo |
 | Áudio semântico, música e partículas | Experimental, funcional no Browser e Electron |
 | Harness headless e sessão fria | Experimental, funcional e automatizado |
-| Jogo de prova card roguelite | ENG-016 concluído; snapshot real do BrowserHost e captura raster pendentes |
+| Fixture antecipada de integração card roguelite | ENG-016 concluído; snapshot real do BrowserHost e captura raster pendentes |
 | Android e iOS | Planejados |
 | Consoles | Rota arquitetural futura, sem backend público |
 
@@ -387,7 +387,7 @@ Use `--format json` para obter resultados estruturados apropriados para automaç
 
 Veja [Cenários, controle e evidência](docs/recipes/scenario-harness.md) para o formato do bundle e o fluxo de reprodução.
 
-O primeiro jogo de prova real está em `examples/card-roguelite`. Execute todos os gates determinísticos com:
+A fixture antecipada de integração card roguelite está em `examples/card-roguelite`. Ela exercita gameplay, conteúdo, save e replay antes da fase final de jogos de prova. Execute seus gates determinísticos com:
 
 ```sh
 pnpm test:card-roguelite

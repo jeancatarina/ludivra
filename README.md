@@ -68,7 +68,7 @@ For now, the engine is consumed directly from a cloned repository. There is no s
 | Signing and notarization | Responsibility of the game owner |
 | Semantic audio, music, and particle effects | Experimental, functional in Browser and Electron |
 | Headless harness and cold session | Experimental, functional, and automated |
-| Card roguelite gameplay proof | ENG-016 complete; real BrowserHost UI snapshot and raster capture pending |
+| Early card roguelite integration fixture | ENG-016 complete; real BrowserHost UI snapshot and raster capture pending |
 | Android and iOS | Planned |
 | Consoles | Future architectural path; no public backend |
 
@@ -387,7 +387,7 @@ Use `--format json` for structured output designed for automation and AI agents.
 
 See [Scenarios, control, and evidence](docs/recipes/scenario-harness.md) for the bundle layout and replay workflow.
 
-The first real gameplay proof is in `examples/card-roguelite`. Run all of its deterministic gates with:
+The early card roguelite integration fixture is in `examples/card-roguelite`. It exercises gameplay, content, save, and replay before the final proof-game phase. Run its deterministic gates with:
 
 ```sh
 pnpm test:card-roguelite

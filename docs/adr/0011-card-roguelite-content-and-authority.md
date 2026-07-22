@@ -3,10 +3,11 @@
 - Status: aceito
 - Data: 2026-07-22
 - Revisão: antes de publicar um segundo formato de conteúdo autoritativo ou extrair uma capability genérica de cartas
+- Sequenciamento atual: fixture antecipada conforme o [ADR 0012](0012-feature-first-roadmap-and-proof-games.md)
 
 ## Contexto
 
-A Fase 1 provou controle, inspeção e replay sobre um starter, mas ainda não provou um jogo com início, progressão e fim. O primeiro incremento da Fase 2 precisa implementar um card roguelite real sem transformar prematuramente três cartas e dois encontros em um framework genérico.
+O control protocol inicial provou inspeção e replay sobre um starter, mas ainda não havia exercitado um loop com início, progressão e fim. O `ENG-016` implementou um card roguelite real como fixture antecipada sem transformar prematuramente três cartas e dois encontros em um framework genérico. O ADR 0012 posteriormente reservou a prova completa dos jogos para a Fase 12; esta decisão de autoridade de conteúdo permanece válida.
 
 Os valores de custo, dano, bloqueio, vida e ataque não podem existir simultaneamente em JSONC e Lua como duas fontes editáveis. O BrowserHost e o worker de controle também não podem preparar chunks Lua diferentes, pois isso invalidaria replay e equivalência entre execução visual e headless.
 

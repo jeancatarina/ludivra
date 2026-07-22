@@ -1,4 +1,4 @@
-# Backlog da fundação
+# Backlog técnico da Ludivra
 
 | ID | Prioridade | Estado | Trabalho |
 |---|---|---|---|
@@ -17,10 +17,12 @@
 | ENG-013 | média | planejado | Assinar e notarizar o pacote macOS após autorização e credenciais explícitas |
 | ENG-014 | alta | concluído | Implementar scenario harness, captura e artifact bundle |
 | ENG-015 | alta | concluído | Automatizar a sessão fria sobre o starter |
-| ENG-016 | alta | concluído | Definir e implementar o loop jogável do card roguelite |
+| ENG-016 | alta | concluído | Implementar o card roguelite como fixture antecipada de gameplay, conteúdo e replay |
 | ENG-017 | alta | planejado | Produzir UiViewModel e RenderedUiSnapshot reais no BrowserHost |
-| ENG-018 | alta | planejado | Adicionar captura raster e cenário visual do primeiro jogo |
+| ENG-018 | alta | planejado | Adicionar captura raster e cenário visual do BrowserHost usando a fixture card roguelite |
+| ENG-019 | alta | planejado | Completar cache/watch incremental com invalidação explicável no Development Runner |
+| ENG-020 | alta | planejado | Validar lifecycle, rebuild afetado e encerramento limpo do Development Runner |
 
-Ordem restante do marco corrente: `ENG-017` → `ENG-018`. O roadmap canônico está em [ROADMAP.md](ROADMAP.md).
+Ordem restante do P0: `ENG-017` → `ENG-018` → `ENG-019` → `ENG-020`. O roadmap canônico está em [ROADMAP.md](ROADMAP.md).
 
-Após o marco corrente, o backlog será detalhado uma fase por vez para o card roguelite, survivor-like, procedural indie sandbox, physics party brawler, procedural diorama builder e os cinco Forges. Esses marcos são obrigatórios pelo [ADR 0008](docs/adr/0008-mandatory-scale-and-procedural-capabilities.md), ainda que suas tarefas internas só sejam abertas quando a fase anterior passar pelo gate.
+Após esse gate, o backlog será detalhado por fundação técnica: autoria text-first, runtime espacial, motion/física/Mass Runtime, persistência mundial/multiplayer, apresentação escalável, construção, Forges e Diagnose–Repair–Verify. Os cinco jogos completos pertencem à prova integrada final definida pelo [ADR 0012](docs/adr/0012-feature-first-roadmap-and-proof-games.md).

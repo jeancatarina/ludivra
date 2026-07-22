@@ -97,7 +97,7 @@
       "limitations": [
         {
           "code": "HARNESS_BROWSER_CAPTURE_NOT_AVAILABLE",
-          "message": "Phase 1 capture uses the deterministic headless semantic renderer; BrowserHost pixel capture is a Phase 2 gate."
+          "message": "The initial capture uses the deterministic headless semantic renderer; BrowserHost pixel capture is a Phase 3 gate in the feature-first roadmap."
         },
         {
           "code": "HARNESS_COMMAND_TRACE_DERIVED",
