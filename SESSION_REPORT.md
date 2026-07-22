@@ -2,37 +2,36 @@
 
 ## Resultado
 
-Ludivra 0.5.0 com a Fase 0 do roadmap implementada em 2026-07-21.
+Ludivra 0.6.0 com a Fase 1 do roadmap implementada em 2026-07-22.
 
 ## Implementado
 
-- ADR 0009 define o estado canônico derivado e a evidência por execução;
-- `game status` regenera `.ludivra/project-state.json` a partir de fontes, Git, catálogo e runs compatíveis;
-- `PROJECT_STATE.json` manual foi removido sem manter fonte concorrente;
-- toda execução concluída da CLI produz `reports/runs/<runId>/manifest.json` com fingerprints, versões, contexto e hashes;
-- manifests de capability agora declaram owner, targets, contratos, exemplos, dependências, verificações e limitações validadas;
-- `CAPABILITIES.json` continua exclusivamente gerado;
-- `game validate` verifica schemas, outputs gerados, imports, dependências e ciclos workspace/CMake;
-- CI usa actions fixadas e matriz Linux/macOS/Windows, com equivalência WebAssembly separada;
-- starter, READMEs, arquitetura, roadmap e backlog foram migrados para a versão 0.5.0.
+- ADR 0010 define o control protocol local, o scenario harness e o limite da captura headless;
+- protocolo v1 e schema de cenário possuem contratos fechados e bindings gerados;
+- worker WASM isolado usa stdio, token efêmero, timeout e encerramento pertencentes à CLI;
+- operações `health`, `load_scenario`, `act`, `wait_for`, `inspect`, `capture`, `metrics`, `verify_replay` e `shutdown` estão implementadas;
+- `game context`, `simulate`, `capture`, `replay`, `report` e `run --control` possuem implementação real;
+- runs de cenário produzem estado lógico, UiViewModel, RenderedUiSnapshot, timeline causal, métricas, captura SVG e replay;
+- o starter possui cenário versionado e chaves de estado inspecionáveis;
+- uma sessão fria automatizada copia o starter, altera a regra de carga de 1 para 2, valida e comprova o resultado;
+- CI executa harness e sessão fria no job WebAssembly.
 
-## Evidências
+## Evidências locais
 
-- `pnpm game -- validate --format json`: PASS, run `run_b0a86a26-ea18-455f-a916-c2acaaa813a7`;
-- `pnpm test`: PASS;
-- CLI: 6 testes PASS, incluindo manifests, estado obsoleto e ciclos;
-- ElectronHost: 3 testes PASS;
-- native runtime: PASS;
-- equivalência native/WASM: PASS, hash `a16b3a84c7581c0a`;
-- `git diff --check`: PASS.
+- CLI: 9 testes PASS, incluindo bloqueio de operação arbitrária e context search citável;
+- scenario harness: PASS, run `run_ab7f8993-1ce1-4682-89cf-e6ca600f159e`;
+- sessão fria: PASS, run efêmero `run_70e9338b-ac44-4488-9d46-17855696857c`;
+- replay independente e relatório do cenário: PASS;
+- timeline do starter contém input, command diff, eventos de áudio/efeito e apresentação.
+- captura SVG convertida para PNG e inspecionada: texto, estado, visual do núcleo e ações estão visíveis sem clipping.
 
-## Não executado
+## Limitações
 
-- matriz remota do novo workflow: `NOT_RUN`, será disparada pelo push desta mudança;
-- captura visual: `NOT_APPLICABLE`, nenhum renderer ou conteúdo visual foi alterado;
-- packages Windows/Linux: `NOT_RUN`, continuam dependendo dos runners nativos da fase desktop;
-- assinatura, notarização e publicação: `NOT_APPLICABLE`, fora do escopo e dependentes de autoridade explícita.
+- captura raster do BrowserHost: `NOT_AVAILABLE` nesta fase; a captura atual é SVG semântica headless;
+- trace de command buffer privado: `NOT_APPLICABLE`; a timeline expõe o diff comprometido sem vazar instruções Lua;
+- packages instaláveis Windows/Linux: `NOT_RUN`; pertencem ao gate desktop;
+- assinatura, notarização e publicação: `NOT_APPLICABLE`, dependem de autoridade explícita.
 
 ## Próxima prioridade
 
-`ENG-012` — implementar o control protocol local de desenvolvimento e teste.
+`ENG-016` — implementar o loop jogável do card roguelite da Fase 2.

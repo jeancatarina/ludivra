@@ -1,0 +1,167 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ludivra.dev/contracts/control-protocol/v1",
+  "title": "Ludivra local control protocol",
+  "oneOf": [
+    { "$ref": "#/$defs/request" },
+    { "$ref": "#/$defs/response" }
+  ],
+  "$defs": {
+    "condition": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["tickAtLeast"],
+          "properties": { "tickAtLeast": { "type": "integer", "minimum": 0 } }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["integer"],
+          "properties": {
+            "integer": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["key", "equals"],
+              "properties": {
+                "key": { "type": "integer", "minimum": 1 },
+                "equals": { "type": "integer" }
+              }
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["ui"],
+          "properties": {
+            "ui": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["id", "visible"],
+              "properties": {
+                "id": { "type": "string", "minLength": 1 },
+                "visible": { "type": "boolean" }
+              }
+            }
+          }
+        }
+      ]
+    },
+    "request": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["protocolVersion", "requestId", "token", "operation", "payload"],
+      "properties": {
+        "protocolVersion": { "const": 1 },
+        "requestId": { "type": "integer", "minimum": 1 },
+        "token": { "type": "string", "minLength": 32, "maxLength": 128 },
+        "operation": {
+          "enum": ["health", "load_scenario", "act", "wait_for", "inspect", "capture", "metrics", "verify_replay", "shutdown"]
+        },
+        "payload": { "type": "object" }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "operation": { "const": "load_scenario" } } },
+          "then": {
+            "properties": {
+              "payload": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["scenarioId", "seed"],
+                "properties": {
+                  "scenarioId": { "type": "string", "pattern": "^[a-z][a-z0-9.-]*$" },
+                  "seed": { "type": "integer", "minimum": 0 }
+                }
+              }
+            }
+          }
+        },
+        {
+          "if": { "properties": { "operation": { "const": "act" } } },
+          "then": {
+            "properties": {
+              "payload": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["action"],
+                "properties": {
+                  "action": { "type": "string", "minLength": 1 },
+                  "valueMilli": { "type": "integer", "minimum": -1000, "maximum": 1000 }
+                }
+              }
+            }
+          }
+        },
+        {
+          "if": { "properties": { "operation": { "const": "wait_for" } } },
+          "then": {
+            "properties": {
+              "payload": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["condition", "maxTicks"],
+                "properties": {
+                  "condition": { "$ref": "#/$defs/condition" },
+                  "maxTicks": { "type": "integer", "minimum": 0, "maximum": 100000 }
+                }
+              }
+            }
+          }
+        },
+        {
+          "if": { "properties": { "operation": { "const": "capture" } } },
+          "then": {
+            "properties": {
+              "payload": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["name"],
+                "properties": { "name": { "type": "string", "pattern": "^[a-z][a-z0-9-]*$" } }
+              }
+            }
+          }
+        },
+        {
+          "if": { "properties": { "operation": { "const": "verify_replay" } } },
+          "then": {
+            "properties": {
+              "payload": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["archiveBase64"],
+                "properties": { "archiveBase64": { "type": "string", "minLength": 1 } }
+              }
+            }
+          }
+        },
+        {
+          "if": { "properties": { "operation": { "enum": ["health", "inspect", "metrics", "shutdown"] } } },
+          "then": { "properties": { "payload": { "type": "object", "maxProperties": 0 } } }
+        }
+      ]
+    },
+    "response": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["protocolVersion", "requestId", "status"],
+      "properties": {
+        "protocolVersion": { "const": 1 },
+        "requestId": { "type": "integer", "minimum": 1 },
+        "status": { "enum": ["PASS", "FAIL", "INCONCLUSIVE"] },
+        "data": {},
+        "diagnostic": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["code", "message"],
+          "properties": {
+            "code": { "type": "string", "pattern": "^[A-Z][A-Z0-9_]*$" },
+            "message": { "type": "string", "minLength": 1 }
+          }
+        }
+      }
+    }
+  }
+}

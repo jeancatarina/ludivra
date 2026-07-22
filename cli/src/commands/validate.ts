@@ -1,5 +1,5 @@
 import { spawnSync } from "node:child_process";
-import { readdir, readFile } from "node:fs/promises";
+import { readdir, readFile, realpath } from "node:fs/promises";
 import { extname, isAbsolute, relative, resolve } from "node:path";
 import { parse, type ParseError } from "jsonc-parser";
 import type { Diagnostic } from "../generated/cli-result.js";
@@ -22,10 +22,12 @@ const requiredFiles = [
   "contracts/cli-result.schema.json",
   "contracts/capability-catalog.schema.json",
   "contracts/capability-manifest.schema.json",
+  "contracts/control-protocol.schema.json",
   "contracts/desktop-host.schema.json",
   "contracts/project-state.schema.json",
   "contracts/presentation-events.schema.json",
   "contracts/run-manifest.schema.json",
+  "schemas/scenario.schema.json",
   "runtime-c-api/include/ludivra/runtime.h",
   "toolchain.lock"
 ] as const;
@@ -38,11 +40,13 @@ const jsonFiles = [
   "contracts/capability-catalog.schema.json",
   "contracts/capability-manifest.schema.json",
   "contracts/cli-result.schema.json",
+  "contracts/control-protocol.schema.json",
   "contracts/desktop-host.schema.json",
   "contracts/project-state.schema.json",
   "contracts/presentation-events.schema.json",
   "contracts/run-manifest.schema.json",
   "schemas/game.schema.json",
+  "schemas/scenario.schema.json",
   "toolchain.lock"
 ] as const;
 
@@ -50,11 +54,13 @@ const contractSchemaFiles = [
   "contracts/capability-manifest.schema.json",
   "contracts/capability-catalog.schema.json",
   "contracts/cli-result.schema.json",
+  "contracts/control-protocol.schema.json",
   "contracts/desktop-host.schema.json",
   "contracts/project-state.schema.json",
   "contracts/presentation-events.schema.json",
   "contracts/run-manifest.schema.json",
-  "schemas/game.schema.json"
+  "schemas/game.schema.json",
+  "schemas/scenario.schema.json"
 ] as const;
 
 const kernelForbiddenPatterns = [
@@ -316,6 +322,7 @@ export async function runValidate(arguments_: string[] = []): Promise<CommandOut
 
   const generationChecks = [
     "tools/contracts/generate-cli-result.mjs",
+    "tools/contracts/generate-control.mjs",
     "tools/contracts/generate-desktop-host.mjs",
     "tools/contracts/generate-presentation-events.mjs",
     "tools/contracts/generate-operability.mjs",
@@ -392,6 +399,15 @@ export async function runValidate(arguments_: string[] = []): Promise<CommandOut
         file: path
       });
     }
+    if (!path.startsWith("cli/") && !path.startsWith("tools/") &&
+        (/LUDIVRA_CONTROL_TOKEN/.test(content) || /["'][^"']*(?:control-client|control-worker|generated\/control-protocol)[^"']*["']/.test(content))) {
+      diagnostics.push({
+        code: "CONTROL_PROTOCOL_OUTSIDE_TOOLING",
+        severity: "error",
+        message: "The development control protocol may only be imported or configured by CLI/tooling code",
+        file: path
+      });
+    }
     if (extname(file) === ".lua" && /\b(?:debug|io|os|package)\s*[.:]/.test(content)) {
       diagnostics.push({
         code: "LUA_HOST_ACCESS_FORBIDDEN",
@@ -429,6 +445,9 @@ export async function runValidate(arguments_: string[] = []): Promise<CommandOut
           const manifest = game as {
             id: string;
             name: string;
+            inputs: Array<{ id: string }>;
+            inspection: { integerStates: Array<{ key: number }> };
+            scenarios: string[];
             audio?: Array<{ id: string; eventId: number; source?: string }>;
             effects?: Array<{ id: string; eventId: number }>;
           };
@@ -473,6 +492,58 @@ export async function runValidate(arguments_: string[] = []): Promise<CommandOut
                 message: `Audio source does not exist: ${audio.source}`,
                 file: gamePath
               });
+            }
+          }
+
+          const scenarioValidator = schemaValidator.getSchema("https://ludivra.dev/schemas/scenario/v1");
+          const actionIds = new Set(manifest.inputs.map(({ id }) => id));
+          const integerKeys = new Set(manifest.inspection.integerStates.map(({ key }) => key));
+          for (const scenarioReference of manifest.scenarios) {
+            const scenarioPath = resolve(project, scenarioReference);
+            const relation = relative(project, scenarioPath);
+            if (relation.startsWith("..") || isAbsolute(relation)) {
+              diagnostics.push({ code: "SCENARIO_PATH_OUTSIDE_PROJECT", severity: "error", message: `Scenario escapes the game project: ${scenarioReference}`, file: gamePath });
+              continue;
+            }
+            const scenarioErrors: ParseError[] = [];
+            try {
+              const [actualProject, actualScenario] = await Promise.all([realpath(project), realpath(scenarioPath)]);
+              const actualRelation = relative(actualProject, actualScenario);
+              if (actualRelation.startsWith("..") || isAbsolute(actualRelation)) {
+                diagnostics.push({ code: "SCENARIO_PATH_OUTSIDE_PROJECT", severity: "error", message: `Scenario symlink escapes the game project: ${scenarioReference}`, file: scenarioPath });
+                continue;
+              }
+              const scenario = parse(await readFile(actualScenario, "utf8"), scenarioErrors) as {
+                steps?: Array<{ operation?: string; action?: string; condition?: { integer?: { key?: number } } }>;
+                assertions?: Array<{ type?: string; key?: number }>;
+              };
+              if (scenarioErrors.length > 0 || scenarioValidator === undefined || !scenarioValidator(scenario)) {
+                diagnostics.push({
+                  code: "SCENARIO_SCHEMA_INVALID",
+                  severity: "error",
+                  message: scenarioErrors.length > 0
+                    ? "Scenario is not valid JSONC"
+                    : scenarioValidator?.errors?.map((error) => `${error.instancePath} ${error.message}`).join("; ") ?? "Scenario schema is unavailable",
+                  file: scenarioPath
+                });
+                continue;
+              }
+              for (const step of scenario.steps ?? []) {
+                if (step.operation === "act" && (step.action === undefined || !actionIds.has(step.action))) {
+                  diagnostics.push({ code: "SCENARIO_ACTION_UNKNOWN", severity: "error", message: `Scenario references unknown action: ${step.action ?? "missing"}`, file: scenarioPath });
+                }
+                const key = step.condition?.integer?.key;
+                if (key !== undefined && !integerKeys.has(key)) {
+                  diagnostics.push({ code: "SCENARIO_STATE_KEY_UNKNOWN", severity: "error", message: `Scenario references undeclared integer key: ${key}`, file: scenarioPath });
+                }
+              }
+              for (const assertion of scenario.assertions ?? []) {
+                if (assertion.type === "integer-equals" && (assertion.key === undefined || !integerKeys.has(assertion.key))) {
+                  diagnostics.push({ code: "SCENARIO_STATE_KEY_UNKNOWN", severity: "error", message: `Scenario assertion references undeclared integer key: ${assertion.key ?? "missing"}`, file: scenarioPath });
+                }
+              }
+            } catch (error) {
+              diagnostics.push({ code: "SCENARIO_UNREADABLE", severity: "error", message: error instanceof Error ? error.message : `Unable to read ${scenarioReference}`, file: scenarioPath });
             }
           }
 

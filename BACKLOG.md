@@ -13,11 +13,14 @@
 | ENG-009 | média | planejado | Validar pacotes Windows/Linux em runners nativos |
 | ENG-010 | alta | concluído | Implementar storage/lifecycle/diagnóstico e adapters Steam opcionais no ElectronHost |
 | ENG-011 | alta | concluído | Reconciliar `PROJECT_STATE.json` com o estado canônico definido pela arquitetura |
-| ENG-012 | alta | planejado | Implementar o control protocol local de desenvolvimento e teste |
+| ENG-012 | alta | concluído | Implementar o control protocol local de desenvolvimento e teste |
 | ENG-013 | média | planejado | Assinar e notarizar o pacote macOS após autorização e credenciais explícitas |
-| ENG-014 | alta | planejado | Implementar scenario harness, captura e artifact bundle |
-| ENG-015 | alta | planejado | Automatizar a sessão fria sobre o starter |
+| ENG-014 | alta | concluído | Implementar scenario harness, captura e artifact bundle |
+| ENG-015 | alta | concluído | Automatizar a sessão fria sobre o starter |
+| ENG-016 | alta | planejado | Definir e implementar o loop jogável do card roguelite |
+| ENG-017 | alta | planejado | Produzir UiViewModel e RenderedUiSnapshot reais no BrowserHost |
+| ENG-018 | alta | planejado | Adicionar captura raster e cenário visual do primeiro jogo |
 
-Ordem do marco corrente: `ENG-012` → `ENG-014` → `ENG-015`. O roadmap canônico está em [ROADMAP.md](ROADMAP.md).
+Ordem do marco corrente: `ENG-016` → `ENG-017` → `ENG-018`. O roadmap canônico está em [ROADMAP.md](ROADMAP.md).
 
 Após o marco corrente, o backlog será detalhado uma fase por vez para o card roguelite, survivor-like, procedural indie sandbox, physics party brawler, procedural diorama builder e os cinco Forges. Esses marcos são obrigatórios pelo [ADR 0008](docs/adr/0008-mandatory-scale-and-procedural-capabilities.md), ainda que suas tarefas internas só sejam abertas quando a fase anterior passar pelo gate.

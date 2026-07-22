@@ -1,6 +1,6 @@
 {
   "name": "ludivra",
-  "version": "0.5.0",
+  "version": "0.6.0",
   "private": true,
   "packageManager": "pnpm@11.7.0",
   "devDependencies": {
@@ -8,8 +8,8 @@
     "jsonc-parser": "3.3.1"
   },
   "scripts": {
-    "contracts": "node tools/contracts/generate-cli-result.mjs && node tools/contracts/generate-desktop-host.mjs && node tools/contracts/generate-presentation-events.mjs && node tools/contracts/generate-operability.mjs && node tools/contracts/generate-capabilities.mjs",
-    "build:cli": "pnpm contracts && pnpm --filter @ludivra/cli build",
+    "contracts": "node tools/contracts/generate-cli-result.mjs && node tools/contracts/generate-control.mjs && node tools/contracts/generate-desktop-host.mjs && node tools/contracts/generate-presentation-events.mjs && node tools/contracts/generate-operability.mjs && node tools/contracts/generate-capabilities.mjs",
+    "build:cli": "pnpm contracts && pnpm --filter @ludivra/runtime-web build && pnpm --filter @ludivra/cli build",
     "build:packages": "pnpm --filter @ludivra/presentation-protocol build && pnpm --filter @ludivra/platform-contracts build && pnpm --filter @ludivra/runtime-web build && pnpm --filter @ludivra/renderer-three build",
     "build:wasm": "tools/build/build-wasm.sh",
     "build:web": "pnpm build:packages && pnpm build:wasm && pnpm --filter @ludivra/browser-host build",
@@ -18,8 +18,10 @@
     "test:cli": "pnpm --filter @ludivra/cli test",
     "test:desktop": "pnpm --filter @ludivra/electron-host check && pnpm --filter @ludivra/electron-host test",
     "test:native": "ctest --preset dev",
+    "test:harness": "node tools/tests/scenario-harness.mjs",
+    "test:cold-session": "node tools/tests/cold-session.mjs",
     "test:wasm-equivalence": "pnpm build:native && pnpm build:wasm && pnpm --filter @ludivra/runtime-web build && node tools/tests/wasm-equivalence.mjs",
-    "test": "pnpm build && pnpm test:cli && pnpm test:desktop && pnpm test:native && pnpm test:wasm-equivalence",
+    "test": "pnpm build && pnpm test:cli && pnpm test:desktop && pnpm test:native && pnpm test:wasm-equivalence && pnpm test:harness && pnpm test:cold-session",
     "game": "node cli/dist/index.js"
   }
 }

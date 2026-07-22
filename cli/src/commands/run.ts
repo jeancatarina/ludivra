@@ -1,9 +1,13 @@
 import { runProcess } from "../process-runner.js";
 import { resolveProjectDirectory } from "../project.js";
 import { findEngineRoot } from "../repository.js";
-import type { CommandOutcome } from "../result.js";
+import type { CommandContext, CommandOutcome } from "../result.js";
+import { runScenarioCommand } from "../scenario-harness.js";
 
-export async function runGame(arguments_: string[]): Promise<CommandOutcome> {
+export async function runGame(context: CommandContext, arguments_: string[]): Promise<CommandOutcome> {
+  if (arguments_.includes("--control")) {
+    return runScenarioCommand(context, arguments_, false);
+  }
   const root = await findEngineRoot();
   const project = await resolveProjectDirectory(arguments_);
   for (const script of ["build:packages", "build:wasm"]) {

@@ -1,0 +1,96 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ludivra.dev/schemas/scenario/v1",
+  "title": "Ludivra scenario",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "id", "requirements", "seed", "timeoutMs", "steps", "assertions"],
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "id": { "type": "string", "pattern": "^[a-z][a-z0-9.-]*$" },
+    "requirements": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": { "type": "string", "pattern": "^[A-Z][A-Z0-9-]*$" }
+    },
+    "seed": { "type": "integer", "minimum": 0 },
+    "timeoutMs": { "type": "integer", "minimum": 100, "maximum": 120000 },
+    "steps": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "oneOf": [
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["operation", "action"],
+            "properties": {
+              "operation": { "const": "act" },
+              "action": { "type": "string", "minLength": 1 },
+              "valueMilli": { "type": "integer", "minimum": -1000, "maximum": 1000 }
+            }
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["operation", "condition", "maxTicks"],
+            "properties": {
+              "operation": { "const": "wait_for" },
+              "condition": { "$ref": "https://ludivra.dev/contracts/control-protocol/v1#/$defs/condition" },
+              "maxTicks": { "type": "integer", "minimum": 0, "maximum": 100000 }
+            }
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["operation"],
+            "properties": { "operation": { "enum": ["inspect", "metrics"] } }
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["operation", "name"],
+            "properties": {
+              "operation": { "const": "capture" },
+              "name": { "type": "string", "pattern": "^[a-z][a-z0-9-]*$" }
+            }
+          }
+        ]
+      }
+    },
+    "assertions": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "oneOf": [
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["type", "key", "equals"],
+            "properties": {
+              "type": { "const": "integer-equals" },
+              "key": { "type": "integer", "minimum": 1 },
+              "equals": { "type": "integer" }
+            }
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["type", "id", "visible"],
+            "properties": {
+              "type": { "const": "ui-node" },
+              "id": { "type": "string", "minLength": 1 },
+              "visible": { "type": "boolean" }
+            }
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["type"],
+            "properties": { "type": { "const": "replay-verifies" } }
+          }
+        ]
+      }
+    }
+  }
+}

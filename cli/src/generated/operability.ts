@@ -11,7 +11,7 @@ export interface RunManifest {
   status: EvidenceStatus; exitCode: number; startedAt: string; finishedAt: string; durationMs: number; command: string[];
   repositories: { engine: RepositoryFingerprint; project?: RepositoryFingerprint };
   toolchain: { engineVersion: string; nodeVersion: string; platform: string; architecture: string; toolchainLockSha256: string; contractsSha256: string };
-  context: { projectId?: string; target?: string; profile?: string };
+  context: { projectId?: string; target?: string; profile?: string; scenarioId?: string; requirements?: string[] };
   diagnostics: Array<{ code: string; severity: "info" | "warning" | "error" }>; artifacts: RunArtifact[];
 }
 

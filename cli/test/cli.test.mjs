@@ -5,6 +5,7 @@ import { tmpdir } from "node:os";
 import { resolve } from "node:path";
 import test from "node:test";
 import { normalizeRepositoryPath, validateCmakeGraph, validateWorkspaceGraph } from "../dist/commands/validate.js";
+import { createContractValidator } from "../dist/contract-validator.js";
 
 function runCli(arguments_) {
   const execution = spawnSync(process.execPath, ["dist/index.js", ...arguments_], {
@@ -25,6 +26,21 @@ test("pnpm argument separator is ignored", () => {
 test("fitness functions normalize Windows repository paths", () => {
   assert.equal(normalizeRepositoryPath("hosts\\electron\\src\\main.cjs"), "hosts/electron/src/main.cjs");
   assert.equal(normalizeRepositoryPath("renderer-three\\src\\index.ts"), "renderer-three/src/index.ts");
+});
+
+test("control protocol rejects arbitrary execution operations", () => {
+  const schema = JSON.parse(readFileSync(new URL("../../contracts/control-protocol.schema.json", import.meta.url), "utf8"));
+  const validate = createContractValidator().compile(schema);
+  assert.equal(validate({ protocolVersion: 1, requestId: 1, token: "a".repeat(64), operation: "eval", payload: { source: "process.exit()" } }), false);
+  assert.equal(validate({ protocolVersion: 1, requestId: 1, token: "a".repeat(64), operation: "health", payload: {} }), true);
+});
+
+test("context search cites matching capability contracts", () => {
+  const { execution, result } = runCli(["context", "--task", "control scenario replay", "--format", "json"]);
+  assert.equal(execution.status, 0);
+  assert.equal(result.data.confidence, "MATCHED");
+  assert.equal(result.data.matches[0].id, "operability.control-harness");
+  assert.ok(result.data.matches[0].contracts.includes("contracts/control-protocol.schema.json"));
 });
 
 test("unknown command returns a structured failure", () => {

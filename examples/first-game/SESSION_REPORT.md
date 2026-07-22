@@ -1,5 +1,7 @@
 # Última sessão
 
-Starter atualizado para Ludivra 0.5.0, com estado derivado por `game status`, evidência por execução, autosave desktop, música declarativa, sons de ação, partículas e pacote Steam verificável.
+Starter atualizado para Ludivra 0.6.0. O projeto declara estado inspecionável e o cenário `starter.charge-core`, controlável pelo harness local.
 
-Validação: schemas, catálogo, runtime native/WASM, preview BrowserHost e pacote Steam/macOS passaram. O burst de carga foi inspecionado visualmente; SteamPipe segue aguardando App ID e Depot ID reais. Evidências atuais devem ser consultadas em `.ludivra/project-state.json` após executar `game status`.
+O cenário envia a ação `charge`, espera a carga do núcleo chegar a 1, captura o layout semântico, grava timeline causal e verifica o replay. Use `game simulate --project . --scenario scenarios/charge-core.jsonc --format json` e regenere o estado com `game status` para localizar a evidência compatível mais recente.
+
+A captura atual é SVG do renderer semântico headless; pixels do BrowserHost e o loop completo do card roguelite pertencem à próxima fase.

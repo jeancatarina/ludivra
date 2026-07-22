@@ -4,7 +4,7 @@
 
 | Campo | Valor |
 |---|---|
-| Versão do documento | 3.1 |
+| Versão do documento | 3.2 |
 | Status | Arquitetura proposta |
 | Escopo inicial | Web, Steam/desktop, Android e iOS |
 | Rota futura | Hosts e renderers nativos para consoles |
@@ -918,6 +918,8 @@ capture / start_video / stop_video / metrics / shutdown
 ```
 
 O transporte pode ser stdio, socket local ou WebSocket de loopback e é detalhe de adapter. O contrato e os payloads são os mesmos. A CLI é dona do processo, aguarda readiness, aplica timeouts e sempre tenta encerramento limpo.
+
+A primeira implementação aprovada usa JSON Lines por `stdio`, conforme [ADR 0010](docs/adr/0010-local-control-protocol-and-scenario-harness.md). O vocabulário executável está em `contracts/control-protocol.schema.json`; cenários declarativos seguem `schemas/scenario.schema.json`. O adapter inicial é headless/WASM e produz captura SVG semântica. Captura de pixels do BrowserHost permanece um gate distinto da Fase 2 e não pode ser inferida pela captura headless.
 
 Esse endpoint:
 

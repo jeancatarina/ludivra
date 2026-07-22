@@ -9,6 +9,9 @@ export interface GameManifest {
   name: string;
   targets: string[];
   entrypoints: { gameplay: string; presentation: string };
+  inputs: Array<{ id: string; label: string; actionId: number; keys: string[] }>;
+  inspection: { integerStates: Array<{ id: string; label: string; key: number }> };
+  scenarios: string[];
   steam?: { appId: number | null; depotId: number | null };
   desktop?: { updates?: { enabled: boolean; feedUrl: string | null } };
 }

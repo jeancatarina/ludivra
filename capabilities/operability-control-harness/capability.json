@@ -1,0 +1,29 @@
+{
+  "id": "operability.control-harness",
+  "status": "experimental",
+  "version": "0.1.0",
+  "owner": "cli",
+  "targets": ["native-headless"],
+  "contracts": [
+    "contracts/control-protocol.schema.json",
+    "schemas/scenario.schema.json",
+    "contracts/run-manifest.schema.json"
+  ],
+  "examples": ["examples/first-game/scenarios/charge-core.jsonc"],
+  "dependencies": ["runtime.lua-gameplay", "runtime.save-replay"],
+  "verification": [
+    "pnpm test:cli",
+    "pnpm test:harness",
+    "pnpm test:cold-session"
+  ],
+  "limitations": [
+    {
+      "code": "HARNESS_BROWSER_CAPTURE_NOT_AVAILABLE",
+      "message": "Phase 1 capture uses the deterministic headless semantic renderer; BrowserHost pixel capture is a Phase 2 gate."
+    },
+    {
+      "code": "HARNESS_COMMAND_TRACE_DERIVED",
+      "message": "Command-stage traces report committed state diffs and do not expose private Lua instructions."
+    }
+  ]
+}

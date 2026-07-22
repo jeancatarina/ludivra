@@ -84,6 +84,10 @@ export async function writeRunManifest(
   if (projectManifest !== undefined) context.projectId = projectManifest.id;
   if (target !== undefined) context.target = target;
   if (profile !== undefined) context.profile = profile;
+  if (typeof result.data?.scenarioId === "string") context.scenarioId = result.data.scenarioId;
+  if (Array.isArray(result.data?.requirements) && result.data.requirements.every((value) => typeof value === "string")) {
+    context.requirements = result.data.requirements as string[];
+  }
 
   const manifest: RunManifest = {
     _generated: "game",

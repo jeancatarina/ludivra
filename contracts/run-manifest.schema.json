@@ -64,7 +64,13 @@
       "properties": {
         "projectId": { "type": "string", "minLength": 1 },
         "target": { "type": "string", "minLength": 1 },
-        "profile": { "type": "string", "minLength": 1 }
+        "profile": { "type": "string", "minLength": 1 },
+        "scenarioId": { "type": "string", "pattern": "^[a-z][a-z0-9.-]*$" },
+        "requirements": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": { "type": "string", "pattern": "^[A-Z][A-Z0-9-]*$" }
+        }
       }
     },
     "diagnostics": {

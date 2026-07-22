@@ -1,0 +1,23 @@
+{
+  "schemaVersion": 1,
+  "id": "starter.charge-core",
+  "requirements": ["HARNESS-001", "STARTER-001"],
+  "seed": 42,
+  "timeoutMs": 10000,
+  "steps": [
+    { "operation": "inspect" },
+    { "operation": "act", "action": "charge", "valueMilli": 1000 },
+    {
+      "operation": "wait_for",
+      "condition": { "integer": { "key": 1, "equals": 1 } },
+      "maxTicks": 2
+    },
+    { "operation": "capture", "name": "core-charged" },
+    { "operation": "metrics" }
+  ],
+  "assertions": [
+    { "type": "integer-equals", "key": 1, "equals": 1 },
+    { "type": "ui-node", "id": "action.reset", "visible": true },
+    { "type": "replay-verifies" }
+  ]
+}

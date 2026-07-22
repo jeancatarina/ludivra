@@ -10,6 +10,11 @@ import { runNew } from "./commands/new.js";
 import { runPackage } from "./commands/package.js";
 import { runGame } from "./commands/run.js";
 import { runStatus } from "./commands/status.js";
+import { runCapture } from "./commands/capture.js";
+import { runContext } from "./commands/context.js";
+import { runReplay } from "./commands/replay.js";
+import { runReport } from "./commands/report.js";
+import { runSimulate } from "./commands/simulate.js";
 import { optionValue } from "./arguments.js";
 import {
   createOperationResult,
@@ -52,13 +57,23 @@ async function dispatch(command: string, context: CommandContext, arguments_: st
     case "package":
       return runPackage(arguments_);
     case "run":
-      return runGame(arguments_);
+      return runGame(context, arguments_);
     case "status":
       return runStatus(arguments_);
+    case "context":
+      return runContext(arguments_);
+    case "simulate":
+      return runSimulate(context, arguments_);
+    case "capture":
+      return runCapture(context, arguments_);
+    case "replay":
+      return runReplay(context, arguments_);
+    case "report":
+      return runReport(context, arguments_);
     case "help":
       return {
         diagnostics: [],
-        data: { commands: ["build", "doctor", "inspect", "new", "package", "run", "status", "test", "validate"] },
+        data: { commands: ["build", "capture", "context", "doctor", "inspect", "new", "package", "replay", "report", "run", "simulate", "status", "test", "validate"] },
         nextActions: ["Run game doctor --format json"]
       };
     default:

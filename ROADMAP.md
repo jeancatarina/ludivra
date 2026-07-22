@@ -4,8 +4,8 @@
 
 | Campo | Valor |
 |---|---|
-| Versão | 1.2 |
-| Data-base | 2026-07-21 |
+| Versão | 1.3 |
+| Data-base | 2026-07-22 |
 | Estado | ativo |
 | Escopo | sequência, critérios de promoção, fases obrigatórias e rota futura |
 
@@ -153,6 +153,8 @@ Uma sessão nova identifica, por comandos e arquivos canônicos, o que existe, o
 
 **Objetivo:** fechar o ciclo `executar → controlar → observar → diagnosticar → verificar` antes de ampliar o domínio da engine.
 
+**Status:** concluída na versão 0.6.0 pelo adapter headless/WASM. Captura raster do BrowserHost permanece no gate visual da Fase 2.
+
 ### Entregas
 
 1. control protocol local, versionado e disponível somente em desenvolvimento/teste;
@@ -173,6 +175,15 @@ O endpoint não oferecerá `eval`, shell, Lua/JavaScript arbitrário, filesystem
 ### Gate de saída
 
 Uma sessão fria altera um comportamento limitado do starter, executa um cenário, inspeciona estado lógico e visual, reproduz a execução e produz artifact bundle sem operação manual fora do chat.
+
+### Evidência de conclusão
+
+- control protocol v1 validado, autenticado por token efêmero e transportado por stdio;
+- `game context`, `simulate`, `capture`, `replay` e `report` implementados;
+- `UiViewModel`, `RenderedUiSnapshot`, captura SVG e timeline causal produzidos pelo adapter semântico;
+- scenario harness verifica assertions fechadas e replay no runtime;
+- sessão fria copia o starter, altera a regra de carga, valida e comprova o novo estado;
+- CI executa harness e sessão fria junto da equivalência native/WebAssembly.
 
 ## 8. Fase 2 — Primeiro jogo real e loop visual completo
 
@@ -431,7 +442,7 @@ O roadmap completo só recebe `PASS` depois dos cinco jogos, das capacidades obr
 
 ## 21. Próxima prioridade
 
-O próximo marco da engine é a **Fase 1 — Harness e ciclo de operabilidade por chat**, começando pelo `ENG-012`, o control protocol local de desenvolvimento e teste. Em seguida vêm scenario harness, captura, artifact bundle ampliado e sessão fria automatizada.
+O próximo marco da engine é a **Fase 2 — Primeiro jogo real e loop visual completo**, começando pelo `ENG-016`, o loop jogável do card roguelite. Em seguida vêm o `UiViewModel` real do BrowserHost e captura raster do cenário visual.
 
 Física avançada, mundo procedural, Mass Runtime, multiplayer, construção procedural e Forges permanecem fora do marco corrente, mas são fases posteriores obrigatórias.
 

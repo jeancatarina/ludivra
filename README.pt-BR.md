@@ -2,7 +2,7 @@
 
 # Ludivra
 
-[![Version](https://img.shields.io/badge/version-0.5.0-7c5cff)](https://github.com/jeancatarina/ludivra)
+[![Version](https://img.shields.io/badge/version-0.6.0-7c5cff)](https://github.com/jeancatarina/ludivra)
 [![Status](https://img.shields.io/badge/status-experimental-f59e0b)](BACKLOG.md)
 [![License](https://img.shields.io/badge/license-MIT-22c55e)](LICENSE)
 
@@ -45,6 +45,7 @@ Electron gera o aplicativo desktop/Steam
 - adapters opcionais para Steam achievements, Cloud, usuário e overlay;
 - logs estruturados e Crashpad local;
 - CLI com saída legível por pessoas ou agentes;
+- control protocol local, cenários declarativos, replay, captura semântica e trace causal;
 - pacote desktop com smoke test, checksums, SBOM e provenance.
 
 ## Quem pode usar
@@ -64,10 +65,11 @@ No momento, a engine é consumida diretamente pelo repositório clonado. Ainda n
 | Integração Steam | Implementada, exige App ID, Depot ID e conta Steamworks |
 | Assinatura e notarização | Responsabilidade do proprietário do jogo |
 | Áudio semântico, música e partículas | Experimental, funcional no Browser e Electron |
+| Harness headless e sessão fria | Experimental, funcional e automatizado |
 | Android e iOS | Planejados |
 | Consoles | Rota arquitetural futura, sem backend público |
 
-Não trate a versão 0.5.0 como uma engine estável para produção sem avaliar essas limitações.
+Não trate a versão 0.6.0 como uma engine estável para produção sem avaliar essas limitações.
 
 ## Tutorial: seu primeiro jogo
 
@@ -122,6 +124,7 @@ meu-primeiro-jogo/
 ├── DECISIONS.md           decisões do jogo
 ├── SESSION_REPORT.md      evidências da última sessão
 ├── game.jsonc             manifesto, targets e inputs
+├── scenarios/             cenários declarativos e assertions
 ├── scripts/
 │   └── gameplay.lua       regras autoritativas
 └── presentation/
@@ -142,10 +145,10 @@ Edite `../meu-primeiro-jogo/game.jsonc`:
 
 ```jsonc
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "id": "meu-primeiro-jogo",
   "name": "Meu Primeiro Jogo",
-  "engine": { "version": "0.5.0" },
+  "engine": { "version": "0.6.0" },
   "targets": ["browser", "desktop", "native-headless"],
   "entrypoints": {
     "gameplay": "scripts/gameplay.lua",
@@ -159,6 +162,12 @@ Edite `../meu-primeiro-jogo/game.jsonc`:
       "keys": ["Space", "Enter"]
     }
   ],
+  "inspection": {
+    "integerStates": [
+      { "id": "score", "label": "Pontuação", "key": 1 }
+    ]
+  },
+  "scenarios": ["scenarios/confirmar.jsonc"],
   "audio": [
     {
       "id": "audio.confirm",
@@ -193,6 +202,31 @@ Edite `../meu-primeiro-jogo/game.jsonc`:
 ```
 
 Gameplay recebe `actionId`, nunca teclas físicas. O binding de `Space` e `Enter` pertence ao manifesto e pode mudar sem contaminar a regra Lua.
+
+Crie `scenarios/confirmar.jsonc` para tornar o cenário declarado imediatamente executável:
+
+```jsonc
+{
+  "schemaVersion": 1,
+  "id": "tutorial.confirmar",
+  "requirements": ["TUTORIAL-001"],
+  "seed": 42,
+  "timeoutMs": 10000,
+  "steps": [
+    { "operation": "act", "action": "confirmar", "valueMilli": 1000 },
+    {
+      "operation": "wait_for",
+      "condition": { "integer": { "key": 1, "equals": 1 } },
+      "maxTicks": 2
+    },
+    { "operation": "capture", "name": "confirmado" }
+  ],
+  "assertions": [
+    { "type": "integer-equals", "key": 1, "equals": 1 },
+    { "type": "replay-verifies" }
+  ]
+}
+```
 
 ### 5. Implemente uma regra em Lua
 
@@ -332,15 +366,23 @@ Todos os comandos devem ser executados na raiz da engine.
 |---|---|
 | `game doctor` | verifica o toolchain fixado |
 | `game inspect` | lista versão, plataformas e capacidades |
+| `game context --task <descrição>` | localiza capabilities e contratos com fontes citáveis |
 | `game new <pasta>` | cria um jogo a partir do starter |
 | `game validate --project <pasta>` | valida schema e regras arquiteturais |
 | `game test` | executa a suíte e grava o log em `reports/runs/` |
 | `game run --project <pasta>` | inicia o preview local |
+| `game run --control --project <pasta>` | executa o cenário padrão pelo control protocol |
+| `game simulate --project <pasta> --scenario <arquivo>` | executa assertions e produz artifact bundle |
+| `game capture --project <pasta> --scenario <arquivo>` | produz captura semântica vinculada ao estado |
+| `game replay --project <pasta> --replay <arquivo>` | verifica um replay no runtime |
+| `game report --project <pasta> --run <id>` | resume uma execução sem alterar o run original |
 | `game status --project <pasta>` | regenera o estado canônico derivado |
 | `game build --project <pasta> --target web` | gera o build web |
 | `game package --project <pasta> --target <target>` | gera o pacote desktop |
 
 Use `--format json` para obter resultados estruturados apropriados para automação e agentes.
+
+Veja [Cenários, controle e evidência](docs/recipes/scenario-harness.md) para o formato do bundle e o fluxo de reprodução.
 
 ## Arquitetura do repositório
 

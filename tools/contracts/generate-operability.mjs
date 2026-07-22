@@ -29,7 +29,7 @@ const output = `// Generated from run-manifest.schema.json and project-state.sch
   `  status: EvidenceStatus; exitCode: number; startedAt: string; finishedAt: string; durationMs: number; command: string[];\n` +
   `  repositories: { engine: RepositoryFingerprint; project?: RepositoryFingerprint };\n` +
   `  toolchain: { engineVersion: string; nodeVersion: string; platform: string; architecture: string; toolchainLockSha256: string; contractsSha256: string };\n` +
-  `  context: { projectId?: string; target?: string; profile?: string };\n` +
+  `  context: { projectId?: string; target?: string; profile?: string; scenarioId?: string; requirements?: string[] };\n` +
   `  diagnostics: Array<{ code: string; severity: "info" | "warning" | "error" }>; artifacts: RunArtifact[];\n` +
   `}\n\n` +
   `export interface ProjectLimitation { code: string; source: string; message: string; }\n` +

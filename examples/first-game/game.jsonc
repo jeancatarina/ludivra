@@ -1,8 +1,8 @@
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "id": "first-game",
   "name": "First Ludivra Game",
-  "engine": { "version": "0.5.0" },
+  "engine": { "version": "0.6.0" },
   "targets": ["browser", "desktop", "native-headless"],
   "entrypoints": {
     "gameplay": "scripts/gameplay.lua",
@@ -12,6 +12,12 @@
     { "id": "charge", "label": "Carregar núcleo", "actionId": 1, "keys": ["Space", "Enter"] },
     { "id": "reset", "label": "Reiniciar", "actionId": 2, "keys": ["KeyR"] }
   ],
+  "inspection": {
+    "integerStates": [
+      { "id": "core.charge", "label": "Carga do núcleo", "key": 1 }
+    ]
+  },
+  "scenarios": ["scenarios/charge-core.jsonc"],
   "audio": [
     {
       "id": "music.core-loop",
