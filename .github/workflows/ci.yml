@@ -49,6 +49,7 @@ jobs:
           node-version: 22.14.0
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+      - run: pnpm build:cli
       - run: tools/deps/bootstrap-emsdk.sh
       - run: pnpm test:wasm-equivalence
       - run: pnpm test:harness
