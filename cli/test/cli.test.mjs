@@ -379,3 +379,49 @@ test("the process runner terminates a child that exceeds its declared timeout", 
   // The child must be gone from the live table, not merely detached.
   assert.deepEqual(liveChildren(), []);
 });
+
+test("the recording renderer links projector intent to the captured frame", async () => {
+  const { createRecordingRenderer } = await import("@ludivra/presentation-protocol");
+  const calls = [];
+  const inner = new Proxy({}, {
+    get: (_target, name) => (...args) => {
+      calls.push(name);
+      return undefined;
+    }
+  });
+  const recording = createRecordingRenderer(inner);
+
+  recording.beginFrame();
+  recording.renderer.createVisual({ id: "core", shape: "sphere", color: 0x9b7cff, surface: "emissive" });
+  recording.renderer.setTransform("core", { position: [1, 2, 3], rotation: [0, 0, 0] });
+  recording.renderer.setVisible("core", false);
+  recording.renderer.spawnParticles({
+    position: [0, 0, 0], color: 1, count: 4, size: 1, speed: 1, lifetimeMs: 10, gravity: 0, seed: 7n
+  });
+  recording.renderer.render();
+
+  const trace = recording.trace("42");
+  assert.equal(trace.tick, "42");
+  assert.equal(trace.visuals.length, 1);
+  assert.deepEqual(trace.visuals[0], {
+    id: "core",
+    shape: "sphere",
+    surface: "emissive",
+    color: 0x9b7cff,
+    visible: false,
+    transform: { position: [1, 2, 3], rotation: [0, 0, 0] }
+  });
+  assert.equal(trace.operations.createVisual, 1);
+  assert.equal(trace.operations.setTransform, 1);
+  assert.equal(trace.operations.render, 1);
+  assert.equal(trace.particleBursts, 1);
+  // Every recorded call must still reach the real renderer.
+  assert.deepEqual(calls, ["createVisual", "setTransform", "setVisible", "spawnParticles", "render"]);
+
+  // A new frame resets per-frame counters but keeps the projected scene.
+  recording.beginFrame();
+  const next = recording.trace("43");
+  assert.equal(next.operations.render, 0);
+  assert.equal(next.particleBursts, 0);
+  assert.equal(next.visuals.length, 1);
+});

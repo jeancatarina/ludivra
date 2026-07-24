@@ -1,4 +1,5 @@
 export * from "./generated/ui.js";
+export * from "./projection-trace.js";
 export * from "./ui-projection.js";
 
 export type VisualShape =

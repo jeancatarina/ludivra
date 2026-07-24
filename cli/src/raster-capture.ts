@@ -141,7 +141,7 @@ export async function runRasterCapture(
   const execution = await runProcess(binary, [resolve(engineRoot, "hosts/electron/src/main.cjs")], {
     cwd: engineRoot,
     id: "capture-electron",
-    timeoutMs: 180_000,
+    timeoutMs: 120_000,
     env: {
       ...process.env,
       LUDIVRA_CAPTURE: "1",
@@ -173,9 +173,21 @@ export async function runRasterCapture(
   const snapshotPath = resolve(output, "rendered-ui-snapshot.json");
   const viewModelPath = resolve(output, "ui-view-model.json");
   const metadataPath = resolve(output, "capture.json");
-  const [snapshot, viewModel] = await Promise.all([
+  const projectionPath = resolve(output, "projection-trace.json");
+  const hostDiagnosticsPath = resolve(output, "host-diagnostics.json");
+  const [snapshot, viewModel, projection, hostDiagnostics] = await Promise.all([
     readFile(snapshotPath, "utf8").then((source) => JSON.parse(source) as Record<string, unknown>),
-    readFile(viewModelPath, "utf8").then((source) => JSON.parse(source) as Record<string, unknown>)
+    readFile(viewModelPath, "utf8").then((source) => JSON.parse(source) as Record<string, unknown>),
+    readFile(projectionPath, "utf8").then((source) => JSON.parse(source) as {
+      visuals: unknown[];
+      operations: Record<string, number>;
+    }),
+    readFile(hostDiagnosticsPath, "utf8").then((source) => JSON.parse(source) as Array<{
+      code: string;
+      message: string;
+      tick: string | null;
+      source: string;
+    }>)
   ]);
 
   const ajv = createContractValidator();
@@ -193,6 +205,23 @@ export async function runRasterCapture(
         details: { errors: (validate.errors ?? []).map((error) => `${error.instancePath} ${error.message ?? ""}`.trim()) }
       });
     }
+  }
+  // A frame that looks right while the host logged a failure is not evidence of a
+  // working game; the recorded cause travels with the run.
+  for (const entry of hostDiagnostics.slice(0, 10)) {
+    diagnostics.push({
+      code: entry.code,
+      severity: "error",
+      message: `${entry.message} (${entry.source}${entry.tick === null ? "" : `, tick ${entry.tick}`})`
+    });
+  }
+  // Pixels with no projector work behind them mean the projector never ran.
+  if (projection.operations.render === 0 || projection.visuals.length === 0) {
+    diagnostics.push({
+      code: "CAPTURE_PROJECTION_EMPTY",
+      severity: "error",
+      message: `The projector produced ${projection.visuals.length} visuals and ${projection.operations.render} render calls for this frame`
+    });
   }
   if (snapshot.renderer !== "browser-dom-v1") {
     diagnostics.push({
@@ -269,6 +298,8 @@ export async function runRasterCapture(
     artifact("rendered-ui-snapshot", snapshotPath),
     artifact("ui-view-model", viewModelPath),
     artifact("capture-metadata", metadataPath),
+    artifact("projection-trace", projectionPath),
+    artifact("host-diagnostics", hostDiagnosticsPath),
     artifact("capture-diff", diffPath)
   ]);
   return {
@@ -281,6 +312,8 @@ export async function runRasterCapture(
       viewport: { width: request.width, height: request.height },
       ticks: request.ticks,
       baselinePresent: baseline !== null,
+      projection: { visuals: projection.visuals.length, operations: projection.operations },
+      hostDiagnostics: hostDiagnostics.length,
       cache: build.decisions.map(({ family, status, reason }) => ({ family, status, ...(reason === undefined ? {} : { reason }) })),
       ...(comparison === null ? {} : { comparison }),
       ...(baseline === null && !request.updateBaseline ? { classification: "NOT_AVAILABLE" } : {})

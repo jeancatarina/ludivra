@@ -209,16 +209,17 @@ Permitir que a IA controle uma execução real, veja o que ocorreu e rastreie um
 - `UiViewModel` e `RenderedUiSnapshot` como contratos versionados com bindings gerados;
 - UI declarativa em DOM acessível no BrowserHost, medida por layout real como `browser-dom-v1`;
 - captura raster pelo adapter ElectronHost, com quiescência declarada, tolerância por perfil e baseline aprovada;
+- trace de projeção por frame: visuais pedidos, transform, visibilidade, câmera, atmosfera e contagem de operações;
+- diagnósticos do host coletados no mesmo run — erro de script, promessa rejeitada, asset ausente e perda de contexto WebGL — e convertidos em falha da captura;
 - bloqueio de `eval`, shell, script arbitrário, filesystem irrestrito e proxy de rede.
 
 ### Falta agora
 
-1. correlação completa no BrowserHost entre input, tick, estado, projector, Three.js e frame capturado — hoje a captura vincula `runId`, tick e hash de estado, mas não o projector;
-2. captura de erros do renderer, assets, shaders, áudio e lifecycle no mesmo run;
-3. baselines para outros perfis, viewports e escalas de texto além de `desktop/1280x800@2x`;
-4. vídeo e profiling somente quando houver contrato e consumidor material.
+1. baselines para outros perfis, viewports e escalas de texto além de `desktop/1280x800@2x`;
+2. erros de shader e de áudio ainda não têm código próprio: hoje aparecem como erro de script ou promessa rejeitada;
+3. vídeo e profiling somente quando houver contrato e consumidor material.
 
-Já entregue nesta fase: inspeção de bounds, clipping, foco efetivo, texto resolvido, contraste e ações disponíveis por nó.
+Já entregue nesta fase: inspeção de bounds, clipping, foco efetivo, texto resolvido, contraste e ações disponíveis por nó; e a cadeia pixels → trace de projeção → estado lógico → tick no mesmo bundle de run.
 
 ### Correlação mínima
 
@@ -227,6 +228,8 @@ Todo registro usa `runId`, tick e sequência. IDs de entidade, visual, chunk, jo
 ### Gate de saída
 
 Ao observar um defeito nos pixels do BrowserHost, a IA consegue relacioná-lo ao estado lógico, ação, evento, projector e origem aplicáveis, reproduzi-lo por cenário e anexar evidência real ao artifact bundle.
+
+Evidência atual: `game capture --raster` grava frame, `RenderedUiSnapshot` medido, `UiViewModel`, trace de projeção, diagnósticos do host e diff contra baseline no mesmo run, com o frame reproduzido byte a byte entre execuções. Falta apenas ampliar perfis e detalhar códigos de shader e áudio.
 
 ## 8. Fase 4 — Autoria text-first de gameplay, UI e conteúdo
 

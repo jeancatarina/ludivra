@@ -194,7 +194,9 @@ app.whenReady().then(() => {
     runCapture({ BrowserWindow, logger, environment: process.env })
       .then(() => {
         process.stdout.write("ludivra_capture=ok\n");
-        app.quit();
+        // Exit instead of quit: artifacts are already flushed, and the registered
+        // services keep handles alive that would make app.quit() hang.
+        app.exit(0);
       })
       .catch((error) => {
         logger.error("capture.failed", { message: error.message });

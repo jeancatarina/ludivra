@@ -1,4 +1,5 @@
 import {
+  createRecordingRenderer,
   createUiLocaleTable,
   createUiViewModel,
   type PresentationState,
@@ -12,6 +13,7 @@ import { audioSources, contentDocuments, gameplaySource, manifest } from "virtua
 import { createAudioFeedback } from "./audio-feedback";
 import { createDesktopCheckpointManager } from "./desktop-checkpoint";
 import { presentEffect } from "./effect-feedback";
+import { createHostDiagnostics } from "./host-diagnostics";
 import { createDomUiRenderer } from "./ui-renderer";
 import "./style.css";
 
@@ -38,17 +40,22 @@ if (captureTicks !== null && (!Number.isInteger(captureTicks) || captureTicks < 
 title.textContent = manifest.name;
 document.title = manifest.name;
 
+let runtimeStarted = false;
+const hostDiagnostics = createHostDiagnostics(() => (runtimeStarted ? runtime.tick().toString() : null));
+
 const runtime = await LudivraRuntime.create(
   createLudivraModule,
   { tickRateHz: 60, maxPendingInputs: 4096, seed: 42n }
 );
+runtimeStarted = true;
 const boundContentDocuments = [createGameplayManifestDocument(manifest), ...contentDocuments];
 runtime.loadGameplay(composeGameplaySource(gameplaySource, boundContentDocuments));
 const desktop = await createDesktopCheckpointManager(runtime);
 // Host diagnostics stay outside the UI contract: they describe the host, not the game.
 hostStatus.textContent = `Kernel WASM${desktop === null ? "" : " · autosave desktop"}`;
 
-const renderer = createThreeRenderer(canvas);
+const recording = createRecordingRenderer(createThreeRenderer(canvas));
+const renderer = recording.renderer;
 const contentById = new Map(boundContentDocuments.map((document) => [document.id, document.value]));
 const presenter = createGamePresenter(renderer, {
   content<T>(id: string): T {
@@ -107,7 +114,9 @@ window.ludivraUi = {
   tick: runtime.tick().toString(),
   stateHash: runtime.stateHash().toString(16).padStart(16, "0"),
   viewModel: () => createUiViewModel(projection()),
-  snapshot: () => ui.snapshot()
+  snapshot: () => ui.snapshot(),
+  projection: () => recording.trace(runtime.tick().toString()),
+  diagnostics: () => hostDiagnostics.list()
 };
 
 window.addEventListener("keydown", (event) => {
@@ -146,6 +155,7 @@ function publishInspection(ready: boolean): void {
 }
 
 function present(): void {
+  recording.beginFrame();
   presenter.present(presentationState);
   renderer.render();
   renderUi();
@@ -185,6 +195,7 @@ window.addEventListener("beforeunload", () => {
   desktop?.dispose();
   document.removeEventListener("visibilitychange", audioVisibility);
   audio.destroy();
+  hostDiagnostics.dispose();
   ui.destroy();
   presenter.destroy();
   renderer.destroy();

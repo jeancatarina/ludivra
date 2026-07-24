@@ -15,7 +15,9 @@ Ludivra 0.7.0 com o P0 de operabilidade fechado em 2026-07-24. As Fases 2 e 3 ga
 - cache por família de artefato — `contracts`, `packages`, `wasm`, `native`, `web-bundle` — com chave por conteúdo, toolchain e ambiente declarado;
 - `game build --watch` reconstrói apenas a família proprietária do arquivo alterado e seus dependentes, com `rebuilds.jsonl` por sessão e um único run manifest;
 - `process-runner` passa a ser o único dono de criação de processo: timeout obrigatório ou `unbounded` declarado, grupo próprio, `SIGTERM`→`SIGKILL` e terminação de todos os filhos no encerramento;
-- o harness e a captura passaram a preparar o runtime pelo mesmo registro de famílias, eliminando as listas de build duplicadas.
+- o harness e a captura passaram a preparar o runtime pelo mesmo registro de famílias, eliminando as listas de build duplicadas;
+- trace de projeção por frame gravado no bundle do run: visuais pedidos pelo projector, transform, visibilidade, câmera e contagem de operações;
+- diagnósticos do host coletados no mesmo run e convertidos em falha da captura, incluindo frame sem trabalho de projector.
 
 ## Defeitos encontrados e corrigidos pela nova evidência
 
@@ -26,21 +28,21 @@ Ludivra 0.7.0 com o P0 de operabilidade fechado em 2026-07-24. As Fases 2 e 3 ga
 
 ## Evidências locais
 
-- CLI: 14 testes PASS, incluindo contratos de UI, decodificação de PNG com filtros, tolerância de comparação, propriedade de famílias e terminação por timeout;
+- CLI: 15 testes PASS, incluindo contratos de UI, decodificação de PNG com filtros, tolerância de comparação, propriedade de famílias e terminação por timeout;
 - `game capture --raster`: baseline aprovada e reproduzida byte a byte na execução seguinte (`changedPixels: 0`);
 - cache: quatro famílias `miss NO_ENTRY` em 344s a frio e quatro `hit` em 17s a quente; alterar `hosts/browser/src` invalida apenas `web-bundle` com `INPUT_CHANGED`;
 - watch: `rebuilds.jsonl` registra o arquivo disparador e a família reconstruída; `SIGINT` encerra com exit 0, run manifest gravado e nenhum processo remanescente;
-- snapshot medido do BrowserHost: 17 nós, nenhum clipado, contraste mínimo 11.7.
+- snapshot medido do BrowserHost: 17 nós, nenhum clipado, contraste mínimo 11.7;
+- trace de projeção no tick 8: cinco visuais pedidos, câmera registrada, inimigo oculto conforme o estado lógico e um `render` no frame.
 
 ## Limitações
 
 - baseline visual aprovada apenas para `desktop/1280x800@2x`: outros viewports, escalas de texto e device scale factors permanecem `NOT_AVAILABLE`;
 - captura raster exige Electron instalado e sessão gráfica; runner Linux headless precisaria de display virtual, ainda `NOT_RUN`;
-- correlação entre frame capturado e projector ainda não existe; a captura vincula `runId`, tick e hash de estado;
-- captura de erros de renderer, assets, shaders e áudio no mesmo run: `NOT_AVAILABLE`;
+- erros de shader e de áudio aparecem sob códigos genéricos de script ou promessa rejeitada;
 - família `content` do cache não existe até o content pack do ADR 0017;
 - ADRs 0016 a 0031 são provisórios: fixam direção sem protótipo nem benchmark.
 
 ## Próxima prioridade
 
-Fechar o restante da Fase 3: correlação entre input, tick, estado, projector e frame capturado, mais captura de erros de renderer no mesmo run.
+Fase 4 — SDK Lua público da camada 1 e content pack compilado, conforme os ADRs 0016 e 0017. Da Fase 3 restam apenas ampliar perfis de baseline e detalhar códigos de shader e áudio.

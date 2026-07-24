@@ -115,7 +115,8 @@ async function runCapture({ BrowserWindow, logger, environment }) {
 
     const inspection = JSON.parse(await window.webContents.executeJavaScript(
       "JSON.stringify({ tick: window.ludivraUi.tick, stateHash: window.ludivraUi.stateHash," +
-      " viewModel: window.ludivraUi.viewModel(), snapshot: window.ludivraUi.snapshot() })"
+      " viewModel: window.ludivraUi.viewModel(), snapshot: window.ludivraUi.snapshot()," +
+      " projection: window.ludivraUi.projection(), diagnostics: window.ludivraUi.diagnostics() })"
     ));
     const { png, size } = await captureStableFrame(window.webContents, deadline);
 
@@ -133,6 +134,16 @@ async function runCapture({ BrowserWindow, logger, environment }) {
         "utf8"
       ),
       writeFile(
+        path.join(options.output, "projection-trace.json"),
+        `${JSON.stringify(inspection.projection, null, 2)}\n`,
+        "utf8"
+      ),
+      writeFile(
+        path.join(options.output, "host-diagnostics.json"),
+        `${JSON.stringify(inspection.diagnostics, null, 2)}\n`,
+        "utf8"
+      ),
+      writeFile(
         path.join(options.output, "capture.json"),
         `${JSON.stringify({
           backend: "electron-offscreen",
@@ -144,12 +155,19 @@ async function runCapture({ BrowserWindow, logger, environment }) {
           stateHash: inspection.stateHash,
           locale: inspection.snapshot.locale,
           textScale: inspection.snapshot.textScale,
-          quiescence: "ludivraUi.ready + two identical consecutive frames"
+          quiescence: "ludivraUi.ready + two identical consecutive frames",
+          projectorOperations: inspection.projection.operations,
+          projectedVisuals: inspection.projection.visuals.length,
+          hostDiagnostics: inspection.diagnostics.length
         }, null, 2)}\n`,
         "utf8"
       )
     ]);
-    logger.info("capture.completed", { output: options.output, tick: inspection.tick });
+    logger.info("capture.completed", {
+      output: options.output,
+      tick: inspection.tick,
+      hostDiagnostics: inspection.diagnostics.length
+    });
     return { status: "ok" };
   } catch (error) {
     throw new Error(describe(error));

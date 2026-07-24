@@ -61,6 +61,8 @@ interface LudivraUiInspection {
   stateHash: string;
   viewModel(): import("@ludivra/presentation-protocol").UiViewModel;
   snapshot(): import("@ludivra/presentation-protocol").RenderedUiSnapshot;
+  projection(): import("@ludivra/presentation-protocol").ProjectionTrace;
+  diagnostics(): Array<{ code: string; message: string; tick: string | null; source: string }>;
 }
 
 interface Window {
