@@ -1,9 +1,10 @@
-import { spawn, type ChildProcessWithoutNullStreams } from "node:child_process";
+import { type ChildProcessWithoutNullStreams } from "node:child_process";
 import { createHash, randomBytes } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import { createInterface, type Interface } from "node:readline";
 import { resolve } from "node:path";
 import { createContractValidator } from "./contract-validator.js";
+import { startChildProcess, terminate } from "./process-runner.js";
 import {
   CONTROL_PROTOCOL_VERSION,
   type ControlOperation,
@@ -33,18 +34,18 @@ export class LocalControlClient {
       TMP: process.env.TMP,
       TEMP: process.env.TEMP
     };
-    const child = spawn(process.execPath, [resolve(engineRoot, "cli/dist/control-worker.js"), "--project", project, "--engine-root", engineRoot], {
-      cwd: engineRoot,
-      env: workerEnvironment,
-      stdio: ["pipe", "pipe", "pipe"]
-    });
+    const child = startChildProcess(
+      process.execPath,
+      [resolve(engineRoot, "cli/dist/control-worker.js"), "--project", project, "--engine-root", engineRoot],
+      { id: "control-worker", cwd: engineRoot, env: workerEnvironment }
+    );
     const schema = JSON.parse(await readFile(resolve(engineRoot, "contracts/control-protocol.schema.json"), "utf8"));
     const client = new LocalControlClient(child, token, timeoutMs, createContractValidator().compile(schema));
     try {
       await client.request("health", {});
       return client;
     } catch {
-      child.kill("SIGTERM");
+      await terminate(child);
       throw new Error("CONTROL_WORKER_START_FAILED");
     }
   }
@@ -148,7 +149,8 @@ export class LocalControlClient {
           accept(true);
         });
       });
-      if (!exitedCleanly && !this.exited) this.child.kill("SIGTERM");
+      // One owner, one escalation path: SIGTERM to the group, then SIGKILL.
+      if (!exitedCleanly && !this.exited) await terminate(this.child);
     }
   }
 }

@@ -5,6 +5,17 @@ import { readFile, realpath } from "node:fs/promises";
 import { createInterface } from "node:readline";
 import { isAbsolute, relative, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
+import {
+  BASE_LOCALE,
+  createUiLocaleTable,
+  createUiViewModel,
+  RENDERED_UI_SNAPSHOT_PROTOCOL_VERSION,
+  resolveUiLabel,
+  type RenderedUiSnapshot,
+  type UiLocaleTable,
+  type UiProjectionInput,
+  type UiViewModel
+} from "@ludivra/presentation-protocol";
 import { composeGameplaySource, createGameplayManifestDocument, LudivraRuntime, type GameplayContentDocument, type PresentationEvent, type RuntimeModuleFactory } from "@ludivra/runtime-web";
 import { parse, type ParseError } from "jsonc-parser";
 import { createContractValidator } from "./contract-validator.js";
@@ -19,33 +30,6 @@ interface LogicalStateSnapshot {
   tick: string;
   stateHash: string;
   integers: Array<{ id: string; label: string; key: number; value: string }>;
-}
-
-interface UiNode {
-  id: string;
-  role: "button" | "status";
-  label: string;
-  enabled: boolean;
-  actions: string[];
-}
-
-interface UiViewModel {
-  screen: "game";
-  focus: string | null;
-  nodes: UiNode[];
-}
-
-interface RenderedUiNode extends UiNode {
-  bounds: { x: number; y: number; width: number; height: number };
-  visible: boolean;
-  clipped: boolean;
-  focused: boolean;
-}
-
-interface RenderedUiSnapshot {
-  renderer: "headless-semantic-v1";
-  viewport: { width: 1280; height: 720 };
-  nodes: RenderedUiNode[];
 }
 
 interface TimelineEntry {
@@ -124,47 +108,49 @@ function logicalState(): LogicalStateSnapshot {
   };
 }
 
-function uiViewModel(state: LogicalStateSnapshot): UiViewModel {
+function projectionInput(state: LogicalStateSnapshot): UiProjectionInput {
   return {
     screen: "game",
-    focus: null,
-    nodes: [
-      { id: "runtime.status", role: "status", label: `Tick ${state.tick}`, enabled: true, actions: [] },
-      ...state.integers.map((integer) => ({
-        id: `state.${integer.id}`,
-        role: "status" as const,
-        label: `${integer.label}: ${integer.value}`,
-        enabled: true,
-        actions: []
-      })),
-      ...manifest.inputs.map((input) => ({
-        id: `action.${input.id}`,
-        role: "button" as const,
-        label: input.label,
-        enabled: true,
-        actions: ["act"]
-      }))
-    ]
+    tick: state.tick,
+    integers: state.integers,
+    inputs: manifest.inputs.map(({ id, label, actionId }) => ({ id, label, actionId }))
   };
 }
 
-function renderedUiSnapshot(viewModel: UiViewModel): RenderedUiSnapshot {
+function uiViewModel(state: LogicalStateSnapshot): UiViewModel {
+  return createUiViewModel(projectionInput(state));
+}
+
+function localeTable(state: LogicalStateSnapshot): UiLocaleTable {
+  return createUiLocaleTable(projectionInput(state));
+}
+
+/**
+ * Synthetic layout for the headless adapter. It proves composition and semantics
+ * only; pixels of the BrowserHost are a separate renderer and a separate gate.
+ */
+function renderedUiSnapshot(viewModel: UiViewModel, locale: UiLocaleTable): RenderedUiSnapshot {
   let statusIndex = 0;
   let buttonIndex = 0;
   return {
+    protocolVersion: RENDERED_UI_SNAPSHOT_PROTOCOL_VERSION,
     renderer: "headless-semantic-v1",
     viewport: { width: 1280, height: 720 },
+    textScale: 1,
+    locale: BASE_LOCALE,
     nodes: viewModel.nodes.map((node) => {
       const isButton = node.role === "button";
       const index = isButton ? buttonIndex++ : statusIndex++;
       return {
-        ...node,
+        id: node.id,
         bounds: isButton
           ? { x: 80 + index * 260, y: 600, width: 230, height: 56 }
           : { x: 80, y: 120 + index * 42, width: 520, height: 32 },
         visible: true,
         clipped: false,
-        focused: viewModel.focus === node.id
+        focused: viewModel.focus === node.id,
+        text: resolveUiLabel(locale, node.labelKey, node.labelParams),
+        accessibleRole: node.role
       };
     })
   };
@@ -177,10 +163,10 @@ function escapeXml(value: string): string {
 function captureSvg(state: LogicalStateSnapshot, rendered: RenderedUiSnapshot): string {
   const nodes = rendered.nodes.map((node) => {
     const { x, y, width, height } = node.bounds;
-    if (node.role === "button") {
-      return `<rect x="${x}" y="${y}" width="${width}" height="${height}" rx="12" fill="#5f46d8"/><text x="${x + 18}" y="${y + 35}" fill="#ffffff" font-size="18">${escapeXml(node.label)}</text>`;
+    if (node.accessibleRole === "button") {
+      return `<rect x="${x}" y="${y}" width="${width}" height="${height}" rx="12" fill="#5f46d8"/><text x="${x + 18}" y="${y + 35}" fill="#ffffff" font-size="18">${escapeXml(node.text)}</text>`;
     }
-    return `<text x="${x}" y="${y + 24}" fill="#d8f7ef" font-size="20">${escapeXml(node.label)}</text>`;
+    return `<text x="${x}" y="${y + 24}" fill="#d8f7ef" font-size="20">${escapeXml(node.text)}</text>`;
   }).join("");
   return `<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="720" viewBox="0 0 1280 720"><rect width="1280" height="720" fill="#080711"/><text x="80" y="70" fill="#9b7cff" font-size="34" font-weight="700">${escapeXml(manifest.name)}</text><circle cx="900" cy="300" r="${90 + Math.min(Number(state.integers[0]?.value ?? 0), 20) * 3}" fill="#9b7cff"/><circle cx="900" cy="300" r="160" fill="none" stroke="#46e6c4" stroke-width="8"/>${nodes}</svg>\n`;
 }
@@ -228,7 +214,7 @@ function inspect(): Record<string, unknown> {
     scenarioId,
     logicalState: state,
     uiViewModel: ui,
-    renderedUiSnapshot: renderedUiSnapshot(ui),
+    renderedUiSnapshot: renderedUiSnapshot(ui, localeTable(state)),
     timeline,
     replayBase64: Buffer.from(activeRuntime.replay()).toString("base64")
   };
@@ -241,7 +227,8 @@ function conditionSatisfied(condition: Record<string, unknown>): boolean {
   if (integer !== undefined) return runtime.integerState(integer.key) === BigInt(integer.equals);
   const ui = condition.ui as { id: string; visible: boolean } | undefined;
   if (ui !== undefined) {
-    const snapshot = renderedUiSnapshot(uiViewModel(logicalState()));
+    const state = logicalState();
+    const snapshot = renderedUiSnapshot(uiViewModel(state), localeTable(state));
     return snapshot.nodes.some((node) => node.id === ui.id && node.visible === ui.visible);
   }
   return false;
@@ -300,7 +287,7 @@ async function handle(request: ControlRequest): Promise<ControlResponse> {
     case "capture": {
       const state = logicalState();
       const ui = uiViewModel(state);
-      const rendered = renderedUiSnapshot(ui);
+      const rendered = renderedUiSnapshot(ui, localeTable(state));
       return pass({ name: (request.payload as { name: string }).name, svg: captureSvg(state, rendered), logicalState: state, uiViewModel: ui, renderedUiSnapshot: rendered });
     }
     case "metrics":

@@ -13,21 +13,37 @@ body { margin: 0; min-width: 320px; min-height: 100vh; }
   margin: 0 auto;
   padding: clamp(20px, 4vw, 52px);
   display: grid;
-  grid-template-rows: auto minmax(320px, 1fr) auto;
+  /* The stage yields space so primary actions stay inside the viewport; a clipped
+     action button is a defect the rendered snapshot reports. */
+  grid-template-rows: auto minmax(0, 1fr) auto;
   gap: 24px;
 }
 .eyebrow { margin: 0 0 10px; color: #a992ff; font-size: 12px; letter-spacing: 0.2em; }
 h1 { margin: 0; font-size: clamp(32px, 6vw, 64px); letter-spacing: -0.04em; }
-#runtime-status { margin: 8px 0 0; color: #aaa4bd; }
+#host-status { margin: 8px 0 0; color: #aaa4bd; }
+#game-status {
+  margin: 14px 0 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 22px;
+}
+#game-status li { margin: 0; color: #e4dcff; font-variant-numeric: tabular-nums; }
+#game-status li[data-ui-state="critical"] { color: #ff9b9b; }
+#game-status li[data-ui-state="highlighted"] { color: #46e6c4; }
 .stage {
-  min-height: 320px;
+  position: relative;
+  min-height: 200px;
   overflow: hidden;
   border: 1px solid #29243f;
   border-radius: 28px;
   background: radial-gradient(circle at 50% 35%, #201949 0, #0e0b1d 55%, #080711 100%);
   box-shadow: 0 30px 90px #0008;
 }
-#game-canvas { display: block; width: 100%; height: 100%; min-height: 320px; }
+/* Absolute so the pixel size the renderer writes inline cannot dictate the row
+   height and push primary actions out of the viewport. */
+#game-canvas { position: absolute; inset: 0; display: block; width: 100%; height: 100%; }
 #game-actions { display: flex; flex-wrap: wrap; gap: 12px; }
 button {
   border: 1px solid #7561d3;

@@ -23,12 +23,14 @@ Cache é uma dependência de infraestrutura que as regras de engenharia só auto
 A unidade é a **família de artefato**, não o arquivo nem o comando. Cada família declara id, entradas, saídas e dependências:
 
 ```text
-contracts ──> packages ──> wasm ──> web-bundle
-                      └──> native
-content
+contracts ──> packages ──> web-bundle
+          ├──> wasm ─────> web-bundle
+          └──> native
 ```
 
-`content` cobre validação de `game.jsonc`, schemas e documentos do projeto. Não haverá cache por arquivo individual, por comando arbitrário nem por invocação inteira da CLI.
+Não haverá cache por arquivo individual, por comando arbitrário nem por invocação inteira da CLI.
+
+Uma família `content` para validação de `game.jsonc`, schemas e documentos do projeto foi prevista e **não** entra agora: a validação atual não produz artefato reutilizável, apenas diagnósticos, e cachear diagnóstico exigiria tratá-lo como saída versionada. Ela passa a fazer sentido junto do content pack do [ADR 0017](0017-content-pack-compilation-and-migrations.md), que cria o artefato correspondente. Registrado aqui para que a ausência seja decisão, não esquecimento.
 
 ### Chave de cache
 

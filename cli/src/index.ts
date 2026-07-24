@@ -53,9 +53,9 @@ async function dispatch(command: string, context: CommandContext, arguments_: st
     case "new":
       return runNew(arguments_);
     case "build":
-      return runBuild(arguments_);
+      return runBuild(context, arguments_);
     case "package":
-      return runPackage(arguments_);
+      return runPackage(context, arguments_);
     case "run":
       return runGame(context, arguments_);
     case "status":

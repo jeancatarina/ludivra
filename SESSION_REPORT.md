@@ -2,44 +2,45 @@
 
 ## Resultado
 
-Ludivra 0.7.0 com o `ENG-016` implementado como fixture antecipada de integração em 2026-07-22. O ADR 0012 reorganiza o trabalho restante por capacidades técnicas e reserva os cinco jogos completos para a Fase 12.
+Ludivra 0.7.0 com o P0 de operabilidade fechado em 2026-07-24. As Fases 2 e 3 ganharam decisões registradas e implementação: contratos de UI versionados, captura raster com baseline aprovada, cache por família de artefato com invalidação explicável e lifecycle de processos com dono único. Os ADRs 0013 a 0031 passam a cobrir todas as fases do roadmap.
 
 ## Implementado
 
-- ADR 0010 define o control protocol local, o scenario harness e o limite da captura headless;
-- protocolo v1 e schema de cenário possuem contratos fechados e bindings gerados;
-- worker WASM isolado usa stdio, token efêmero, timeout e encerramento pertencentes à CLI;
-- operações `health`, `load_scenario`, `act`, `wait_for`, `inspect`, `capture`, `metrics`, `verify_replay` e `shutdown` estão implementadas;
-- `game context`, `simulate`, `capture`, `replay`, `report` e `run --control` possuem implementação real;
-- runs de cenário produzem estado lógico, UiViewModel, RenderedUiSnapshot, timeline causal, métricas, captura SVG e replay;
-- o starter possui cenário versionado e chaves de estado inspecionáveis;
-- uma sessão fria automatizada copia o starter, altera a regra de carga de 1 para 2, valida e comprova o resultado;
-- CI executa harness e sessão fria no job WebAssembly;
-- ADR 0011 define a autoridade do conteúdo e proíbe duplicação de balanceamento entre JSONC e Lua;
-- `examples/card-roguelite` implementa início, dois encontros, recompensa, vitória, derrota e reinício;
-- `composeGameplaySource` liga documentos validados ao mesmo chunk Lua no BrowserHost e no control worker;
-- os cenários de vitória, derrota e energia/bloqueio verificam estados finais e replay;
-- o BrowserHost compila a apresentação Three.js da fixture card roguelite;
-- o ADR 0012 define o roadmap feature-first e reclassifica jogos completos como provas integradas finais.
+- ADRs 0013 a 0031 e a tabela da seção 36 de `architecture.md` apontando qual decisão fecha cada escolha pendente;
+- `contracts/ui-view-model.schema.json` e `contracts/rendered-ui-snapshot.schema.json` com bindings gerados por `tools/contracts/generate-ui.mjs`, proprietário `presentation-protocol`;
+- projeção de UI compartilhada: o control worker e o BrowserHost derivam o mesmo `UiViewModel` a partir do manifest e do estado inteiro;
+- `UiViewModel` transporta chave de localização e parâmetros; texto resolvido existe apenas no `RenderedUiSnapshot`;
+- UI declarativa em DOM acessível no BrowserHost, medindo bounds, visibilidade, clipping, foco efetivo, texto resolvido, papel de acessibilidade e contraste como `browser-dom-v1`;
+- `game capture --raster` captura um frame real do bundle web pelo ElectronHost offscreen, com quiescência declarada, tolerância por perfil, baseline versionada e relatório de diff;
+- cache por família de artefato — `contracts`, `packages`, `wasm`, `native`, `web-bundle` — com chave por conteúdo, toolchain e ambiente declarado;
+- `game build --watch` reconstrói apenas a família proprietária do arquivo alterado e seus dependentes, com `rebuilds.jsonl` por sessão e um único run manifest;
+- `process-runner` passa a ser o único dono de criação de processo: timeout obrigatório ou `unbounded` declarado, grupo próprio, `SIGTERM`→`SIGKILL` e terminação de todos os filhos no encerramento;
+- o harness e a captura passaram a preparar o runtime pelo mesmo registro de famílias, eliminando as listas de build duplicadas.
+
+## Defeitos encontrados e corrigidos pela nova evidência
+
+- os sete botões de ação ficavam `clipped` em 1280x800 porque o canvas do Three.js fixa altura inline e travava a linha `1fr` do grid;
+- o BrowserHost inteiro morria quando a bridge desktop estava exposta mas sem handler registrado, em vez de degradar para host indisponível;
+- a captura em janela oculta retornava a primeira pintura, antes do runtime terminar; a quiescência passou a exigir dois frames idênticos consecutivos;
+- o adapter de captura não tinha prazo na espera de carregamento e podia ficar vivo indefinidamente.
 
 ## Evidências locais
 
-- CLI: 10 testes PASS, incluindo bloqueio de operação arbitrária, context search citável e rejeição de conteúdo divergente;
-- scenario harness e sessão fria: PASS na suíte integrada;
-- cenários `ember-vault.run-victory`, `ember-vault.run-defeat` e `ember-vault.guard-and-energy`: PASS;
-- build do BrowserHost para `examples/card-roguelite`: PASS;
-- replay independente e relatório do cenário: PASS;
-- timeline do starter contém input, command diff, eventos de áudio/efeito e apresentação.
-- captura SVG convertida para PNG e inspecionada: texto, estado, visual do núcleo e ações estão visíveis sem clipping.
+- CLI: 14 testes PASS, incluindo contratos de UI, decodificação de PNG com filtros, tolerância de comparação, propriedade de famílias e terminação por timeout;
+- `game capture --raster`: baseline aprovada e reproduzida byte a byte na execução seguinte (`changedPixels: 0`);
+- cache: quatro famílias `miss NO_ENTRY` em 344s a frio e quatro `hit` em 17s a quente; alterar `hosts/browser/src` invalida apenas `web-bundle` com `INPUT_CHANGED`;
+- watch: `rebuilds.jsonl` registra o arquivo disparador e a família reconstruída; `SIGINT` encerra com exit 0, run manifest gravado e nenhum processo remanescente;
+- snapshot medido do BrowserHost: 17 nós, nenhum clipado, contraste mínimo 11.7.
 
 ## Limitações
 
-- captura raster do BrowserHost: `NOT_AVAILABLE` nesta fase; a captura atual é SVG semântica headless;
-- UiViewModel e RenderedUiSnapshot reais do BrowserHost: `NOT_AVAILABLE`; pertencem ao `ENG-017`;
-- trace de command buffer privado: `NOT_APPLICABLE`; a timeline expõe o diff comprometido sem vazar instruções Lua;
-- packages instaláveis Windows/Linux: `NOT_RUN`; pertencem ao gate desktop;
-- assinatura, notarização e publicação: `NOT_APPLICABLE`, dependem de autoridade explícita.
+- baseline visual aprovada apenas para `desktop/1280x800@2x`: outros viewports, escalas de texto e device scale factors permanecem `NOT_AVAILABLE`;
+- captura raster exige Electron instalado e sessão gráfica; runner Linux headless precisaria de display virtual, ainda `NOT_RUN`;
+- correlação entre frame capturado e projector ainda não existe; a captura vincula `runId`, tick e hash de estado;
+- captura de erros de renderer, assets, shaders e áudio no mesmo run: `NOT_AVAILABLE`;
+- família `content` do cache não existe até o content pack do ADR 0017;
+- ADRs 0016 a 0031 são provisórios: fixam direção sem protótipo nem benchmark.
 
 ## Próxima prioridade
 
-`ENG-017` — produzir `UiViewModel` e `RenderedUiSnapshot` reais no BrowserHost e avançar o gate da Fase 3.
+Fechar o restante da Fase 3: correlação entre input, tick, estado, projector e frame capturado, mais captura de erros de renderer no mesmo run.

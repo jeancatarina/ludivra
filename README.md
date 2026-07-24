@@ -377,10 +377,12 @@ Run all commands from the engine root directory.
 | `game run --control --project <directory>` | runs the default scenario through the control protocol |
 | `game simulate --project <directory> --scenario <file>` | executes assertions and produces an artifact bundle |
 | `game capture --project <directory> --scenario <file>` | produces a semantic capture linked to state |
+| `game capture --raster --project <directory> --name <id>` | captures a real frame of the web bundle through the ElectronHost and compares it with the approved baseline |
 | `game replay --project <directory> --replay <file>` | verifies a replay in the runtime |
 | `game report --project <directory> --run <id>` | summarizes a run without modifying its source evidence |
 | `game status --project <directory>` | regenerates canonical derived state |
-| `game build --project <directory> --target web` | creates the web build |
+| `game build --project <directory> --target web` | creates the web build, reusing cached artifact families |
+| `game build --project <directory> --watch` | rebuilds only the family that owns a changed file plus its declared dependents |
 | `game package --project <directory> --target <target>` | creates a desktop package |
 
 Use `--format json` for structured output designed for automation and AI agents.

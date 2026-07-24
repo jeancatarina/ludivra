@@ -54,6 +54,16 @@ declare module "@game/presentation" {
   export const createGamePresenter: CreateGamePresenter;
 }
 
+/** Inspection surface consumed by the raster capture adapter. Read-only by contract. */
+interface LudivraUiInspection {
+  ready: boolean;
+  tick: string;
+  stateHash: string;
+  viewModel(): import("@ludivra/presentation-protocol").UiViewModel;
+  snapshot(): import("@ludivra/presentation-protocol").RenderedUiSnapshot;
+}
+
 interface Window {
   ludivraDesktop?: import("@ludivra/platform-contracts").DesktopBridge;
+  ludivraUi?: LudivraUiInspection;
 }

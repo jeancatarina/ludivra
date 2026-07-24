@@ -1,3 +1,6 @@
+export * from "./generated/ui.js";
+export * from "./ui-projection.js";
+
 export type VisualShape =
   | "box"
   | "cone"

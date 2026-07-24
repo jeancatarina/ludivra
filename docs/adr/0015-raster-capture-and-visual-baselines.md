@@ -26,9 +26,17 @@ O adapter de captura é borda: ele não conhece regra de jogo e não decide quan
 
 ### Vínculo causal obrigatório
 
-Toda captura carrega `runId`, tick, sequência, id do cenário, id do renderer conforme o ADR 0014, backend, perfil, viewport, escala de texto e locale efetivo.
+Toda captura carrega `runId`, tick, hash do estado lógico, id do renderer conforme o ADR 0014, backend, viewport pedido, tamanho real da imagem, escala de texto, locale efetivo e a condição de quiescência aplicada.
 
-A captura só ocorre depois de uma condição de quiescência declarada pelo cenário, usando `wait_for` do control protocol. Capturar sem condição declarada é proibido, porque produziria evidência que falha de forma intermitente sem defeito no jogo. Quiescência não atingida é `CAPTURE_NOT_QUIESCENT` e falha o cenário; nunca captura parcial silenciosa.
+A captura só ocorre depois de uma condição de quiescência declarada. Capturar sem condição declarada é proibido, porque produziria evidência que falha de forma intermitente sem defeito no jogo.
+
+A quiescência tem três partes, e todas são necessárias:
+
+1. **tick determinístico** — o host recebe `?ludivra-capture=<ticks>`, substitui o laço de animação por exatamente esse número de ticks lógicos e projeta uma vez. Sem isso o texto do frame depende do escalonador;
+2. **prontidão declarada pela página** — o host publica `window.ludivraUi.ready` somente após projetar; o adapter espera esse sinal em vez de adivinhar por tempo;
+3. **frame estável** — dois `capturePage` consecutivos idênticos. Uma janela oculta não repinta necessariamente após a primeira pintura, e sem essa terceira condição o adapter grava o frame anterior ao boot enquanto o DOM já está completo. Esse defeito foi observado e é a razão da regra.
+
+Quiescência não atingida é `CAPTURE_NOT_QUIESCENT` ou `CAPTURE_FRAME_NOT_STABLE`; nunca captura parcial silenciosa. O caminho de captura não usa `wait_for` do control protocol: ele dirige o host real, não o worker headless.
 
 O bundle do run recebe a imagem, o `RenderedUiSnapshot` correspondente e o `capture-diff.json` quando houver baseline.
 
@@ -40,9 +48,11 @@ O relatório de diff registra pixels alterados, delta máximo, caixas das regiõ
 
 ### Baselines
 
-Baselines vivem versionadas em `tests/baselines/<scenario>/<backend>/<profile>/<viewport>.png`, uma por combinação declarada. Capturas de execução permanecem no bundle do run ignorado pelo Git.
+Baselines vivem versionadas **no projeto**, em `tests/baselines/<nome>/<backend>/<perfil>/<largura>x<altura>@<escala>x.png`, uma por combinação declarada. O jogo é dono das suas baselines; a engine não guarda evidência visual de projetos. Capturas de execução permanecem no bundle do run ignorado pelo Git.
 
-Baseline ausente é `CAPTURE_BASELINE_MISSING` e classifica o item como `NOT_AVAILABLE`, nunca `PASS`. Atualização de baseline só ocorre por mudança intencional que carregue o relatório de diff no mesmo change set.
+O device scale factor entra no nome do arquivo porque um frame capturado a 2x não é comparável com um capturado a 1x. Sem isso, a mesma baseline em máquinas de DPI diferente acusaria defeito inexistente; com isso, a combinação ausente é `CAPTURE_BASELINE_MISSING`, ou seja `NOT_AVAILABLE`.
+
+Atualização de baseline só ocorre por mudança intencional que carregue o relatório de diff no mesmo change set.
 
 Combinação sem baseline aprovada não pode ser alegada como suporte visual, seguindo a regra da target matrix.
 
@@ -50,7 +60,7 @@ Combinação sem baseline aprovada não pode ser alegada como suporte visual, se
 
 A captura SVG headless permanece válida como evidência de composição e semântica e continua proibida como evidência de pixels. Este ADR não promete comparação entre backends diferentes, captura de vídeo, profiling de GPU nem baseline por máquina de desenvolvedor.
 
-Códigos: `CAPTURE_RASTER_UNAVAILABLE`, `CAPTURE_NOT_QUIESCENT`, `CAPTURE_BASELINE_MISSING`, `CAPTURE_BASELINE_MISMATCH`, `CAPTURE_PROFILE_UNDECLARED`.
+Códigos: `CAPTURE_RASTER_UNAVAILABLE`, `CAPTURE_NOT_QUIESCENT`, `CAPTURE_FRAME_NOT_STABLE`, `CAPTURE_BUNDLE_LOAD_FAILED`, `CAPTURE_BUNDLE_LOAD_TIMEOUT`, `CAPTURE_BASELINE_MISSING`, `CAPTURE_BASELINE_MISMATCH`, `CAPTURE_IMAGE_SIZE_MISMATCH`, `CAPTURE_PROFILE_UNDECLARED`, `CAPTURE_RENDERER_UNEXPECTED`.
 
 ## Consequências
 

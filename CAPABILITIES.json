@@ -80,7 +80,9 @@
       "contracts": [
         "contracts/control-protocol.schema.json",
         "schemas/scenario.schema.json",
-        "contracts/run-manifest.schema.json"
+        "contracts/run-manifest.schema.json",
+        "contracts/ui-view-model.schema.json",
+        "contracts/rendered-ui-snapshot.schema.json"
       ],
       "examples": [
         "examples/first-game/scenarios/charge-core.jsonc"
@@ -96,8 +98,12 @@
       ],
       "limitations": [
         {
-          "code": "HARNESS_BROWSER_CAPTURE_NOT_AVAILABLE",
-          "message": "The initial capture uses the deterministic headless semantic renderer; BrowserHost pixel capture is a Phase 3 gate in the feature-first roadmap."
+          "code": "HARNESS_HEADLESS_CAPTURE_IS_SEMANTIC",
+          "message": "The headless adapter captures deterministic SVG for composition and semantics; pixel evidence requires game capture --raster, which renders through the ElectronHost."
+        },
+        {
+          "code": "HARNESS_RASTER_REQUIRES_DESKTOP_SESSION",
+          "message": "Raster capture needs an installed Electron and a graphical session; headless Linux runners require a virtual display."
         },
         {
           "code": "HARNESS_COMMAND_TRACE_DERIVED",
@@ -165,16 +171,12 @@
       ],
       "limitations": [
         {
-          "code": "CARD_BROWSER_UI_SNAPSHOT_NOT_AVAILABLE",
-          "message": "The real BrowserHost UiViewModel and RenderedUiSnapshot remain in ENG-017."
-        },
-        {
-          "code": "CARD_RASTER_CAPTURE_NOT_AVAILABLE",
-          "message": "Raster capture and its visual scenario remain in ENG-018."
-        },
-        {
           "code": "CARD_FRAMEWORK_NOT_EXTRACTED",
           "message": "The loop is intentionally game-specific until a second game proves a reusable card contract."
+        },
+        {
+          "code": "CARD_VISUAL_BASELINE_SINGLE_PROFILE",
+          "message": "Only the desktop 1280x800@2x baseline is approved; other viewports, text scales and device scale factors remain NOT_AVAILABLE."
         }
       ]
     },

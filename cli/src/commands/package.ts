@@ -3,7 +3,7 @@ import { optionValue } from "../arguments.js";
 import { runProcess } from "../process-runner.js";
 import { readGameManifest, resolveProjectDirectory } from "../project.js";
 import { findEngineRoot } from "../repository.js";
-import type { CommandOutcome } from "../result.js";
+import type { CommandContext, CommandOutcome } from "../result.js";
 import { runBuild } from "./build.js";
 
 const platforms: Record<string, string> = {
@@ -12,7 +12,7 @@ const platforms: Record<string, string> = {
   "steam-linux": "linux"
 };
 
-export async function runPackage(arguments_: string[]): Promise<CommandOutcome> {
+export async function runPackage(context: CommandContext, arguments_: string[]): Promise<CommandOutcome> {
   const target = optionValue(arguments_, "--target") ?? "steam-macos";
   const platform = platforms[target];
   if (platform === undefined) {
@@ -21,7 +21,7 @@ export async function runPackage(arguments_: string[]): Promise<CommandOutcome> 
       nextActions: ["Use steam-macos, steam-windows, or steam-linux"]
     };
   }
-  const build = await runBuild(arguments_);
+  const build = await runBuild(context, arguments_);
   if (build.diagnostics.some((diagnostic) => diagnostic.severity === "error")) {
     return build;
   }
@@ -31,7 +31,7 @@ export async function runPackage(arguments_: string[]): Promise<CommandOutcome> 
   const result = await runProcess(
     "node",
     ["tools/build/package-steam.mjs", "--project", project, "--platform", platform],
-    { cwd: root, env: process.env }
+    { id: "package-steam", cwd: root, timeoutMs: 900_000, env: process.env }
   );
   if (result.exitCode !== 0) {
     return {

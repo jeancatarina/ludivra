@@ -4,8 +4,10 @@ import { existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 
 const root = resolve(import.meta.dirname, "../..");
+// A cold artifact cache may rebuild WebAssembly from scratch, so the deadline is
+// generous; the CLI enforces its own per-child timeouts.
 function game(arguments_) {
-  const execution = spawnSync(process.execPath, ["cli/dist/index.js", ...arguments_, "--format", "json"], { cwd: root, encoding: "utf8", maxBuffer: 20 * 1024 * 1024, timeout: 120_000 });
+  const execution = spawnSync(process.execPath, ["cli/dist/index.js", ...arguments_, "--format", "json"], { cwd: root, encoding: "utf8", maxBuffer: 20 * 1024 * 1024, timeout: 900_000 });
   assert.equal(execution.status, 0, execution.stderr || execution.stdout);
   return JSON.parse(execution.stdout);
 }

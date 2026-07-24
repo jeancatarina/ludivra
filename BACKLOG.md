@@ -18,11 +18,11 @@
 | ENG-014 | alta | concluído | Implementar scenario harness, captura e artifact bundle |
 | ENG-015 | alta | concluído | Automatizar a sessão fria sobre o starter |
 | ENG-016 | alta | concluído | Implementar o card roguelite como fixture antecipada de gameplay, conteúdo e replay |
-| ENG-017 | alta | planejado | Produzir UiViewModel e RenderedUiSnapshot reais no BrowserHost ([ADR 0014](docs/adr/0014-declarative-ui-contracts-and-initial-renderer.md)) |
-| ENG-018 | alta | planejado | Adicionar captura raster e cenário visual do BrowserHost usando a fixture card roguelite ([ADR 0015](docs/adr/0015-raster-capture-and-visual-baselines.md)) |
-| ENG-019 | alta | planejado | Completar cache/watch incremental com invalidação explicável no Development Runner ([ADR 0013](docs/adr/0013-development-runner-cache-and-lifecycle.md)) |
-| ENG-020 | alta | planejado | Validar lifecycle, rebuild afetado e encerramento limpo do Development Runner ([ADR 0013](docs/adr/0013-development-runner-cache-and-lifecycle.md)) |
+| ENG-017 | alta | concluído | Produzir UiViewModel e RenderedUiSnapshot reais no BrowserHost ([ADR 0014](docs/adr/0014-declarative-ui-contracts-and-initial-renderer.md)) |
+| ENG-018 | alta | concluído | Adicionar captura raster e cenário visual do BrowserHost usando a fixture card roguelite ([ADR 0015](docs/adr/0015-raster-capture-and-visual-baselines.md)) |
+| ENG-019 | alta | concluído | Completar cache/watch incremental com invalidação explicável no Development Runner ([ADR 0013](docs/adr/0013-development-runner-cache-and-lifecycle.md)) |
+| ENG-020 | alta | concluído | Validar lifecycle, rebuild afetado e encerramento limpo do Development Runner ([ADR 0013](docs/adr/0013-development-runner-cache-and-lifecycle.md)) |
 
-Ordem restante do P0: `ENG-017` → `ENG-018` → `ENG-019` → `ENG-020`. O roadmap canônico está em [ROADMAP.md](ROADMAP.md).
+O P0 de operabilidade está concluído: contratos de UI versionados, captura raster com baseline, cache por família de artefato e lifecycle de processos com dono único. O roadmap canônico está em [ROADMAP.md](ROADMAP.md).
 
 Após esse gate, o backlog será detalhado por fundação técnica: autoria text-first, runtime espacial, motion/física/Mass Runtime, persistência mundial/multiplayer, apresentação escalável, construção, Forges e Diagnose–Repair–Verify. Os cinco jogos completos pertencem à prova integrada final definida pelo [ADR 0012](docs/adr/0012-feature-first-roadmap-and-proof-games.md).

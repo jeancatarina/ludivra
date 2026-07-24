@@ -1,13 +1,14 @@
 import { mkdir, readFile, realpath, writeFile } from "node:fs/promises";
 import { isAbsolute, relative, resolve } from "node:path";
+import type { RenderedUiSnapshot, UiViewModel } from "@ludivra/presentation-protocol";
 import { parse, type ParseError } from "jsonc-parser";
 import { optionValue } from "./arguments.js";
+import { ensureFamilies, type CacheDecision } from "./artifact-cache.js";
 import { hashArtifactPath } from "./artifact-hash.js";
 import { LocalControlClient } from "./control-client.js";
 import { createContractValidator } from "./contract-validator.js";
 import type { Artifact, Diagnostic } from "./generated/cli-result.js";
 import type { ControlOperation, ControlPayload, ControlResponse } from "./generated/control-protocol.js";
-import { runProcess } from "./process-runner.js";
 import { readGameManifest, resolveProjectDirectory } from "./project.js";
 import { findEngineRoot } from "./repository.js";
 import type { CommandContext, CommandOutcome } from "./result.js";
@@ -41,8 +42,8 @@ export interface ScenarioDefinition {
 
 interface InspectionData {
   logicalState: { tick: string; stateHash: string; integers: Array<{ key: number; value: string }> };
-  uiViewModel: { nodes: Array<{ id: string }> };
-  renderedUiSnapshot: { nodes: Array<{ id: string; visible: boolean }> };
+  uiViewModel: UiViewModel | null;
+  renderedUiSnapshot: RenderedUiSnapshot | null;
   timeline: unknown[];
   replayBase64: string;
 }
@@ -84,14 +85,61 @@ async function loadScenario(engineRoot: string, project: string, arguments_: str
   return { scenario, path, source };
 }
 
-async function prepareHarness(engineRoot: string): Promise<void> {
-  for (const [command, arguments_] of [
-    ["pnpm", ["--filter", "@ludivra/runtime-web", "build"]],
-    ["pnpm", ["build:wasm"]]
-  ] as const) {
-    const result = await runProcess(command, [...arguments_], { cwd: engineRoot, env: process.env });
-    if (result.exitCode !== 0) throw new Error(`SCENARIO_PREPARATION_FAILED:${result.output.trim()}`);
+/**
+ * Validates the UI payloads against their versioned contracts. Structural drift in
+ * either payload must fail the scenario instead of reaching an artifact unchecked.
+ */
+async function validateUiContracts(
+  engineRoot: string,
+  inspection: InspectionData,
+  scenarioPath: string
+): Promise<Diagnostic[]> {
+  const diagnostics: Diagnostic[] = [];
+  const ajv = createContractValidator();
+  const payloads = [
+    { file: "contracts/ui-view-model.schema.json", value: inspection.uiViewModel, kind: "uiViewModel" },
+    { file: "contracts/rendered-ui-snapshot.schema.json", value: inspection.renderedUiSnapshot, kind: "renderedUiSnapshot" }
+  ] as const;
+  for (const payload of payloads) {
+    if (payload.value === null) {
+      diagnostics.push({
+        code: "UI_CONTRACT_UNAVAILABLE",
+        severity: "error",
+        message: `Inspection did not produce ${payload.kind}`,
+        file: scenarioPath
+      });
+      continue;
+    }
+    const schema = JSON.parse(await readFile(resolve(engineRoot, payload.file), "utf8"));
+    const validate = ajv.compile(schema);
+    if (!validate(payload.value)) {
+      diagnostics.push({
+        code: "UI_CONTRACT_INVALID",
+        severity: "error",
+        message: `${payload.kind} violates ${payload.file}`,
+        file: scenarioPath,
+        details: {
+          errors: (validate.errors ?? []).map((error) => `${error.instancePath} ${error.message ?? ""}`.trim())
+        }
+      });
+    }
   }
+  return diagnostics;
+}
+
+/**
+ * Prepares the runtime through the artifact cache, so an unchanged tree reuses the
+ * previous build instead of recompiling WebAssembly for every scenario.
+ */
+async function prepareHarness(engineRoot: string): Promise<CacheDecision[]> {
+  const prepared = await ensureFamilies(["contracts", "packages", "wasm"], {
+    root: engineRoot,
+    environment: process.env
+  });
+  if (prepared.failure !== null) {
+    throw new Error(`SCENARIO_PREPARATION_FAILED:${prepared.failure.family}: ${prepared.failure.message}`);
+  }
+  return prepared.decisions;
 }
 
 function stepPayload(step: ScenarioStep): ControlPayload {
@@ -159,6 +207,7 @@ export async function runScenarioCommand(context: CommandContext, arguments_: st
     inspection = inspected.data as InspectionData;
     const measured = await client.request("metrics", {});
     if (measured.status === "PASS") metrics = measured.data as Record<string, unknown>;
+    diagnostics.push(...(await validateUiContracts(engineRoot, inspection, scenarioPath)));
     if (forceCapture && captures.length === 0) {
       const captured = await client.request("capture", { name: "final" });
       if (captured.status !== "PASS") throw new Error(captured.diagnostic?.code ?? "SCENARIO_CAPTURE_FAILED");
@@ -173,7 +222,7 @@ export async function runScenarioCommand(context: CommandContext, arguments_: st
         const value = inspection.logicalState.integers.find(({ key }) => key === assertion.key)?.value;
         if (value !== String(assertion.equals)) diagnostics.push({ code: "SCENARIO_ASSERT_INTEGER", severity: "error", message: `Expected integer ${assertion.key} to equal ${assertion.equals}, got ${value ?? "missing"}`, file: scenarioPath });
       } else if (assertion.type === "ui-node") {
-        const node = inspection.renderedUiSnapshot.nodes.find(({ id }) => id === assertion.id);
+        const node = inspection.renderedUiSnapshot?.nodes.find(({ id }) => id === assertion.id);
         if (node === undefined || node.visible !== assertion.visible) diagnostics.push({ code: "SCENARIO_ASSERT_UI", severity: "error", message: `Expected UI node ${assertion.id} visibility to be ${assertion.visible}`, file: scenarioPath });
       } else {
         const verified = await client.request("verify_replay", { archiveBase64: inspection.replayBase64 });
@@ -194,8 +243,8 @@ export async function runScenarioCommand(context: CommandContext, arguments_: st
   if (inspection === undefined) {
     inspection = {
       logicalState: { tick: "0", stateHash: "unavailable", integers: [] },
-      uiViewModel: { nodes: [] },
-      renderedUiSnapshot: { nodes: [] },
+      uiViewModel: null,
+      renderedUiSnapshot: null,
       timeline: [],
       replayBase64: ""
     };

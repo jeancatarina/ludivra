@@ -197,3 +197,185 @@ test("validate rejects card content that references an absent manifest action", 
     rmSync(temporaryRoot, { recursive: true, force: true });
   }
 });
+
+test("ui contracts validate the projected view model and the measured snapshot", async () => {
+  const root = fileURLToPath(new URL("../..", import.meta.url));
+  const { BASE_LOCALE, createUiLocaleTable, createUiViewModel, resolveUiLabel } = await import(
+    "@ludivra/presentation-protocol"
+  );
+  const validator = createContractValidator();
+  const viewModelSchema = JSON.parse(readFileSync(resolve(root, "contracts/ui-view-model.schema.json"), "utf8"));
+  const snapshotSchema = JSON.parse(
+    readFileSync(resolve(root, "contracts/rendered-ui-snapshot.schema.json"), "utf8")
+  );
+  const validateViewModel = validator.compile(viewModelSchema);
+  const validateSnapshot = validator.compile(snapshotSchema);
+
+  const projection = {
+    screen: "game",
+    tick: "12",
+    integers: [{ id: "energy", label: "Energia", value: "3" }],
+    inputs: [{ id: "play-strike", label: "Jogar Golpe", actionId: 1 }]
+  };
+  const viewModel = createUiViewModel(projection);
+  const locale = createUiLocaleTable(projection);
+  assert.ok(validateViewModel(viewModel), JSON.stringify(validateViewModel.errors));
+
+  // The view model carries keys and parameters; resolved text belongs to the renderer.
+  for (const node of viewModel.nodes) {
+    assert.ok(!Object.values(node).includes("Energia: 3"));
+  }
+  assert.equal(resolveUiLabel(locale, "state.energy", { value: "3" }), "Energia: 3");
+  assert.equal(resolveUiLabel(locale, "input.play-strike", {}), "Jogar Golpe");
+  assert.throws(() => resolveUiLabel(locale, "state.absent", {}), /UI_LOCALE_KEY_MISSING/);
+  assert.throws(() => resolveUiLabel(locale, "state.energy", {}), /UI_LOCALE_PARAM_MISSING/);
+
+  const button = viewModel.nodes.find(({ role }) => role === "button");
+  assert.deepEqual(button.actions, ["act"]);
+  assert.equal(button.intent.actionId, 1);
+
+  const snapshot = {
+    protocolVersion: 1,
+    renderer: "browser-dom-v1",
+    viewport: { width: 1280, height: 720 },
+    textScale: 1,
+    locale: BASE_LOCALE,
+    nodes: viewModel.nodes.map((node) => ({
+      id: node.id,
+      bounds: { x: 0, y: 0, width: 100, height: 20 },
+      visible: true,
+      clipped: false,
+      focused: false,
+      text: resolveUiLabel(locale, node.labelKey, node.labelParams),
+      accessibleRole: node.role === "button" ? "button" : "status",
+      contrastRatio: 7.4
+    }))
+  };
+  assert.ok(validateSnapshot(snapshot), JSON.stringify(validateSnapshot.errors));
+
+  // An unknown renderer must be refused so headless evidence is never read as browser evidence.
+  assert.equal(validateSnapshot({ ...snapshot, renderer: "unknown-v1" }), false);
+});
+
+test("raster comparison decodes PNG filters and applies declared tolerance", async () => {
+  const { crc32, deflateSync } = await import("node:zlib");
+  const { compareRasterImages, decodePng } = await import("../dist/raster-image.js");
+  const signature = Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]);
+
+  function chunk(type, body) {
+    const length = Buffer.alloc(4);
+    length.writeUInt32BE(body.length);
+    const typed = Buffer.concat([Buffer.from(type, "ascii"), body]);
+    const checksum = Buffer.alloc(4);
+    checksum.writeUInt32BE(crc32(typed));
+    return Buffer.concat([length, typed, checksum]);
+  }
+
+  // Row 0 uses filter None, row 1 uses filter Sub, so both unfilter paths are exercised.
+  function encode(width, height, rows) {
+    const stride = width * 4;
+    const raw = Buffer.alloc(height * (stride + 1));
+    for (let y = 0; y < height; y += 1) {
+      raw[y * (stride + 1)] = rows[y].filter;
+      Buffer.from(rows[y].bytes).copy(raw, y * (stride + 1) + 1);
+    }
+    const header = Buffer.alloc(13);
+    header.writeUInt32BE(width, 0);
+    header.writeUInt32BE(height, 4);
+    header[8] = 8;
+    header[9] = 6;
+    return Buffer.concat([
+      signature,
+      chunk("IHDR", header),
+      chunk("IDAT", deflateSync(raw)),
+      chunk("IEND", Buffer.alloc(0))
+    ]);
+  }
+
+  const first = [10, 20, 30, 255, 12, 22, 32, 255];
+  const secondSub = [40, 50, 60, 255, 5, 5, 5, 0];
+  const png = encode(2, 2, [{ filter: 0, bytes: first }, { filter: 1, bytes: secondSub }]);
+  const image = decodePng(png);
+  assert.equal(image.width, 2);
+  assert.equal(image.height, 2);
+  assert.deepEqual([...image.pixels.slice(0, 8)], first);
+  // Sub filter: each channel adds the pixel to its left.
+  assert.deepEqual([...image.pixels.slice(8, 16)], [40, 50, 60, 255, 45, 55, 65, 255]);
+
+  const identical = compareRasterImages(image, decodePng(png), { maxChangedFraction: 0, maxChannelDelta: 0 });
+  assert.equal(identical.changedPixels, 0);
+  assert.equal(identical.withinTolerance, true);
+
+  const drifted = decodePng(encode(2, 2, [
+    { filter: 0, bytes: [10, 20, 30, 255, 12, 22, 34, 255] },
+    { filter: 1, bytes: secondSub }
+  ]));
+  const small = compareRasterImages(image, drifted, { maxChangedFraction: 0.5, maxChannelDelta: 8 });
+  assert.equal(small.changedPixels, 1);
+  assert.equal(small.maxChannelDelta, 2);
+  assert.equal(small.withinTolerance, true);
+  assert.deepEqual(small.regions, [{ x: 0, y: 0, width: 2, height: 2 }]);
+
+  const strict = compareRasterImages(image, drifted, { maxChangedFraction: 0.5, maxChannelDelta: 1 });
+  assert.equal(strict.withinTolerance, false);
+
+  assert.throws(
+    () => compareRasterImages(image, decodePng(encode(1, 1, [{ filter: 0, bytes: [0, 0, 0, 255] }])), {
+      maxChangedFraction: 1,
+      maxChannelDelta: 255
+    }),
+    /CAPTURE_IMAGE_SIZE_MISMATCH/
+  );
+  assert.throws(() => decodePng(Buffer.from("not a png")), /CAPTURE_IMAGE_NOT_PNG/);
+});
+
+test("artifact families own their inputs and declare their dependents", async () => {
+  const { cacheFamilyIds, dependentFamilies, familyDefinition, owningFamily } = await import(
+    "../dist/artifact-cache.js"
+  );
+  const { parseBuildOptions } = await import("../dist/build-runner.js");
+
+  assert.deepEqual(cacheFamilyIds(), ["contracts", "packages", "wasm", "native", "web-bundle"]);
+  assert.equal(owningFamily("hosts/browser/src/main.ts"), "web-bundle");
+  assert.equal(owningFamily("kernel/src/runtime.cpp"), "wasm");
+  assert.equal(owningFamily("contracts/ui-view-model.schema.json"), "contracts");
+  // A path no family declares must not trigger a rebuild by accident.
+  assert.equal(owningFamily("README.md"), null);
+
+  // Changing contracts must rebuild everything that consumes them, in order.
+  const affected = dependentFamilies("contracts");
+  assert.deepEqual(affected, ["contracts", "packages", "wasm", "native", "web-bundle"]);
+  assert.deepEqual(dependentFamilies("packages"), ["packages", "web-bundle"]);
+  assert.deepEqual(dependentFamilies("web-bundle"), ["web-bundle"]);
+
+  // Every family declares inputs, outputs and a command; a stub family is not allowed.
+  for (const id of cacheFamilyIds()) {
+    const family = familyDefinition(id);
+    assert.ok(family.inputs.length > 0, `${id} declares inputs`);
+    assert.ok(family.outputs.length > 0, `${id} declares outputs`);
+    assert.ok(family.command.length > 0, `${id} declares a command`);
+  }
+
+  assert.deepEqual(parseBuildOptions([]), { watch: false, force: false, debounceMs: 150 });
+  assert.deepEqual(parseBuildOptions(["--watch", "--no-cache", "--debounce", "50"]), {
+    watch: true,
+    force: true,
+    debounceMs: 50
+  });
+  assert.throws(() => parseBuildOptions(["--debounce", "-1"]), /RUNNER_DEBOUNCE_INVALID/);
+});
+
+test("the process runner terminates a child that exceeds its declared timeout", async () => {
+  const { liveChildren, runProcess } = await import("../dist/process-runner.js");
+  const result = await runProcess(process.execPath, ["-e", "setTimeout(() => {}, 60_000)"], {
+    id: "timeout-probe",
+    cwd: process.cwd(),
+    timeoutMs: 300,
+    killGraceMs: 200
+  });
+  assert.equal(result.timedOut, true);
+  assert.equal(result.exitCode, 124);
+  assert.match(result.output, /RUNNER_CHILD_TIMEOUT: timeout-probe/);
+  // The child must be gone from the live table, not merely detached.
+  assert.deepEqual(liveChildren(), []);
+});

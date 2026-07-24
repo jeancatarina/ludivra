@@ -1,0 +1,76 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ludivra.dev/contracts/ui-view-model/v1",
+  "title": "Ludivra UI view model",
+  "description": "Semantic UI intent produced by a read-only projector. Resolved text, layout and pixels are forbidden here; they belong to rendered-ui-snapshot.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["protocolVersion", "screen", "focus", "nodes"],
+  "properties": {
+    "protocolVersion": { "const": 1 },
+    "screen": { "$ref": "#/$defs/identifier" },
+    "focus": {
+      "oneOf": [{ "$ref": "#/$defs/identifier" }, { "type": "null" }]
+    },
+    "nodes": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/node" }
+    }
+  },
+  "$defs": {
+    "identifier": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "^[a-z][a-z0-9]*([._-][a-z0-9]+)*$"
+    },
+    "role": {
+      "enum": ["status", "label", "button", "group"]
+    },
+    "presentationState": {
+      "enum": ["default", "highlighted", "critical"]
+    },
+    "action": {
+      "enum": ["act", "inspect", "confirm", "cancel"]
+    },
+    "intent": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["actionId", "valueMilli"],
+      "properties": {
+        "actionId": { "type": "integer", "minimum": 1 },
+        "valueMilli": { "type": "integer" }
+      }
+    },
+    "node": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "role", "labelKey", "labelParams", "state", "enabled", "selected", "actions"],
+      "properties": {
+        "id": { "$ref": "#/$defs/identifier" },
+        "role": { "$ref": "#/$defs/role" },
+        "labelKey": { "$ref": "#/$defs/identifier" },
+        "labelParams": {
+          "type": "object",
+          "additionalProperties": { "type": "string" }
+        },
+        "state": { "$ref": "#/$defs/presentationState" },
+        "enabled": { "type": "boolean" },
+        "selected": { "type": "boolean" },
+        "actions": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": { "$ref": "#/$defs/action" }
+        },
+        "intent": { "$ref": "#/$defs/intent" },
+        "navigation": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "previous": { "$ref": "#/$defs/identifier" },
+            "next": { "$ref": "#/$defs/identifier" }
+          }
+        }
+      }
+    }
+  }
+}

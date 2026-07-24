@@ -330,7 +330,8 @@ export async function runValidate(arguments_: string[] = []): Promise<CommandOut
     "tools/contracts/generate-desktop-host.mjs",
     "tools/contracts/generate-presentation-events.mjs",
     "tools/contracts/generate-operability.mjs",
-    "tools/contracts/generate-capabilities.mjs"
+    "tools/contracts/generate-capabilities.mjs",
+    "tools/contracts/generate-ui.mjs"
   ];
   for (const script of generationChecks) {
     const execution = spawnSync("node", [resolve(root, script), "--check"], { encoding: "utf8" });

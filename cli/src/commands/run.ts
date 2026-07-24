@@ -1,8 +1,12 @@
+import type { CacheFamilyId } from "../artifact-cache.js";
+import { parseBuildOptions, runFamilies, summarizeDecisions } from "../build-runner.js";
 import { runProcess } from "../process-runner.js";
 import { resolveProjectDirectory } from "../project.js";
 import { findEngineRoot } from "../repository.js";
 import type { CommandContext, CommandOutcome } from "../result.js";
 import { runScenarioCommand } from "../scenario-harness.js";
+
+const runtimeFamilies: CacheFamilyId[] = ["contracts", "packages", "wasm"];
 
 export async function runGame(context: CommandContext, arguments_: string[]): Promise<CommandOutcome> {
   if (arguments_.includes("--control")) {
@@ -10,19 +14,37 @@ export async function runGame(context: CommandContext, arguments_: string[]): Pr
   }
   const root = await findEngineRoot();
   const project = await resolveProjectDirectory(arguments_);
-  for (const script of ["build:packages", "build:wasm"]) {
-    const prepared = await runProcess("pnpm", [script], { cwd: root, env: process.env });
-    if (prepared.exitCode !== 0) {
-      return {
-        diagnostics: [{ code: "RUN_PREPARATION_FAILED", severity: "error", message: prepared.output.trim() }],
-        nextActions: ["Run game doctor and repair the toolchain"]
-      };
-    }
+  const options = parseBuildOptions(arguments_);
+  const prepared = await runFamilies({
+    runId: context.runId,
+    root,
+    evidenceRoot: project,
+    families: runtimeFamilies,
+    environment: { ...process.env, LUDIVRA_GAME_DIR: project },
+    watch: false,
+    force: options.force,
+    debounceMs: options.debounceMs
+  });
+  if (prepared.diagnostics.some(({ severity }) => severity === "error")) {
+    return {
+      diagnostics: prepared.diagnostics.map((diagnostic) => ({ ...diagnostic, code: "RUN_PREPARATION_FAILED" })),
+      artifacts: prepared.artifacts,
+      data: { project, cache: summarizeDecisions(prepared.decisions) },
+      nextActions: ["Run game doctor and repair the toolchain"]
+    };
   }
+  // The dev server is declared unbounded; the runner still owns its process group
+  // and terminates it when the CLI exits.
   const server = await runProcess(
     "pnpm",
     ["--filter", "@ludivra/browser-host", "dev", "--host", "127.0.0.1"],
-    { cwd: root, env: { ...process.env, LUDIVRA_GAME_DIR: project }, interactive: true }
+    {
+      id: "browser-host-dev",
+      cwd: root,
+      timeoutMs: "unbounded",
+      env: { ...process.env, LUDIVRA_GAME_DIR: project },
+      interactive: true
+    }
   );
   return {
     diagnostics: server.exitCode === 0 ? [] : [{
@@ -30,7 +52,8 @@ export async function runGame(context: CommandContext, arguments_: string[]): Pr
       severity: "error",
       message: `Browser host exited with code ${server.exitCode}`
     }],
-    data: { project },
+    artifacts: prepared.artifacts,
+    data: { project, cache: summarizeDecisions(prepared.decisions) },
     nextActions: ["Run game build --target web"]
   };
 }

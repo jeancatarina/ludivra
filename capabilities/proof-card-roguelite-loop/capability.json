@@ -3,7 +3,11 @@
   "status": "experimental",
   "version": "0.1.0",
   "owner": "examples/card-roguelite",
-  "targets": ["native-headless", "browser", "electron"],
+  "targets": [
+    "native-headless",
+    "browser",
+    "electron"
+  ],
   "contracts": [
     "schemas/game.schema.json",
     "schemas/card-roguelite.schema.json",
@@ -26,16 +30,12 @@
   ],
   "limitations": [
     {
-      "code": "CARD_BROWSER_UI_SNAPSHOT_NOT_AVAILABLE",
-      "message": "The real BrowserHost UiViewModel and RenderedUiSnapshot remain in ENG-017."
-    },
-    {
-      "code": "CARD_RASTER_CAPTURE_NOT_AVAILABLE",
-      "message": "Raster capture and its visual scenario remain in ENG-018."
-    },
-    {
       "code": "CARD_FRAMEWORK_NOT_EXTRACTED",
       "message": "The loop is intentionally game-specific until a second game proves a reusable card contract."
+    },
+    {
+      "code": "CARD_VISUAL_BASELINE_SINGLE_PROFILE",
+      "message": "Only the desktop 1280x800@2x baseline is approved; other viewports, text scales and device scale factors remain NOT_AVAILABLE."
     }
   ]
 }

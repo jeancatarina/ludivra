@@ -2,15 +2,17 @@ const { app, autoUpdater, BrowserWindow, crashReporter, ipcMain, powerMonitor, s
 const { readFileSync } = require("node:fs");
 const path = require("node:path");
 const channels = require("./generated/desktop-channels.cjs");
+const { runCapture } = require("./services/capture.cjs");
 const { createLogger } = require("./services/logger.cjs");
 const { createStorageService } = require("./services/storage.cjs");
 const { prepareSteam } = require("./services/steam.cjs");
 const { createUpdateService } = require("./services/updates.cjs");
 
-if (process.env.LUDIVRA_SMOKE_USER_DATA) {
-  const smokeUserData = path.resolve(process.env.LUDIVRA_SMOKE_USER_DATA);
-  app.setPath("userData", smokeUserData);
-  app.setAppLogsPath(path.join(smokeUserData, "logs"));
+const relocatedUserData = process.env.LUDIVRA_USER_DATA ?? process.env.LUDIVRA_SMOKE_USER_DATA;
+if (relocatedUserData) {
+  const userData = path.resolve(relocatedUserData);
+  app.setPath("userData", userData);
+  app.setAppLogsPath(path.join(userData, "logs"));
 }
 
 function readConfiguration() {
@@ -186,6 +188,21 @@ app.whenReady().then(() => {
   registerIpc(storage, steam, updates);
   powerMonitor.on("suspend", () => broadcastLifecycle("suspend"));
   powerMonitor.on("resume", () => broadcastLifecycle("resume"));
+  if (process.env.LUDIVRA_CAPTURE === "1") {
+    // Capture runs against the same registered IPC surface as a real session, so the
+    // frame it produces is evidence about the shipped host, not about a stub.
+    runCapture({ BrowserWindow, logger, environment: process.env })
+      .then(() => {
+        process.stdout.write("ludivra_capture=ok\n");
+        app.quit();
+      })
+      .catch((error) => {
+        logger.error("capture.failed", { message: error.message });
+        process.stderr.write(`${error.message}\n`);
+        app.exit(1);
+      });
+    return;
+  }
   if (process.env.LUDIVRA_SMOKE_TEST === "1") {
     let smokeWindow;
     void storage.write("smoke", new Uint8Array([1, 2, 3]))
@@ -202,7 +219,7 @@ app.whenReady().then(() => {
           smokeWindow.webContents.once("did-finish-load", () => {
             const inspect = () => {
               void smokeWindow.webContents.executeJavaScript(
-                "document.querySelector('#runtime-status')?.textContent ?? ''"
+                "document.querySelector('#host-status')?.textContent ?? ''"
               ).then((status) => {
                 if (status.includes("Kernel WASM") && status.includes("autosave desktop")) {
                   clearTimeout(timeout);

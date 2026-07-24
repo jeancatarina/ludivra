@@ -17,6 +17,9 @@ importers:
 
   cli:
     dependencies:
+      '@ludivra/presentation-protocol':
+        specifier: workspace:*
+        version: link:../presentation-protocol
       '@ludivra/runtime-web':
         specifier: workspace:*
         version: link:../runtime-web

@@ -7,8 +7,8 @@
 | Versão do roadmap | 3.0 |
 | Data-base | 2026-07-22 |
 | Release atual | 0.7.0 |
-| Prioridade atual | Fechar o P0 das Fases 2–3 — runner, controle e observabilidade real |
-| Próxima entrega | `ENG-017`, seguida de `ENG-018` |
+| Prioridade atual | Fechar o restante da Fase 3 — correlação de projector e erros de renderer |
+| Próxima entrega | resto da Fase 3, depois a Fase 4 |
 | Decisão de sequência | [ADR 0012](docs/adr/0012-feature-first-roadmap-and-proof-games.md) |
 | Prova final | Fase 12 — cinco jogos e sessões frias |
 
@@ -63,8 +63,8 @@ Os estados são baseados em evidência. Código compilando, protótipo visual ou
 | Fase | Fundação técnica | Estado atual | Evidência existente | Principal lacuna |
 |---|---|---|---|---|
 | 1 | Estado canônico e catálogo | `CONCLUÍDA` | `game status`, catálogo e manifests de run | nenhuma no gate atual |
-| 2 | Context Engine, CLI e Development Runner | `EM ANDAMENTO` | CLI, BrowserHost e ElectronHost experimentais | cache/watch e lifecycle incremental |
-| 3 | Control Plane e observabilidade causal | `EM ANDAMENTO` | harness headless, replay, SVG e sessão fria | UI e raster reais do BrowserHost |
+| 2 | Context Engine, CLI e Development Runner | `CONCLUÍDA` | cache por família com causa, watch afetado e lifecycle com dono único | nenhuma no gate atual |
+| 3 | Control Plane e observabilidade causal | `EM ANDAMENTO` | harness, replay, contratos de UI e captura raster com baseline | correlação completa e captura de erros de renderer |
 | 4 | Autoria text-first | `PARCIAL` | Lua, JSONC, schemas e content binding | UI declarativa e content pack |
 | 5 | Runtime espacial e mundo procedural | `PLANEJADA` | — | modelo espacial, chunks, jobs e streaming |
 | 6 | Motion, física e Mass Simulation | `PLANEJADA` | primitivas visuais não autoritativas | motion formal, adapters físicos e Mass Runtime |
@@ -150,7 +150,7 @@ Uma sessão nova encontra o estado, as capabilities, as limitações e a evidên
 
 | Campo | Valor |
 |---|---|
-| Estado | `EM ANDAMENTO` |
+| Estado | `CONCLUÍDA` |
 | Owners principais | CLI, BrowserHost e ElectronHost |
 | Dependência | Fase 1 |
 | ADR de base | [ADR 0013](docs/adr/0013-development-runner-cache-and-lifecycle.md) |
@@ -167,20 +167,22 @@ Fazer da CLI a interface operacional oficial entre IA, engine, hosts e toolchain
 - BrowserHost iniciado pela CLI com WASM e bundle Vite;
 - ElectronHost com bundle local, lifecycle, storage e adapters Steam opcionais;
 - saída JSON estruturada com `runId`, status, diagnósticos, artefatos e próximas ações;
-- build WebAssembly e pacotes TypeScript reproduzíveis por lockfiles.
+- build WebAssembly e pacotes TypeScript reproduzíveis por lockfiles;
+- cache incremental por família de artefato com chave por conteúdo, toolchain e ambiente declarado;
+- causa de hit/miss por família registrada em `cache-decisions.json` no bundle do run;
+- `--watch` com rebuild limitado à família proprietária e aos dependentes declarados, com `rebuilds.jsonl` por sessão;
+- criação de processo com dono único, timeout declarado, grupo próprio e `SIGTERM`→`SIGKILL` sem órfãos.
 
 ### Falta
 
-- cache incremental por famílias de artefato e invalidação explicável;
-- watch mode com rebuild limitado ao módulo afetado;
-- hardening do lifecycle de processos em todos os hosts;
-- comandos futuros apenas quando sua capability proprietária existir; não serão criados stubs de `world`, `physics`, `network` ou `construction`.
+- comandos futuros apenas quando sua capability proprietária existir; não serão criados stubs de `world`, `physics`, `network` ou `construction`;
+- a família `content` do cache entra com o content pack do [ADR 0017](docs/adr/0017-content-pack-compilation-and-migrations.md).
 
 Smoke tests distribuíveis, assinatura e notarização pertencem ao hardening de targets da Fase 11; não bloqueiam o Development Runner local.
 
-### Gate de saída
+### Gate concluído
 
-Uma sessão executa, interrompe, reconstrói e inspeciona um projeto com comandos reproduzíveis; caches declaram causa de hit/miss; processos não ficam órfãos; cada target alegado possui execução no sistema correspondente.
+Uma sessão executa, interrompe, reconstrói e inspeciona um projeto com comandos reproduzíveis; caches declaram causa de hit/miss; processos não ficam órfãos. Evidência: `game build` reconstrói quatro famílias em 344s a frio e reutiliza as quatro em 17s a quente; alterar `hosts/browser/src` invalida apenas `web-bundle` com `INPUT_CHANGED`; uma sessão `--watch` interrompida por `SIGINT` grava seu rebuild e fecha sem processo remanescente.
 
 ## 7. Fase 3 — AI Control Plane e observabilidade causal
 
@@ -204,16 +206,19 @@ Permitir que a IA controle uma execução real, veja o que ocorreu e rastreie um
 - scenario harness com assertions fechadas por schema;
 - artifact bundle e captura SVG semântica no adapter headless/WASM;
 - sessão fria automatizada sobre o starter;
+- `UiViewModel` e `RenderedUiSnapshot` como contratos versionados com bindings gerados;
+- UI declarativa em DOM acessível no BrowserHost, medida por layout real como `browser-dom-v1`;
+- captura raster pelo adapter ElectronHost, com quiescência declarada, tolerância por perfil e baseline aprovada;
 - bloqueio de `eval`, shell, script arbitrário, filesystem irrestrito e proxy de rede.
 
 ### Falta agora
 
-1. `ENG-017` — `UiViewModel` e `RenderedUiSnapshot` produzidos pelo BrowserHost real;
-2. `ENG-018` — captura raster real vinculada ao run e cenário visual reproduzível;
-3. correlação BrowserHost entre input, tick, estado, projector, DOM/Three.js e frame capturado;
-4. inspeção de bounds, clipping, foco, texto resolvido, acessibilidade e ações disponíveis;
-5. captura de erros do renderer, assets, shaders, áudio e lifecycle no mesmo run;
-6. vídeo e profiling somente quando houver contrato e consumidor material.
+1. correlação completa no BrowserHost entre input, tick, estado, projector, Three.js e frame capturado — hoje a captura vincula `runId`, tick e hash de estado, mas não o projector;
+2. captura de erros do renderer, assets, shaders, áudio e lifecycle no mesmo run;
+3. baselines para outros perfis, viewports e escalas de texto além de `desktop/1280x800@2x`;
+4. vídeo e profiling somente quando houver contrato e consumidor material.
+
+Já entregue nesta fase: inspeção de bounds, clipping, foco efetivo, texto resolvido, contraste e ações disponíveis por nó.
 
 ### Correlação mínima
 
@@ -689,20 +694,14 @@ Checklist obrigatório:
 ## 20. Próxima sequência executável
 
 ```text
-ENG-017  BrowserHost UiViewModel + RenderedUiSnapshot reais
+ENG-017 a ENG-020  concluídos: contratos de UI, captura raster, cache e lifecycle
     ↓
-ENG-018  captura raster + cenário visual + artifact bundle
-    ↓
-ENG-019  cache/watch incremental e invalidação explicável
-    ↓
-ENG-020  lifecycle e encerramento limpo do Development Runner
-    ↓
-fechar gates P0 das Fases 2–3
+correlação de projector e captura de erros de renderer (resto da Fase 3)
     ↓
 detalhar e concluir a Fase 4 antes do runtime espacial
 ```
 
-O card roguelite continuará como fixture para `ENG-017` e `ENG-018`. Depois disso, o trabalho retorna às fundações técnicas; não será iniciado outro jogo completo antes da Fase 12.
+O card roguelite permanece como fixture de integração e agora sustenta a baseline visual aprovada. O trabalho retorna às fundações técnicas; não será iniciado outro jogo completo antes da Fase 12.
 
 ## 21. Regra de evolução
 

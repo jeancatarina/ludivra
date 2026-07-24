@@ -81,7 +81,13 @@ export async function createDesktopCheckpointManager(
 ): Promise<DesktopCheckpointManager | null> {
   const bridge = window.ludivraDesktop;
   if (bridge === undefined) return null;
-  const hostInfo = await bridge.info();
+  // A bridge that is exposed but does not answer is an unavailable host, not a
+  // reason to stop the game. The fallback is declared and observable.
+  const hostInfo = await bridge.info().catch((error: unknown) => {
+    console.warn("Ludivra desktop bridge did not answer; continuing without desktop services", { error });
+    return null;
+  });
+  if (hostInfo === null) return null;
   if (hostInfo.protocolVersion !== 1) {
     throw new Error(`unsupported desktop host protocol: ${hostInfo.protocolVersion}`);
   }
