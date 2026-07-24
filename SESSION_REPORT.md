@@ -39,7 +39,7 @@ Ludivra 0.7.0 com o P0 de operabilidade fechado em 2026-07-24. As Fases 2 e 3 ga
 
 - baseline visual aprovada apenas para `desktop/1280x800@2x`: outros viewports, escalas de texto e device scale factors permanecem `NOT_AVAILABLE`;
 - captura raster exige Electron instalado e sessão gráfica; runner Linux headless precisaria de display virtual, ainda `NOT_RUN`;
-- erros de shader e de áudio aparecem sob códigos genéricos de script ou promessa rejeitada;
+- falhas de renderer e de shader aparecem como erro de script; áudio já reporta com códigos próprios;
 - família `content` do cache não existe até o content pack do ADR 0017;
 - ADRs 0016 a 0031 são provisórios: fixam direção sem protótipo nem benchmark.
 

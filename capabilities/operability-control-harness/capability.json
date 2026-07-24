@@ -35,8 +35,8 @@
       "message": "Raster capture needs an installed Electron and a graphical session; headless Linux runners require a virtual display."
     },
     {
-      "code": "HARNESS_SHADER_AND_AUDIO_CODES_GENERIC",
-      "message": "Host diagnostics report script errors, rejected promises, missing assets and lost WebGL contexts; shader and audio failures still surface under those generic codes."
+      "code": "HARNESS_RENDERER_CODES_GENERIC",
+      "message": "Host diagnostics carry dedicated codes for script errors, rejected promises, missing assets, lost WebGL contexts and audio failures; renderer and shader problems still surface as script errors."
     },
     {
       "code": "HARNESS_COMMAND_TRACE_DERIVED",

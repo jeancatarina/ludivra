@@ -63,7 +63,7 @@ const presenter = createGamePresenter(renderer, {
     return contentById.get(id) as T;
   }
 });
-const audio = createAudioFeedback(manifest.audio ?? [], audioSources);
+const audio = createAudioFeedback(manifest.audio ?? [], audioSources, hostDiagnostics.report);
 const effects = new Map((manifest.effects ?? []).map((definition) => [definition.eventId, definition]));
 const audioVisibility = (): void => {
   if (document.visibilityState === "hidden") audio.suspend();

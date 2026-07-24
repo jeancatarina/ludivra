@@ -21,9 +21,13 @@ export interface AudioFeedback {
   destroy(): void;
 }
 
+/** Reports an audio failure with a stable code so it reaches the run evidence. */
+export type AudioFailureReporter = (code: string, message: string, source: string) => void;
+
 export function createAudioFeedback(
   definitions: readonly AudioDefinition[],
-  sourceUrls: Readonly<Record<number, string>>
+  sourceUrls: Readonly<Record<number, string>>,
+  report: AudioFailureReporter
 ): AudioFeedback {
   const context = new AudioContext();
   const master = context.createGain();
@@ -45,7 +49,13 @@ export function createAudioFeedback(
     const response = await fetch(url);
     if (!response.ok) throw new Error(`audio asset failed to load: ${url}`);
     buffers.set(Number(id), await context.decodeAudioData(await response.arrayBuffer()));
-  })).catch((error) => console.error("Ludivra audio preload failed", error)).finally(() => {
+  })).catch((error: unknown) => {
+    report(
+      "HOST_AUDIO_ASSET_FAILED",
+      error instanceof Error ? error.message : "audio preload failed",
+      "audio.preload"
+    );
+  }).finally(() => {
     loadingComplete = true;
   });
 
@@ -78,7 +88,7 @@ export function createAudioFeedback(
       source = node;
     } else {
       if (!loadingComplete) void loading.then(() => play(definition, volumeMilli));
-      else console.warn("Ludivra audio asset is unavailable", { id: definition.id });
+      else report("HOST_AUDIO_ASSET_UNAVAILABLE", `audio asset is unavailable: ${definition.id}`, "audio.play");
       return;
     }
     source.connect(gain);
@@ -110,7 +120,7 @@ export function createAudioFeedback(
       lastSequence = event.sequence;
       const definition = byId.get(event.id);
       if (definition === undefined) {
-        console.warn("Unknown Ludivra audio event", { id: event.id });
+        report("HOST_AUDIO_EVENT_UNRESOLVED", `audio event has no definition: ${event.id}`, "audio.handle");
         return;
       }
       if (event.type === "audio-stop") stop(event.id);
