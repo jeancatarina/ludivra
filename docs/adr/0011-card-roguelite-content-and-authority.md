@@ -4,6 +4,7 @@
 - Data: 2026-07-22
 - Revisão: antes de publicar um segundo formato de conteúdo autoritativo ou extrair uma capability genérica de cartas
 - Sequenciamento atual: fixture antecipada conforme o [ADR 0012](0012-feature-first-roadmap-and-proof-games.md)
+- Substituído em parte: a ponte `composeGameplaySource` será removida quando o content pack do [ADR 0017](0017-content-pack-compilation-and-migrations.md) carregar em todos os hosts; a autoridade única do JSONC permanece válida
 
 ## Contexto
 

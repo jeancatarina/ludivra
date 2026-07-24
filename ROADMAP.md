@@ -120,6 +120,7 @@ Observabilidade e diagnóstico básico são transversais: nenhuma fase pode adia
 | Campo | Valor |
 |---|---|
 | Estado | `CONCLUÍDA` |
+| ADR de base | [ADR 0009](docs/adr/0009-canonical-state-and-run-evidence.md) |
 | Release de referência | 0.5.0 |
 | Owner principal | CLI e contratos de estado |
 
@@ -152,6 +153,7 @@ Uma sessão nova encontra o estado, as capabilities, as limitações e a evidên
 | Estado | `EM ANDAMENTO` |
 | Owners principais | CLI, BrowserHost e ElectronHost |
 | Dependência | Fase 1 |
+| ADR de base | [ADR 0013](docs/adr/0013-development-runner-cache-and-lifecycle.md) |
 
 ### Objetivo
 
@@ -187,7 +189,7 @@ Uma sessão executa, interrompe, reconstrói e inspeciona um projeto com comando
 | Estado | `EM ANDAMENTO` |
 | Owners principais | CLI, control protocol, harness e BrowserHost |
 | Backlog ativo | `ENG-017` → `ENG-018`; depois retorno aos gaps `ENG-019`–`ENG-020` da Fase 2 |
-| ADR de base | [ADR 0010](docs/adr/0010-local-control-protocol-and-scenario-harness.md) |
+| ADR de base | [ADR 0010](docs/adr/0010-local-control-protocol-and-scenario-harness.md), [ADR 0014](docs/adr/0014-declarative-ui-contracts-and-initial-renderer.md) e [ADR 0015](docs/adr/0015-raster-capture-and-visual-baselines.md) |
 
 ### Objetivo
 
@@ -228,6 +230,7 @@ Ao observar um defeito nos pixels do BrowserHost, a IA consegue relacioná-lo ao
 | Estado | `PARCIAL` |
 | Owners principais | kernel, Lua SDK, schemas, content compiler e presentation protocol |
 | Dependência | Fase 3 |
+| ADR de base | [ADR 0004](docs/adr/0004-lua-sandbox.md), [ADR 0016](docs/adr/0016-public-lua-sdk-layers-and-escape-hatches.md), [ADR 0017](docs/adr/0017-content-pack-compilation-and-migrations.md) e [ADR 0018](docs/adr/0018-numeric-determinism-and-rng-streams.md) |
 
 ### Objetivo
 
@@ -245,7 +248,7 @@ Permitir que a maior parte de um jogo seja criada por Lua, JSONC, CSS e TypeScri
 
 ### Falta
 
-- SDK Lua público para entidades, componentes, tags, relações, recursos, timers, queries e comandos sem expor internals;
+- SDK Lua público declarado e versionado com acesso por símbolo, queries, timers lógicos, streams de RNG e comandos, sem expor internals. Entidades, componentes, tags, relações e recursos são a camada 2 do [ADR 0016](docs/adr/0016-public-lua-sdk-layers-and-escape-hatches.md) e pertencem à fase do consumidor que os exigir;
 - compilador de content pack versionado, com mapa de símbolos e origem para diagnóstico;
 - UI declarativa baseada em `UiViewModel`, intents e schemas;
 - estilos CSS registrados como apresentação, não como contrato público;
@@ -269,6 +272,7 @@ Uma sessão nova cria regras, conteúdo, tela, apresentação e cenário usando 
 | Estado | `PLANEJADA` |
 | Owners previstos | spatial runtime, world runtime e job system |
 | Dependência | Fase 4 |
+| ADR de base | [ADR 0018](docs/adr/0018-numeric-determinism-and-rng-streams.md) e [ADR 0019](docs/adr/0019-spatial-model-chunk-lifecycle-and-job-commit.md) |
 
 ### Objetivo
 
@@ -309,6 +313,7 @@ O runtime gera, carrega, descarta e regenera chunks determinísticos; viagens lo
 | Estado | `PLANEJADA` |
 | Owners previstos | motion, physics adapters e mass runtime |
 | Dependência | Fase 5 |
+| ADR de base | [ADR 0021](docs/adr/0021-motion-and-physics-adapter-authority.md), [ADR 0022](docs/adr/0022-mass-runtime-storage-levels-and-budgets.md) e [ADR 0020](docs/adr/0020-presentation-buffers-and-wasm-memory.md) |
 
 ### Objetivo
 
@@ -358,6 +363,7 @@ A IA explica por que uma entidade não se moveu, um corpo atravessou um collider
 | Estado | `PARCIAL` |
 | Owners principais | kernel, storage e network runtime futuro |
 | Dependências | Fases 5 e 6 |
+| ADR de base | [ADR 0023](docs/adr/0023-world-persistence-and-region-storage.md) e [ADR 0024](docs/adr/0024-player-hosted-multiplayer-and-protocol-compatibility.md) |
 
 ### Já entregue
 
@@ -402,6 +408,7 @@ Save local e mundial sobrevivem a crash e migration; replay encontra a primeira 
 | Estado | `PARCIAL` |
 | Owners principais | presentation protocol, renderer-three, UI renderer e hosts |
 | Dependências | Fases 3, 4, 5, 6 e 7 |
+| ADR de base | [ADR 0020](docs/adr/0020-presentation-buffers-and-wasm-memory.md), [ADR 0014](docs/adr/0014-declarative-ui-contracts-and-initial-renderer.md), [ADR 0015](docs/adr/0015-raster-capture-and-visual-baselines.md) e [ADR 0025](docs/adr/0025-audio-backends-voice-budgets-and-fallback.md) |
 
 ### Já entregue
 
@@ -451,6 +458,7 @@ A IA diferencia objeto inexistente, fora da câmera, cullado, transparente, asse
 | Estado | `PLANEJADA` |
 | Owners previstos | construction runtime, geometry compiler e authoring toolkit |
 | Dependências | Fases 5, 6 e 8 |
+| ADR de base | [ADR 0026](docs/adr/0026-construction-graph-as-source-of-truth.md) |
 
 ### Objetivo
 
@@ -485,6 +493,7 @@ Mover uma parede reconstrói apenas a região necessária; undo/redo e replay re
 | Estado | `PLANEJADA` |
 | Owners previstos | ferramentas independentes de authoring/build time |
 | Dependências | Fases 4–9 conforme o Forge |
+| ADR de base | [ADR 0027](docs/adr/0027-forge-output-contract-and-authoring-boundary.md) |
 
 ### Contrato comum
 
@@ -538,6 +547,7 @@ Os cinco Forges produzem artefatos rastreáveis usados nas fixtures e preparados
 | Estado | `PARCIAL` |
 | Owners principais | CLI, harness, diagnósticos e benchmark registry |
 | Dependência | Gates de observabilidade das fases anteriores |
+| ADR de base | [ADR 0028](docs/adr/0028-diagnose-repair-verify-and-repair-classes.md), [ADR 0029](docs/adr/0029-benchmark-registry-profiles-and-baselines.md), [ADR 0030](docs/adr/0030-target-hardening-signing-and-distribution.md) e [ADR 0031](docs/adr/0031-native-diagnostic-host-trigger-and-criteria.md) |
 
 ### Já entregue
 
@@ -570,6 +580,7 @@ A IA não relata apenas “FPS baixo” ou “falhou”: identifica sistema, arc
 |---|---|
 | Estado | `PLANEJADA` |
 | Dependência | Fases 1–11 |
+| ADR de base | [ADR 0008](docs/adr/0008-mandatory-scale-and-procedural-capabilities.md) e [ADR 0012](docs/adr/0012-feature-first-roadmap-and-proof-games.md) |
 | Regra | jogos validam integração; não são proprietários das fundações |
 
 ### Situação atual

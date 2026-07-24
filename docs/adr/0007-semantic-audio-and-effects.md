@@ -3,6 +3,7 @@
 - Status: aceito
 - Data: 2026-07-18
 - Revisão: antes de estabilizar o protocolo de apresentação
+- Estendido por: [ADR 0025](0025-audio-backends-voice-budgets-and-fallback.md) para backend por host, budgets de voz e fallback
 
 ## Contexto
 

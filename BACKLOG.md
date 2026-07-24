@@ -18,10 +18,10 @@
 | ENG-014 | alta | concluído | Implementar scenario harness, captura e artifact bundle |
 | ENG-015 | alta | concluído | Automatizar a sessão fria sobre o starter |
 | ENG-016 | alta | concluído | Implementar o card roguelite como fixture antecipada de gameplay, conteúdo e replay |
-| ENG-017 | alta | planejado | Produzir UiViewModel e RenderedUiSnapshot reais no BrowserHost |
-| ENG-018 | alta | planejado | Adicionar captura raster e cenário visual do BrowserHost usando a fixture card roguelite |
-| ENG-019 | alta | planejado | Completar cache/watch incremental com invalidação explicável no Development Runner |
-| ENG-020 | alta | planejado | Validar lifecycle, rebuild afetado e encerramento limpo do Development Runner |
+| ENG-017 | alta | planejado | Produzir UiViewModel e RenderedUiSnapshot reais no BrowserHost ([ADR 0014](docs/adr/0014-declarative-ui-contracts-and-initial-renderer.md)) |
+| ENG-018 | alta | planejado | Adicionar captura raster e cenário visual do BrowserHost usando a fixture card roguelite ([ADR 0015](docs/adr/0015-raster-capture-and-visual-baselines.md)) |
+| ENG-019 | alta | planejado | Completar cache/watch incremental com invalidação explicável no Development Runner ([ADR 0013](docs/adr/0013-development-runner-cache-and-lifecycle.md)) |
+| ENG-020 | alta | planejado | Validar lifecycle, rebuild afetado e encerramento limpo do Development Runner ([ADR 0013](docs/adr/0013-development-runner-cache-and-lifecycle.md)) |
 
 Ordem restante do P0: `ENG-017` → `ENG-018` → `ENG-019` → `ENG-020`. O roadmap canônico está em [ROADMAP.md](ROADMAP.md).
 

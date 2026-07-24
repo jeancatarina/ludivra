@@ -1263,20 +1263,32 @@ A separação evita duas listas de fases divergentes. O roadmap deve preservar a
 
 ## 36. Decisões que exigem ADR antes da implementação
 
-Este documento define a direção, mas as escolhas abaixo precisam de protótipo e ADR com benchmark:
+Este documento define a direção. As escolhas abaixo exigem ADR próprio, e a tabela registra qual decisão já as fechou. O índice completo está em [DECISIONS.md](DECISIONS.md).
 
-- algoritmo e representação de fixed-point;
-- PRNG e estratégia de streams;
-- formato binário de content pack e presentation buffers;
-- mecanismo de bindings da C ABI;
-- versão e configuração exatas de Lua;
-- estratégia de memória compartilhada/cópia no WASM;
-- renderer de UI inicial;
-- backend de áudio por host;
-- ferramenta de build C++ e layout final do monorepo;
-- política de compatibilidade N/N-1 por protocolo;
-- backend do `NativeDiagnosticHost`;
-- estratégia de assinatura e distribuição por plataforma.
+| Escolha | Situação |
+|---|---|
+| algoritmo e representação de fixed-point | fechada pelo [ADR 0018](docs/adr/0018-numeric-determinism-and-rng-streams.md) |
+| PRNG e estratégia de streams | fechada pelo [ADR 0018](docs/adr/0018-numeric-determinism-and-rng-streams.md) |
+| formato de content pack | container e mapa de símbolos fechados pelo [ADR 0017](docs/adr/0017-content-pack-compilation-and-migrations.md); encoding binário por seção condicionado a benchmark |
+| formato dos presentation buffers | fechada pelo [ADR 0020](docs/adr/0020-presentation-buffers-and-wasm-memory.md) |
+| memória compartilhada ou cópia no WASM | fechada pelo [ADR 0020](docs/adr/0020-presentation-buffers-and-wasm-memory.md); `SharedArrayBuffer` exigiria ADR novo |
+| renderer de UI inicial | fechada pelo [ADR 0014](docs/adr/0014-declarative-ui-contracts-and-initial-renderer.md) |
+| backend de áudio por host | fechada pelo [ADR 0025](docs/adr/0025-audio-backends-voice-budgets-and-fallback.md) |
+| versão e configuração exatas de Lua | fechada pelo [ADR 0004](docs/adr/0004-lua-sandbox.md) |
+| ferramenta de build C++ | fechada pelo [ADR 0001](docs/adr/0001-build-system.md) |
+| layout final do monorepo | **aberta** até a primeira versão estável |
+| mecanismo de bindings da C ABI | **aberta**; pertence à revisão do [ADR 0002](docs/adr/0002-runtime-c-abi.md) |
+| política de compatibilidade N/N-1 por protocolo | fechada pelo [ADR 0024](docs/adr/0024-player-hosted-multiplayer-and-protocol-compatibility.md) |
+| backend do `NativeDiagnosticHost` | gatilhos e critérios no [ADR 0031](docs/adr/0031-native-diagnostic-host-trigger-and-criteria.md); backend concreto **aberto** |
+| estratégia de assinatura e distribuição por plataforma | fechada pelo [ADR 0030](docs/adr/0030-target-hardening-signing-and-distribution.md) |
+
+Estas escolhas permanecem abertas por decisão explícita e exigem ADR quando seu gatilho ocorrer:
+
+- solver físico 2D ou 3D concreto — [ADR 0021](docs/adr/0021-motion-and-physics-adapter-authority.md);
+- transporte de rede concreto além do local — [ADR 0024](docs/adr/0024-player-hosted-multiplayer-and-protocol-compatibility.md);
+- framework de UI — [ADR 0014](docs/adr/0014-declarative-ui-contracts-and-initial-renderer.md);
+- camada 2 do SDK Lua, com entidades, componentes, tags, relações e recursos — [ADR 0016](docs/adr/0016-public-lua-sdk-layers-and-escape-hatches.md);
+- extensão nativa solicitada por um jogo — [ADR 0016](docs/adr/0016-public-lua-sdk-layers-and-escape-hatches.md).
 
 Um ADR deve registrar contexto, decisão, consequências, alternativas rejeitadas, evidência e condição de revisão. Não se cria ADR para detalhes locais reversíveis.
 

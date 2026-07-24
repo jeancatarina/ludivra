@@ -4,6 +4,7 @@
 - Data: 2026-07-22
 - Revisão: antes de alterar operações, transporte ou schemaVersion do protocolo v1
 - Sequenciamento atual: o escopo visual pendente pertence à Fase 3 do [ADR 0012](0012-feature-first-roadmap-and-proof-games.md)
+- Estendido por: [ADR 0013](0013-development-runner-cache-and-lifecycle.md) para propriedade do processo filho, [ADR 0014](0014-declarative-ui-contracts-and-initial-renderer.md) para os contratos de UI e [ADR 0015](0015-raster-capture-and-visual-baselines.md) para o adapter de captura raster
 
 ## Contexto
 

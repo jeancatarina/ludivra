@@ -2,7 +2,8 @@
 
 - Status: provisório
 - Data: 2026-07-18
-- Revisão: antes da primeira versão estável
+- Revisão: antes da primeira versão estável; o mecanismo de bindings da C ABI continua pendente na seção 36 de [architecture.md](../../architecture.md)
+- Estendido por: [ADR 0020](0020-presentation-buffers-and-wasm-memory.md), que cumpre a promessa de schema próprio para buffers de apresentação
 
 ## Contexto
 

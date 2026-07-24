@@ -4,6 +4,7 @@
 - Data: 2026-07-21
 - Revisão: após os cinco jogos de prova ou antes de estabilizar a API 1.0
 - Sequenciamento: complementado pelo [ADR 0012](0012-feature-first-roadmap-and-proof-games.md)
+- Fundações decididas: [ADR 0018](0018-numeric-determinism-and-rng-streams.md) e [ADR 0019](0019-spatial-model-chunk-lifecycle-and-job-commit.md) para mundo procedural, [ADR 0021](0021-motion-and-physics-adapter-authority.md) e [ADR 0022](0022-mass-runtime-storage-levels-and-budgets.md) para motion, física e Mass Runtime, [ADR 0024](0024-player-hosted-multiplayer-and-protocol-compatibility.md) para multiplayer, [ADR 0026](0026-construction-graph-as-source-of-truth.md) para construção e [ADR 0027](0027-forge-output-contract-and-authoring-boundary.md) para os Forges
 
 ## Contexto
 
