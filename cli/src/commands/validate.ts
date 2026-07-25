@@ -13,6 +13,8 @@ import type { CommandOutcome } from "../result.js";
 
 const requiredFiles = [
   "AGENTS.md",
+  "BACKLOG.md",
+  "DECISIONS.md",
   "ROADMAP.md",
   "architecture.md",
   "CAPABILITIES.json",
@@ -26,7 +28,9 @@ const requiredFiles = [
   "contracts/desktop-host.schema.json",
   "contracts/project-state.schema.json",
   "contracts/presentation-events.schema.json",
+  "contracts/program-status.schema.json",
   "contracts/run-manifest.schema.json",
+  "docs/program-status.json",
   "schemas/card-roguelite.schema.json",
   "schemas/scenario.schema.json",
   "runtime-c-api/include/ludivra/runtime.h",
@@ -45,7 +49,9 @@ const jsonFiles = [
   "contracts/desktop-host.schema.json",
   "contracts/project-state.schema.json",
   "contracts/presentation-events.schema.json",
+  "contracts/program-status.schema.json",
   "contracts/run-manifest.schema.json",
+  "docs/program-status.json",
   "schemas/card-roguelite.schema.json",
   "schemas/game.schema.json",
   "schemas/scenario.schema.json",
@@ -60,6 +66,7 @@ const contractSchemaFiles = [
   "contracts/desktop-host.schema.json",
   "contracts/project-state.schema.json",
   "contracts/presentation-events.schema.json",
+  "contracts/program-status.schema.json",
   "contracts/run-manifest.schema.json",
   "schemas/card-roguelite.schema.json",
   "schemas/game.schema.json",
@@ -365,7 +372,8 @@ export async function runValidate(arguments_: string[] = []): Promise<CommandOut
     "tools/contracts/generate-presentation-events.mjs",
     "tools/contracts/generate-operability.mjs",
     "tools/contracts/generate-capabilities.mjs",
-    "tools/contracts/generate-ui.mjs"
+    "tools/contracts/generate-ui.mjs",
+    "tools/program-status/generate.mjs"
   ];
   for (const script of generationChecks) {
     const execution = spawnSync("node", [resolve(root, script), "--check"], { encoding: "utf8" });

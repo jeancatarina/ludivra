@@ -23,6 +23,14 @@ Não carregue documentação sem relação com a mudança.
 
 Não repita regras destes documentos em novos arquivos. Aponte para a fonte canônica. Guardrails só podem ser editados quando a tarefa pedir explicitamente sua alteração.
 
+## Estado do programa
+
+- edite progresso, fases, backlog, targets e jogos de prova somente em `docs/program-status.json`;
+- edite título, status e decisão somente no ADR proprietário;
+- edite estado de capability somente em `capabilities/*/capability.json`;
+- `ROADMAP.md`, `BACKLOG.md`, `DECISIONS.md` e `CAPABILITIES.json` são gerados e não podem ser editados manualmente;
+- depois de alterar uma fonte, execute `pnpm contracts`; `game validate` rejeita índices divergentes.
+
 ## Git e publicação
 
 O workflow obrigatório está em [engineering-rules.md, seção 8](docs/guardrails/engineering-rules.md#8-git-e-publicação). Agentes DEVEM concluir mudanças com commit e push diretos em `main`. Branches e pull requests somente podem ser usados quando o usuário pedir explicitamente.

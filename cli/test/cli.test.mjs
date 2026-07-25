@@ -344,6 +344,8 @@ test("artifact families own their inputs and declare their dependents", async ()
   assert.equal(owningFamily("hosts/browser/src/main.ts"), "web-bundle");
   assert.equal(owningFamily("kernel/src/runtime.cpp"), "wasm");
   assert.equal(owningFamily("contracts/ui-view-model.schema.json"), "contracts");
+  assert.equal(owningFamily("docs/program-status.json"), "contracts");
+  assert.equal(owningFamily("docs/adr/0046-generated-program-documentation.md"), "contracts");
   // A path no family declares must not trigger a rebuild by accident.
   assert.equal(owningFamily("README.md"), null);
 

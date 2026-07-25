@@ -126,7 +126,6 @@ meu-primeiro-jogo/
 │   └── project-state.json estado derivado por `game status`
 ├── BACKLOG.md             trabalho futuro
 ├── DECISIONS.md           decisões do jogo
-├── SESSION_REPORT.md      evidências da última sessão
 ├── game.jsonc             manifesto, targets e inputs
 ├── scenarios/             cenários declarativos e assertions
 ├── scripts/
@@ -357,7 +356,8 @@ O jogo criado contém estado suficiente para outra sessão continuar sem depende
 Execute `game status --project . --format json`. Depois leia AGENTS.md,
 .ludivra/project-state.json, game.jsonc, BACKLOG.md e as decisões relevantes.
 Implemente um vertical slice pequeno. Antes de concluir, valide, teste, execute,
-inspecione o resultado e atualize o relatório da sessão com evidências e limitações.
+inspecione o resultado, use o run manifest compatível como evidência e atualize
+somente a fonte canônica de qualquer limitação alterada.
 ```
 
 Para mudanças na própria engine, agentes devem começar por [AGENTS.md](AGENTS.md). As fronteiras técnicas estão em [architecture.md](architecture.md), a sequência de evolução em [ROADMAP.md](ROADMAP.md), e os gates obrigatórios em [docs/guardrails/](docs/guardrails/).
@@ -434,7 +434,7 @@ ludivra/
 - Android, iOS e consoles ainda não possuem hosts utilizáveis;
 - o starter demonstra a arquitetura, não um jogo comercial pronto.
 
-O plano de evolução está em [ROADMAP.md](ROADMAP.md), e o trabalho executável do marco corrente em [BACKLOG.md](BACKLOG.md). Não esconda uma limitação com fallback silencioso.
+O plano de evolução gerado está em [ROADMAP.md](ROADMAP.md), e o trabalho executável gerado do marco corrente em [BACKLOG.md](BACKLOG.md). Edite progresso somente em `docs/program-status.json`. Não esconda uma limitação com fallback silencioso.
 
 ## Como contribuir
 

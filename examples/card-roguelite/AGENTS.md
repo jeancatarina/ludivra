@@ -5,4 +5,4 @@
 3. Preserve as transições `idle → combat → reward → combat → victory` e o caminho `combat → defeat`.
 4. Execute `game status`, `game validate` e os três cenários após qualquer mudança lógica.
 5. Não use captura SVG headless como evidência de pixels do BrowserHost.
-6. Registre evidência e limitações em `SESSION_REPORT.md`.
+6. Registre evidência no artifact bundle do run; limitações da capability pertencem ao manifest proprietário.

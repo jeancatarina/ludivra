@@ -1,0 +1,28 @@
+{
+  "id": "authoring.audio-forge",
+  "status": "experimental",
+  "version": "0.1.0",
+  "owner": "audio-authoring",
+  "targets": ["native-headless", "browser", "electron"],
+  "contracts": [
+    "schemas/audio-recipe.schema.json"
+  ],
+  "examples": [
+    "examples/card-roguelite/audio/ember-strike.audio.jsonc"
+  ],
+  "dependencies": ["feedback.audio-effects"],
+  "verification": [
+    "pnpm test:audio",
+    "pnpm game -- audio inspect --project examples/card-roguelite --format json"
+  ],
+  "limitations": [
+    {
+      "code": "AUDIO_FORGE_MUSIC_NOT_IMPLEMENTED",
+      "message": "Music recipes, stems and adaptive-music authoring are not implemented."
+    },
+    {
+      "code": "AUDIO_FORGE_VISUAL_PREVIEWS_NOT_IMPLEMENTED",
+      "message": "The render produces WAV and numeric analysis, but waveform and spectrogram image artifacts are not implemented."
+    }
+  ]
+}

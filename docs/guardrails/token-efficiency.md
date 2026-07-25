@@ -73,7 +73,7 @@ Falha em uma camada interrompe as camadas dependentes até a correção. Gates o
 1. Estado durável pertence a fontes, manifests, ADRs e relatórios versionados.
 2. Relatórios registram decisão e evidência, não transcrição da sessão.
 3. Use IDs, links e hashes em vez de copiar conteúdo já canônico.
-4. `SESSION_REPORT.md` deve permitir continuação sem recontar o histórico completo.
+4. Continuidade usa `.ludivra/project-state.json`, o run manifest compatível e os índices gerados; relatório de sessão mutável não é estado atual.
 5. Resultados antigos só são recarregados quando ainda correspondem ao commit e às versões atuais.
 
 ## 7. Resposta pelo chat

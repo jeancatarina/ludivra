@@ -1,0 +1,44 @@
+import assert from "node:assert/strict";
+import test from "node:test";
+import {
+  readAdrs,
+  readCapabilities,
+  readProgram,
+  renderBacklog,
+  renderDecisions,
+  renderRoadmap,
+  repositoryRoot,
+  validateProgram
+} from "./generate.mjs";
+
+test("ADRs are continuous and drive the decision index", async () => {
+  const adrs = await readAdrs();
+  assert.equal(adrs.size, 46);
+  assert.equal(adrs.get("0046").status, "aceito");
+  assert.match(renderDecisions(adrs), /\[0046\].+Estado do programa estruturado/);
+});
+
+test("program source validates and renders every public index", async () => {
+  const [program, adrs, capabilities] = await Promise.all([readProgram(), readAdrs(), readCapabilities()]);
+  await validateProgram(program, adrs, capabilities, repositoryRoot);
+  assert.match(renderRoadmap(program, adrs), /\| 10 \| Procedural Forges \| `PARCIAL` \|/);
+  assert.match(renderRoadmap(program, adrs), /Capabilities: `authoring\.audio-forge`/);
+  assert.match(renderBacklog(program, adrs), /OBS-001.+em andamento/);
+});
+
+test("completed phases cannot retain work and task IDs cannot collide", async () => {
+  const [program, adrs, capabilities] = await Promise.all([readProgram(), readAdrs(), readCapabilities()]);
+  const invalidPhase = structuredClone(program);
+  invalidPhase.phases[0].remaining.push("stale");
+  await assert.rejects(
+    validateProgram(invalidPhase, adrs, capabilities, repositoryRoot),
+    /PROGRAM_COMPLETED_PHASE_HAS_REMAINING/
+  );
+
+  const duplicateTask = structuredClone(program);
+  duplicateTask.tasks.push(structuredClone(duplicateTask.tasks[0]));
+  await assert.rejects(
+    validateProgram(duplicateTask, adrs, capabilities, repositoryRoot),
+    /PROGRAM_TASK_DUPLICATE/
+  );
+});

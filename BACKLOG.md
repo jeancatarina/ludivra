@@ -1,30 +1,19 @@
 # Backlog técnico da Ludivra
 
-| ID | Prioridade | Estado | Trabalho |
-|---|---|---|---|
-| ENG-001 | alta | concluído | Fixar Lua e implementar sandbox mínima |
-| ENG-002 | alta | concluído | Instalar Emscripten e provar equivalência native/WASM |
-| ENG-003 | alta | concluído | Adicionar validação JSON Schema completa sem duplicar contratos |
-| ENG-004 | alta | concluído | Automatizar todas as regras de imports e ciclos |
-| ENG-005 | alta | concluído | Produzir artifact manifest por execução da CLI |
-| ENG-006 | média | concluído | Adicionar CI com actions fixadas após configurar o remote GitHub |
-| ENG-007 | alta | concluído | Implementar saves versionados, replay e equivalência native/WASM |
-| ENG-008 | alta | concluído | Adicionar áudio abstrato, música e partículas ao vertical slice |
-| ENG-009 | média | planejado | Validar pacotes Windows/Linux em runners nativos |
-| ENG-010 | alta | concluído | Implementar storage/lifecycle/diagnóstico e adapters Steam opcionais no ElectronHost |
-| ENG-011 | alta | concluído | Reconciliar `PROJECT_STATE.json` com o estado canônico definido pela arquitetura |
-| ENG-012 | alta | concluído | Implementar o control protocol local de desenvolvimento e teste |
-| ENG-013 | média | planejado | Assinar e notarizar o pacote macOS após autorização e credenciais explícitas |
-| ENG-014 | alta | concluído | Implementar scenario harness, captura e artifact bundle |
-| ENG-015 | alta | concluído | Automatizar a sessão fria sobre o starter |
-| ENG-016 | alta | concluído | Implementar o card roguelite como fixture antecipada de gameplay, conteúdo e replay |
-| ENG-017 | alta | concluído | Produzir UiViewModel e RenderedUiSnapshot reais no BrowserHost ([ADR 0014](docs/adr/0014-declarative-ui-contracts-and-initial-renderer.md)) |
-| ENG-018 | alta | concluído | Adicionar captura raster e cenário visual do BrowserHost usando a fixture card roguelite ([ADR 0015](docs/adr/0015-raster-capture-and-visual-baselines.md)) |
-| ENG-019 | alta | concluído | Completar cache/watch incremental com invalidação explicável no Development Runner ([ADR 0013](docs/adr/0013-development-runner-cache-and-lifecycle.md)) |
-| ENG-020 | alta | concluído | Validar lifecycle, rebuild afetado e encerramento limpo do Development Runner ([ADR 0013](docs/adr/0013-development-runner-cache-and-lifecycle.md)) |
-| AUD-001 | alta | em andamento | Implementar o Audio Forge: receita JSONC, compilador determinístico, cache e `game audio` ([ADR 0032](docs/adr/0032-audio-forge-recipes-and-deterministic-renderer.md)) |
-| VIS-001 | média | planejado | Implementar o Visual Forge para humanoides estilizados ([ADR 0033](docs/adr/0033-visual-forge-procedural-characters-and-generated-surfaces.md)) |
+> Gerado de `docs/program-status.json` por `tools/program-status/generate.mjs`. Não edite manualmente.
 
-O P0 de operabilidade está concluído: contratos de UI versionados, captura raster com baseline, cache por família de artefato e lifecycle de processos com dono único. O roadmap canônico está em [ROADMAP.md](ROADMAP.md).
+Foco atual: **Fase 3 — Fechar os códigos específicos de renderer e shader e ampliar a matriz mínima de baselines.**
 
-Após esse gate, o backlog será detalhado por fundação técnica: autoria text-first, runtime espacial, motion/física/Mass Runtime, persistência mundial/multiplayer, apresentação escalável, construção, Forges e Diagnose–Repair–Verify. Os cinco jogos completos pertencem à prova integrada final definida pelo [ADR 0012](docs/adr/0012-feature-first-roadmap-and-proof-games.md).
+| ID | Prioridade | Estado | Fase | Trabalho | ADRs |
+|---|---|---|---:|---|---|
+| OBS-001 | alta | em andamento | 3 | Separar falhas de renderer e shader de erros genéricos de script. | [ADR 0010](docs/adr/0010-local-control-protocol-and-scenario-harness.md), [ADR 0015](docs/adr/0015-raster-capture-and-visual-baselines.md) |
+| OBS-002 | alta | planejado | 3 | Aprovar a matriz mínima adicional de baselines raster. | [ADR 0015](docs/adr/0015-raster-capture-and-visual-baselines.md) |
+| CNT-001 | alta | planejado | 4 | Implementar migrations explícitas do content pack e suas fixtures. | [ADR 0017](docs/adr/0017-content-pack-compilation-and-migrations.md) |
+| SDK-001 | alta | planejado | 4 | Fechar o contrato versionado da camada 1 do SDK Lua, queries e projectors. | [ADR 0016](docs/adr/0016-public-lua-sdk-layers-and-escape-hatches.md) |
+| WORLD-001 | alta | planejado | 5 | Adicionar jobs assíncronos, Simulation LOD e inspeção espacial após o gate da Fase 4. | [ADR 0019](docs/adr/0019-spatial-model-chunk-lifecycle-and-job-commit.md), [ADR 0045](docs/adr/0045-wasm-threads-and-shared-memory.md) |
+| AUD-001 | alta | planejado | 10 | Completar música, stems, previews e integração final do Audio Forge. | [ADR 0032](docs/adr/0032-audio-forge-recipes-and-deterministic-renderer.md) |
+| VIS-001 | média | planejado | 10 | Implementar o Visual Forge para humanoides estilizados. | [ADR 0033](docs/adr/0033-visual-forge-procedural-characters-and-generated-surfaces.md) |
+| ENG-009 | média | planejado | 11 | Validar pacotes Windows e Linux em runners nativos. | [ADR 0030](docs/adr/0030-target-hardening-signing-and-distribution.md) |
+| ENG-013 | média | bloqueado | 11 | Assinar e notarizar o pacote macOS após autorização e credenciais explícitas. | [ADR 0030](docs/adr/0030-target-hardening-signing-and-distribution.md) |
+
+Itens concluídos não permanecem no backlog. O estado entregue de cada fase está no [ROADMAP.md](ROADMAP.md), com evidência versionada; o histórico detalhado está no Git e nos manifests de `reports/runs/`.

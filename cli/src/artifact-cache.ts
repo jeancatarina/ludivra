@@ -51,13 +51,24 @@ interface FamilyDefinition {
 const families: FamilyDefinition[] = [
   {
     id: "contracts",
-    inputs: ["contracts", "tools/contracts", "capabilities", "contracts/capability-catalog.source.json"],
+    inputs: [
+      "contracts",
+      "tools/contracts",
+      "tools/program-status",
+      "capabilities",
+      "docs/adr",
+      "docs/program-status.json",
+      "contracts/capability-catalog.source.json"
+    ],
     outputs: [
       "cli/src/generated",
       "runtime-web/src/generated",
       "presentation-protocol/src/generated",
       "hosts/electron/src/generated",
-      "CAPABILITIES.json"
+      "CAPABILITIES.json",
+      "BACKLOG.md",
+      "DECISIONS.md",
+      "ROADMAP.md"
     ],
     dependsOn: [],
     environment: [],

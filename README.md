@@ -126,7 +126,6 @@ my-first-game/
 │   └── project-state.json state derived by `game status`
 ├── BACKLOG.md             future work
 ├── DECISIONS.md           game-specific decisions
-├── SESSION_REPORT.md      evidence from the latest session
 ├── game.jsonc             manifest, targets, and input bindings
 ├── scenarios/             declarative scenarios and assertions
 ├── scripts/
@@ -357,7 +356,7 @@ A generated game contains enough durable state for a new session to continue wit
 Run `game status --project . --format json`. Then read AGENTS.md,
 .ludivra/project-state.json, game.jsonc, BACKLOG.md, and the relevant decisions.
 Implement a small vertical slice. Before finishing, validate, test, run, and inspect it.
-Update the session report with evidence, limitations, and one recommended next step.
+Use the compatible run manifest for evidence and update only the canonical source of any changed limitation.
 ```
 
 Agents modifying the engine itself must start with [AGENTS.md](AGENTS.md). Technical boundaries are defined in [architecture.md](architecture.md), the evolution sequence lives in [ROADMAP.md](ROADMAP.md), and mandatory gates live in [docs/guardrails/](docs/guardrails/).
@@ -434,7 +433,7 @@ ludivra/
 - Android, iOS, and consoles do not have usable hosts yet;
 - the starter demonstrates the architecture; it is not a production-ready commercial game.
 
-The evolution plan lives in [ROADMAP.md](ROADMAP.md), and executable work for the current milestone is tracked in [BACKLOG.md](BACKLOG.md). Never hide a limitation behind a silent fallback.
+The generated evolution plan lives in [ROADMAP.md](ROADMAP.md), and generated executable work for the current milestone is tracked in [BACKLOG.md](BACKLOG.md). Edit progress only in `docs/program-status.json`. Never hide a limitation behind a silent fallback.
 
 ## Contributing
 

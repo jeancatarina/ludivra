@@ -795,7 +795,7 @@ Capacidades não podem furar o sandbox nem importar um renderer por conveniênci
 3. `game status --project . --format json` para regenerar o índice;
 4. `.ludivra/project-state.json`;
 5. `game.jsonc` e a parte relevante de `GAME_DESIGN.md`;
-6. `DECISIONS.md` e `BACKLOG.md` filtrados para a tarefa;
+6. `DECISIONS.md` e `BACKLOG.md`, índices gerados e filtrados para a tarefa;
 7. `CAPABILITIES.json`;
 8. contratos e receitas diretamente relacionados;
 9. `architecture.md` quando a tarefa tocar uma fronteira, contrato público ou decisão de engine.
@@ -806,10 +806,11 @@ O agente não precisa carregar toda a documentação para cada alteração. A do
 
 - Git é o histórico canônico de código e conteúdo;
 - `.ludivra/project-state.json` é um resumo gerado e validado, não um diário manual;
-- `DECISIONS.md` indexa ADRs arquiteturais;
-- `BACKLOG.md` contém trabalho futuro priorizado;
+- `docs/program-status.json` é a única fonte editável de progresso, backlog, targets e jogos de prova;
+- `DECISIONS.md` indexa metadados lidos diretamente dos ADRs;
+- `ROADMAP.md` e `BACKLOG.md` são projeções geradas de `docs/program-status.json`;
 - manifests de `reports/runs/` indexam evidências imutáveis por execução;
-- `SESSION_REPORT.md` aponta para a última execução e pode ser regenerado.
+- relatórios de sessão mutáveis são proibidos como estado atual; a execução mais recente compatível vem de `.ludivra/project-state.json` e seu run manifest.
 
 Um estado gerado nunca afirma “passing” sem referenciar `runId`, commit, comando e artefato que comprovem isso.
 
@@ -1146,10 +1147,14 @@ ludivra/
 ├── docs/
 │   ├── guardrails/
 │   ├── recipes/
-│   └── adr/
+│   ├── adr/
+│   └── program-status.json fonte de progresso do programa
 ├── AGENTS.md
 ├── architecture.md
-├── CAPABILITIES.json
+├── BACKLOG.md             gerado
+├── CAPABILITIES.json      gerado
+├── DECISIONS.md           gerado
+├── ROADMAP.md             gerado
 └── toolchain.lock
 ```
 
@@ -1163,7 +1168,6 @@ my-game/
 ├── GAME_DESIGN.md
 ├── BACKLOG.md
 ├── DECISIONS.md
-├── SESSION_REPORT.md
 ├── .ludivra/
 │   ├── project-state.json
 │   └── permissions.jsonc
@@ -1241,7 +1245,7 @@ A premissa completa da Ludivra só será considerada entregue quando, além do g
 
 ## 34. Roadmap orientado a riscos
 
-A sequência, os critérios de promoção, as fases obrigatórias e a rota futura são mantidos em [ROADMAP.md](ROADMAP.md). Este documento continua sendo a autoridade para boundaries, objetivos e critérios de comprovação; o roadmap não pode alterá-los sem a mudança arquitetural e, quando aplicável, o ADR exigido.
+A sequência, os critérios de promoção, as fases obrigatórias e a rota futura são publicados no [ROADMAP.md](ROADMAP.md), gerado de [docs/program-status.json](docs/program-status.json). Este documento continua sendo a autoridade para boundaries, objetivos e critérios de comprovação; a fonte do roadmap não pode alterá-los sem a mudança arquitetural e, quando aplicável, o ADR exigido.
 
 A separação evita duas listas de fases divergentes. O roadmap deve preservar a ordem de risco estabelecida aqui: estado e contratos, execução e controle, observabilidade causal, autoria text-first, fundações espaciais e de escala, física e rede, apresentação escalável, construção, Forges, diagnóstico e performance, e por fim os cinco jogos como provas integradas. Fixtures técnicas e protótipos podem surgir antes; eles não substituem o gate final dos jogos. O sequenciamento feature-first é definido pelo [ADR 0012](docs/adr/0012-feature-first-roadmap-and-proof-games.md).
 
@@ -1255,7 +1259,7 @@ A separação evita duas listas de fases divergentes. O roadmap deve preservar a
 | UI acoplada ao DOM | `UiViewModel`, `UiIntent`, árvore semântica e renderer substituível |
 | Three.js vazar para gameplay | pacote exclusivo, grafo de imports e fitness functions no CI |
 | Agente “validar” apenas por compilação | harness obrigatório, cenários, capturas, vídeo, trace e artifact bundle |
-| Documentação ficar desatualizada | estado derivado, contratos executáveis, receitas testadas e links por diagnóstico |
+| Documentação ficar desatualizada | progresso estruturado, índices gerados, `--check` obrigatório e evidência versionada por entrega |
 | Abstração prematura | extrair após dois usos diferentes; estabilizar após o terceiro |
 | Portabilidade apenas teórica | runner native desde a fase 1 e equivalência contínua |
 | Serviços externos quebrarem determinismo | requests/results por tick, idempotência e replay de resultados |
@@ -1265,7 +1269,7 @@ A separação evita duas listas de fases divergentes. O roadmap deve preservar a
 
 ## 36. Decisões que exigem ADR antes da implementação
 
-Este documento define a direção. As escolhas abaixo exigem ADR próprio, e a tabela registra qual decisão já as fechou. O índice completo está em [DECISIONS.md](DECISIONS.md).
+Este documento define a direção. As escolhas abaixo exigem ADR próprio, e a tabela registra qual decisão já as fechou. O índice completo é gerado dos próprios ADRs em [DECISIONS.md](DECISIONS.md).
 
 | Escolha | Situação |
 |---|---|

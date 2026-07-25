@@ -1,0 +1,424 @@
+{
+  "schemaVersion": 1,
+  "release": "0.7.0",
+  "currentFocus": {
+    "phase": 3,
+    "summary": "Fechar os códigos específicos de renderer e shader e ampliar a matriz mínima de baselines.",
+    "next": "Concluir o gate da Fase 4 antes de ampliar novamente a fundação espacial."
+  },
+  "phases": [
+    {
+      "id": 1,
+      "title": "Estado canônico e catálogo de capacidades",
+      "status": "completed",
+      "owners": ["CLI", "contratos de estado"],
+      "dependencies": [],
+      "adrs": ["0009"],
+      "objective": "Dar à IA uma representação única, navegável e regenerável do estado da engine e do projeto.",
+      "delivered": [
+        {
+          "summary": "Estado derivado, catálogo de capabilities, manifests de run e fitness functions.",
+          "evidence": ["cli/src/project-state.ts", "CAPABILITIES.json", "contracts/run-manifest.schema.json"]
+        }
+      ],
+      "remaining": [],
+      "gate": "Uma sessão nova encontra estado, capabilities, limitações e evidência compatível sem pesquisar o repositório inteiro."
+    },
+    {
+      "id": 2,
+      "title": "Context Engine, CLI e Development Runner",
+      "status": "completed",
+      "owners": ["CLI", "BrowserHost", "ElectronHost"],
+      "dependencies": [1],
+      "adrs": ["0013"],
+      "objective": "Fazer da CLI a interface operacional oficial entre IA, engine, hosts e toolchain.",
+      "delivered": [
+        {
+          "summary": "CLI estruturada, cache por família, watch afetado e lifecycle de processos com dono único.",
+          "evidence": ["cli/src/artifact-cache.ts", "cli/src/build-runner.ts", "cli/src/process-runner.ts"]
+        }
+      ],
+      "remaining": [],
+      "gate": "Uma sessão executa, interrompe, reconstrói e inspeciona um projeto com comandos reproduzíveis e sem processos órfãos."
+    },
+    {
+      "id": 3,
+      "title": "AI Control Plane e observabilidade causal",
+      "status": "active",
+      "owners": ["CLI", "control protocol", "scenario harness", "BrowserHost"],
+      "dependencies": [1, 2],
+      "adrs": ["0010", "0014", "0015"],
+      "objective": "Permitir que a IA controle uma execução real e rastreie um defeito do input até a apresentação.",
+      "delivered": [
+        {
+          "summary": "Control protocol, harness, replay, contratos de UI e captura raster com baseline.",
+          "capabilities": ["operability.control-harness"],
+          "evidence": ["contracts/control-protocol.schema.json", "cli/src/scenario-harness.ts", "cli/src/raster-capture.ts"]
+        },
+        {
+          "summary": "Cadeia de pixels para trace de projeção, estado lógico e tick no mesmo run.",
+          "evidence": ["renderer-three/src/index.ts", "contracts/rendered-ui-snapshot.schema.json"]
+        }
+      ],
+      "remaining": [
+        "Códigos próprios para falhas de renderer e shader em vez de erro de script genérico.",
+        "Baselines aprovadas para a matriz mínima de viewport, escala de texto e device scale factor."
+      ],
+      "gate": "Um defeito nos pixels é correlacionado a estado, ação, evento, projector e origem, reproduzido por cenário e anexado ao artifact bundle."
+    },
+    {
+      "id": 4,
+      "title": "Autoria text-first de gameplay, UI e conteúdo",
+      "status": "partial",
+      "owners": ["kernel", "Lua SDK", "content compiler", "presentation protocol"],
+      "dependencies": [3],
+      "adrs": ["0004", "0016", "0017", "0018", "0044"],
+      "objective": "Permitir que jogos sejam criados por APIs públicas textuais sem alterar internals da engine.",
+      "delivered": [
+        {
+          "summary": "Lua sandboxed com estado por símbolo, timers, fixed-point, streams de RNG e diagnósticos estáveis.",
+          "capabilities": ["runtime.lua-gameplay"],
+          "evidence": ["kernel/src/lua_sandbox.cpp", "tests/runtime/runtime_test.cpp", "tests/fixtures/determinism.lua"]
+        },
+        {
+          "summary": "Content pack versionado, determinístico, rastreável e carregado pelo kernel em todos os hosts.",
+          "capabilities": ["runtime.content-binding"],
+          "evidence": ["content-compiler/src/pack.ts", "kernel/src/content_pack.cpp", "tools/tests/card-roguelite.mjs"]
+        }
+      ],
+      "remaining": [
+        "Contrato público e versionado da camada 1 do SDK, incluindo queries declarativas e maturidade por símbolo.",
+        "Projectors read-only declarados e medidos separadamente.",
+        "Migrations explícitas de schema e conteúdo com fixtures.",
+        "Gate integrado de UI, localização, navegação, foco, touch targets e breakpoints."
+      ],
+      "gate": "Uma sessão nova cria regra, conteúdo, tela, apresentação e cenário usando apenas APIs públicas."
+    },
+    {
+      "id": 5,
+      "title": "Runtime espacial e mundo procedural",
+      "status": "partial",
+      "owners": ["kernel spatial runtime", "world runtime", "job system"],
+      "dependencies": [4],
+      "adrs": ["0018", "0019", "0039", "0045"],
+      "objective": "Criar uma fundação opt-in para mapas pequenos, mundos extensos e sandboxes virtualmente infinitos.",
+      "delivered": [
+        {
+          "summary": "Posição composta, identidade e lifecycle de chunk, commit determinístico de jobs e geração pura sem seams.",
+          "capabilities": ["spatial.runtime-foundation"],
+          "evidence": ["kernel/src/world_position.cpp", "kernel/src/world_chunks.cpp", "tests/kernel/kernel_test.cpp"]
+        },
+        {
+          "summary": "Janela de streaming com residência estável e regeneração idêntica ao revisitar.",
+          "evidence": ["kernel/src/world_streaming.cpp", "capabilities/spatial-runtime-foundation/capability.json"]
+        }
+      ],
+      "remaining": [
+        "Jobs assíncronos reais sem alterar a ordem de commit.",
+        "Simulation LOD, catch-up lógico e inspeção de regiões, chunks, jobs e caches.",
+        "Posição com região e partitioning interno comprovado pelo consumidor.",
+        "Superfície pública apenas quando um jogo declarar a capability."
+      ],
+      "gate": "O runtime gera, carrega, descarta e regenera chunks determinísticos com memória estabilizada em viagens longas."
+    },
+    {
+      "id": 6,
+      "title": "Motion, física e Mass Simulation",
+      "status": "planned",
+      "owners": ["motion runtime", "physics adapters", "Mass Runtime"],
+      "dependencies": [5],
+      "adrs": ["0021", "0022", "0037", "0045"],
+      "objective": "Entregar movimento formal, física por adapters e multidões em níveis de simulação declarados.",
+      "delivered": [],
+      "remaining": [
+        "Motion por tempo declarado e comandos semânticos.",
+        "Adapters Jolt 3D e Box2D 2D com autoridade, quantização e replay.",
+        "Mass Runtime contíguo, níveis de simulação, promoção controlada e budgets."
+      ],
+      "gate": "Movimento, física e hordas permanecem observáveis, reproduzíveis e dentro dos budgets aprovados."
+    },
+    {
+      "id": 7,
+      "title": "Persistência, replays e multiplayer player-hosted",
+      "status": "partial",
+      "owners": ["kernel", "storage", "network runtime"],
+      "dependencies": [5, 6],
+      "adrs": ["0023", "0024", "0038"],
+      "objective": "Preservar mundo e sessões player-hosted com compatibilidade e recuperação explícitas.",
+      "delivered": [
+        {
+          "summary": "Saves lógicos versionados, migrations básicas, replays, checkpoints e equivalência native/WASM.",
+          "capabilities": ["runtime.save-replay"],
+          "evidence": ["kernel/src/state_archive.cpp", "kernel/src/runtime.cpp", "tools/tests/wasm-equivalence.mjs"]
+        }
+      ],
+      "remaining": [
+        "Region storage atômico com journal, compactação, recovery e migrations.",
+        "Salvamento por seed, generator version e deltas sem duplicar o mundo regenerável.",
+        "Salas host-authoritative, transport adapters, late join, reconexão e host migration."
+      ],
+      "gate": "Save mundial sobrevive a crash e migration, replay localiza divergência e uma sala casual suporta seu lifecycle completo."
+    },
+    {
+      "id": 8,
+      "title": "Renderer, UI, áudio e apresentação escalável",
+      "status": "partial",
+      "owners": ["presentation protocol", "renderer-three", "UI renderer", "hosts"],
+      "dependencies": [3, 4, 5, 6, 7],
+      "adrs": ["0014", "0015", "0020", "0025", "0040"],
+      "objective": "Apresentar jogos pequenos e massivos com observabilidade e degradação sem alterar gameplay.",
+      "delivered": [
+        {
+          "summary": "Renderer Three.js experimental, UI DOM acessível, Web Audio e partículas simples.",
+          "capabilities": ["presentation.three", "feedback.audio-effects"],
+          "evidence": ["renderer-three/src", "hosts/browser/src/ui-renderer.ts", "hosts/browser/src/audio-feedback.ts"]
+        }
+      ],
+      "remaining": [
+        "Buffers contíguos, instancing, LOD, culling, pooling e terrain streaming.",
+        "UI completa por teclado, controle e touch com baselines por perfil.",
+        "Budgets de voz e memória, prioridade, deduplicação, música adaptativa e fallback observável."
+      ],
+      "gate": "A IA explica falhas de apresentação e a carga massiva permanece dentro dos budgets aprovados."
+    },
+    {
+      "id": 9,
+      "title": "Procedural Construction Runtime",
+      "status": "planned",
+      "owners": ["construction runtime", "geometry compiler", "authoring toolkit"],
+      "dependencies": [5, 6, 8],
+      "adrs": ["0026", "0035"],
+      "objective": "Permitir construção procedural interativa cuja fonte de verdade seja um grafo semântico.",
+      "delivered": [],
+      "remaining": [
+        "Construction Graph, comandos semânticos, undo/redo e replay.",
+        "Building Chemistry, constraint solver e Geometry Compiler incremental.",
+        "Terrain sculpting, ferramentas semânticas e rastreabilidade de derivados."
+      ],
+      "gate": "Uma edição reconstrói apenas a região necessária e toda consequência derivada é explicável."
+    },
+    {
+      "id": 10,
+      "title": "Procedural Forges",
+      "status": "partial",
+      "owners": ["authoring toolchains"],
+      "dependencies": [4, 5, 6, 7, 8, 9],
+      "adrs": ["0027", "0032", "0033", "0034", "0035", "0036"],
+      "objective": "Produzir assets e receitas convencionais, rastreáveis e regeneráveis em cinco famílias.",
+      "delivered": [
+        {
+          "summary": "Audio Forge possui receita JSONC, render determinístico, análise, cache, cooker e comandos de CLI.",
+          "capabilities": ["authoring.audio-forge"],
+          "evidence": ["capabilities/authoring-audio-forge/capability.json", "audio-authoring/src", "cli/src/audio-forge.ts"]
+        }
+      ],
+      "remaining": [
+        "Completar música, stems, previews gráficos e runtime/cooker do Audio Forge.",
+        "Implementar Visual, World, Construction e Physics Forges.",
+        "Aplicar o manifest comum de Forge, origem, licença, preview e regeneração."
+      ],
+      "gate": "Os cinco Forges produzem artefatos rastreáveis usados nas fixtures e preparados para os jogos finais."
+    },
+    {
+      "id": 11,
+      "title": "Diagnose, Repair, Verify e performance gates",
+      "status": "partial",
+      "owners": ["CLI", "diagnostics", "benchmark registry", "target hardening"],
+      "dependencies": [3, 4, 5, 6, 7, 8, 9, 10],
+      "adrs": ["0028", "0029", "0030", "0031", "0043"],
+      "objective": "Transformar falhas e regressões em diagnóstico causal, reparo controlado e comparação verificável.",
+      "delivered": [
+        {
+          "summary": "Diagnósticos estruturados, artifact bundles, replay, hashes, timeline e classificações de disponibilidade.",
+          "evidence": ["contracts/cli-result.schema.json", "contracts/run-manifest.schema.json", "cli/src/result.ts"]
+        }
+      ],
+      "remaining": [
+        "Fluxo real de diagnose, explain, fix dry-run/apply e verify com classes de reparo.",
+        "Registry de métricas, profiles e benchmarks oficiais por target.",
+        "Hardening, SBOM, provenance, licença e smoke instalado."
+      ],
+      "gate": "Todo reparo possui regressão e comparação de evidência; falhas de performance apontam o sistema responsável."
+    },
+    {
+      "id": 12,
+      "title": "Cinco jogos de prova e sessões frias",
+      "status": "planned",
+      "owners": ["programa Ludivra"],
+      "dependencies": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11],
+      "adrs": ["0008", "0012"],
+      "objective": "Comprovar integração, reuso, targets e continuidade por IA em cinco jogos materialmente diferentes.",
+      "delivered": [],
+      "remaining": [
+        "Card roguelite como jogo final, além da fixture antecipada.",
+        "Survivor-like, physics party brawler, procedural sandbox e procedural diorama builder.",
+        "Sessão fria completa e gates funcionais, visuais, de target e performance por jogo."
+      ],
+      "gate": "Os cinco jogos passam pelos gates aplicáveis usando releases compatíveis da engine."
+    }
+  ],
+  "tasks": [
+    {
+      "id": "OBS-001",
+      "priority": "high",
+      "status": "in_progress",
+      "phase": 3,
+      "work": "Separar falhas de renderer e shader de erros genéricos de script.",
+      "adrs": ["0010", "0015"]
+    },
+    {
+      "id": "OBS-002",
+      "priority": "high",
+      "status": "planned",
+      "phase": 3,
+      "work": "Aprovar a matriz mínima adicional de baselines raster.",
+      "adrs": ["0015"]
+    },
+    {
+      "id": "SDK-001",
+      "priority": "high",
+      "status": "planned",
+      "phase": 4,
+      "work": "Fechar o contrato versionado da camada 1 do SDK Lua, queries e projectors.",
+      "adrs": ["0016"]
+    },
+    {
+      "id": "CNT-001",
+      "priority": "high",
+      "status": "planned",
+      "phase": 4,
+      "work": "Implementar migrations explícitas do content pack e suas fixtures.",
+      "adrs": ["0017"]
+    },
+    {
+      "id": "WORLD-001",
+      "priority": "high",
+      "status": "planned",
+      "phase": 5,
+      "work": "Adicionar jobs assíncronos, Simulation LOD e inspeção espacial após o gate da Fase 4.",
+      "adrs": ["0019", "0045"]
+    },
+    {
+      "id": "AUD-001",
+      "priority": "high",
+      "status": "planned",
+      "phase": 10,
+      "work": "Completar música, stems, previews e integração final do Audio Forge.",
+      "adrs": ["0032"]
+    },
+    {
+      "id": "VIS-001",
+      "priority": "medium",
+      "status": "planned",
+      "phase": 10,
+      "work": "Implementar o Visual Forge para humanoides estilizados.",
+      "adrs": ["0033"]
+    },
+    {
+      "id": "ENG-009",
+      "priority": "medium",
+      "status": "planned",
+      "phase": 11,
+      "work": "Validar pacotes Windows e Linux em runners nativos.",
+      "adrs": ["0030"]
+    },
+    {
+      "id": "ENG-013",
+      "priority": "medium",
+      "status": "blocked",
+      "phase": 11,
+      "work": "Assinar e notarizar o pacote macOS após autorização e credenciais explícitas.",
+      "adrs": ["0030"]
+    }
+  ],
+  "targets": [
+    {
+      "id": "native-headless",
+      "label": "Native headless",
+      "status": "experimental",
+      "current": "Executado em CI e nos testes nativos.",
+      "required": "Manter equivalência e corpus de replays verdes."
+    },
+    {
+      "id": "browser",
+      "label": "Browser",
+      "status": "experimental",
+      "current": "Host WASM, Three.js, UI DOM e controle local existem.",
+      "required": "Fechar Control Plane, budgets e fallbacks gráficos."
+    },
+    {
+      "id": "electron-macos",
+      "label": "Electron/macOS",
+      "status": "experimental",
+      "current": "Pacote local, lifecycle, storage e Steam opcional existem.",
+      "required": "Smoke instalado e política de assinatura."
+    },
+    {
+      "id": "electron-windows",
+      "label": "Electron/Windows",
+      "status": "not_run",
+      "current": "Empacotamento existe sem smoke no target.",
+      "required": "Build e smoke em runner Windows."
+    },
+    {
+      "id": "electron-linux",
+      "label": "Electron/Linux",
+      "status": "not_run",
+      "current": "Empacotamento existe sem smoke no target.",
+      "required": "Build e smoke em runner Linux."
+    },
+    {
+      "id": "android",
+      "label": "Android",
+      "status": "not_available",
+      "current": "Host não implementado.",
+      "required": "Host, lifecycle, touch, persistência e dispositivo real."
+    },
+    {
+      "id": "ios",
+      "label": "iOS",
+      "status": "not_available",
+      "current": "Host não implementado.",
+      "required": "Host, lifecycle, touch, persistência e dispositivo real."
+    },
+    {
+      "id": "consoles",
+      "label": "Consoles",
+      "status": "future",
+      "current": "Rota arquitetural futura.",
+      "required": "Acesso oficial, infraestrutura privada e hosts/renderers nativos."
+    }
+  ],
+  "proofGames": [
+    {
+      "id": "card-roguelite",
+      "label": "Card roguelite",
+      "status": "fixture",
+      "proves": "Determinismo, conteúdo, UI declarativa, saves, replays, áudio, captura e operação."
+    },
+    {
+      "id": "survivor-like",
+      "label": "Survivor-like",
+      "status": "planned",
+      "proves": "Spatial grid, Mass Runtime, instancing, partículas e performance."
+    },
+    {
+      "id": "physics-party-brawler",
+      "label": "Physics party brawler",
+      "status": "planned",
+      "proves": "Física 3D, ragdolls, multiplayer, reconexão e host migration."
+    },
+    {
+      "id": "procedural-sandbox",
+      "label": "Procedural indie sandbox",
+      "status": "planned",
+      "proves": "Chunks, streaming, geração, persistência por deltas e Simulation LOD."
+    },
+    {
+      "id": "procedural-diorama-builder",
+      "label": "Procedural diorama builder",
+      "status": "planned",
+      "proves": "Construction Graph, constraints, geometria incremental e terrain sculpting."
+    }
+  ]
+}
