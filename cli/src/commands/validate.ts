@@ -77,6 +77,11 @@ const kernelForbiddenPatterns = [
 const skippedDirectories = new Set([".git", ".toolchains", "build", "dist", "node_modules", "reports"]);
 const forbiddenGenericDirectories = new Set(["common", "helpers", "utils"]);
 
+/** Removes block and line comments so a forbidden-name scan reads code only. */
+export function stripComments(source: string): string {
+  return source.replaceAll(/\/\*[\s\S]*?\*\//g, " ").replaceAll(/\/\/[^\n]*/g, " ");
+}
+
 async function collectSourceFiles(directory: string): Promise<string[]> {
   const entries = await readdir(directory, { withFileTypes: true });
   const files: string[] = [];
@@ -348,8 +353,11 @@ export async function runValidate(arguments_: string[] = []): Promise<CommandOut
 
   for (const file of await collectSourceFiles(resolve(root, "kernel"))) {
     const content = await readFile(file, "utf8");
+    // Comments are prose: a sentence mentioning a forbidden name is not a
+    // dependency, and matching it would punish documentation.
+    const code = stripComments(content);
     for (const forbidden of kernelForbiddenPatterns) {
-      if (forbidden.pattern.test(content)) {
+      if (forbidden.pattern.test(code)) {
         diagnostics.push({
           code: forbidden.code,
           severity: "error",

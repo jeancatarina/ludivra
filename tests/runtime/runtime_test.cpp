@@ -69,6 +69,10 @@ std::string counter_gameplay() {
   return fixture("counter.lua");
 }
 
+std::string determinism_gameplay() {
+  return fixture("determinism.lua");
+}
+
 std::vector<uint8_t> save_archive(TestContext& context, ludivra_runtime* runtime) {
   uint32_t size = 0;
   context.expect(ludivra_runtime_save_size(runtime, &size) == LUDIVRA_OK, "save size is available");
@@ -137,6 +141,61 @@ int main() {
   context.expect(ludivra_runtime_step(scripted, 1U) == LUDIVRA_OK, "Lua gameplay advances");
   context.expect(integer_state(context, scripted, 1U) == 1, "Lua changes state through commands");
   std::printf("wasm_equivalence_hash=%016" PRIx64 "\n", state_hash(context, scripted));
+
+  {
+    // ADR 0018 through the whole stack: draws and fixed-point reach the state, and
+    // the stream position becomes part of the hash and of the save.
+    auto* deterministic = create_runtime(context);
+    const auto source = determinism_gameplay();
+    context.expect(
+        ludivra_runtime_load_gameplay(
+            deterministic, source.data(), static_cast<uint32_t>(source.size())) == LUDIVRA_OK,
+        "determinism gameplay loads");
+    submit(context, deterministic, 1U, 2000, 1U);
+    context.expect(ludivra_runtime_step(deterministic, 1U) == LUDIVRA_OK, "determinism tick advances");
+    const auto roll = integer_state(context, deterministic, 10U);
+    context.expect(roll >= 1 && roll <= 6, "ranged draw stays inside the declared range");
+    context.expect(
+        integer_state(context, deterministic, 11U) == 3000,
+        "fixed-point multiply keeps the milli scale");
+    const auto chance = integer_state(context, deterministic, 12U);
+    context.expect(chance >= 0 && chance <= 1000, "unit draw stays in milli range");
+    std::printf("wasm_determinism_hash=%016" PRIx64 "\n", state_hash(context, deterministic));
+
+    // The same seed and the same inputs reproduce the same draws.
+    auto* twin = create_runtime(context);
+    context.expect(
+        ludivra_runtime_load_gameplay(
+            twin, source.data(), static_cast<uint32_t>(source.size())) == LUDIVRA_OK,
+        "twin gameplay loads");
+    submit(context, twin, 1U, 2000, 1U);
+    context.expect(ludivra_runtime_step(twin, 1U) == LUDIVRA_OK, "twin tick advances");
+    context.expect(
+        state_hash(context, twin) == state_hash(context, deterministic),
+        "same seed reproduces the same draws");
+
+    // Restoring a save resumes the stream instead of replaying the first draw.
+    const auto archive = save_archive(context, deterministic);
+    auto* restored = create_runtime(context);
+    context.expect(
+        ludivra_runtime_load_gameplay(
+            restored, source.data(), static_cast<uint32_t>(source.size())) == LUDIVRA_OK,
+        "restored gameplay loads");
+    context.expect(
+        ludivra_runtime_load_save(restored, archive.data(), static_cast<uint32_t>(archive.size())) == LUDIVRA_OK,
+        "save with stream positions loads");
+    submit(context, restored, 1U, 2000, 2U);
+    submit(context, deterministic, 1U, 2000, 2U);
+    context.expect(ludivra_runtime_step(restored, 1U) == LUDIVRA_OK, "restored tick advances");
+    context.expect(ludivra_runtime_step(deterministic, 1U) == LUDIVRA_OK, "original tick advances");
+    context.expect(
+        integer_state(context, restored, 10U) == integer_state(context, deterministic, 10U),
+        "restored stream continues the same sequence");
+
+    ludivra_runtime_destroy(restored);
+    ludivra_runtime_destroy(twin);
+    ludivra_runtime_destroy(deterministic);
+  }
 
   auto save = save_archive(context, scripted);
   context.expect(

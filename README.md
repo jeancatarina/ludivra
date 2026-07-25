@@ -39,7 +39,8 @@ Electron packages the desktop/Steam application
 - native and WebAssembly runtimes verified with the same state hash;
 - TypeScript presentation through a renderer-agnostic protocol;
 - Three.js renderer isolated from gameplay, with shadows, cinematic tone mapping, bloom, color grading, vignette, fog, and particles;
-- versioned binary saves and verifiable replays;
+- versioned binary saves and verifiable replays, including PRNG stream positions;
+- integer fixed-point arithmetic and domain-separated PRNG streams exposed to Lua, with cross-language golden vectors;
 - atomic desktop autosave, backup, and close-time checkpointing;
 - Electron with a sandboxed renderer and contract-generated IPC;
 - optional adapters for Steam achievements, Cloud, user, and overlay;

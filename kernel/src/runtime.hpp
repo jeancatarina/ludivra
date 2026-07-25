@@ -2,6 +2,7 @@
 
 #include "command_buffer.hpp"
 #include "lua_sandbox.hpp"
+#include "random_streams.hpp"
 
 #include <cstdint>
 #include <span>
@@ -82,6 +83,7 @@ class Runtime final {
   std::uint32_t max_pending_inputs_;
   std::vector<LogicalInput> pending_inputs_;
   IntegerState integer_state_;
+  RandomStreamRegistry random_streams_;
   CommandBuffer commands_;
   LuaSandbox lua_;
   std::string gameplay_source_;

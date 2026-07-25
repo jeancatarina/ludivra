@@ -16,6 +16,10 @@ const match = /wasm_equivalence_hash=([0-9a-f]{16})/.exec(native.stdout);
 if (match?.[1] === undefined) {
   throw new Error("native runtime did not emit an equivalence hash");
 }
+const determinismMatch = /wasm_determinism_hash=([0-9a-f]{16})/.exec(native.stdout);
+if (determinismMatch?.[1] === undefined) {
+  throw new Error("native runtime did not emit a determinism hash");
+}
 
 const runtime = await LudivraRuntime.create(
   createLudivraModule,
@@ -31,6 +35,28 @@ try {
   if (wasmHash !== match[1]) {
     throw new Error(`native/WASM mismatch: native=${match[1]} wasm=${wasmHash}`);
   }
+  // ADR 0018 in WebAssembly: the same draws and the same fixed-point results as
+  // native, which is what makes the golden vectors a cross-target guarantee.
+  const determinism = await LudivraRuntime.create(
+    createLudivraModule,
+    { tickRateHz: 60, maxPendingInputs: 4096, seed: 42n },
+    { locateFile: (path) => resolve(root, "runtime-wasm/generated", path) }
+  );
+  try {
+    determinism.loadGameplay(await readFile(resolve(root, "tests/fixtures/determinism.lua"), "utf8"));
+    determinism.submitInput({ actionId: 1, valueMilli: 2000, sequence: 1n });
+    determinism.step(1);
+    const producedHash = determinism.stateHash().toString(16).padStart(16, "0");
+    if (producedHash !== determinismMatch[1]) {
+      throw new Error(`determinism mismatch: native=${determinismMatch[1]} wasm=${producedHash}`);
+    }
+    if (determinism.integerState(11) !== 3000n) {
+      throw new Error(`fixed-point multiply diverged in WebAssembly: ${determinism.integerState(11)}`);
+    }
+  } finally {
+    determinism.destroy();
+  }
+
   const save = runtime.save();
   const replay = runtime.replay();
   runtime.verifyReplay(replay);

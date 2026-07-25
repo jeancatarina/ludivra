@@ -1,6 +1,7 @@
 #pragma once
 
 #include "command_buffer.hpp"
+#include "random_streams.hpp"
 #include "state_archive.hpp"
 
 #include <cstdint>
@@ -28,6 +29,7 @@ class LuaSandbox final {
   [[nodiscard]] bool on_input(
       const ScriptInput& input,
       const IntegerState& state,
+      RandomStreamRegistry& random_streams,
       CommandBuffer& commands);
   [[nodiscard]] const std::string& last_error() const noexcept;
 

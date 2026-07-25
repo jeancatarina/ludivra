@@ -1,6 +1,7 @@
 #include "state_archive.hpp"
 
 #include <algorithm>
+#include <string>
 #include <array>
 #include <stdexcept>
 #include <utility>
@@ -10,7 +11,12 @@ namespace {
 
 constexpr std::array<std::uint8_t, 4> save_magic{'L', 'D', 'S', 'V'};
 constexpr std::array<std::uint8_t, 4> replay_magic{'L', 'D', 'R', 'P'};
-constexpr std::uint32_t archive_version = 1;
+constexpr std::uint32_t archive_version = 2;
+/// Version 1 predates PRNG streams. It is still readable and migrates to an empty
+/// stream set, which is exactly what a save written before streams existed means.
+constexpr std::uint32_t archive_version_without_streams = 1;
+constexpr std::uint32_t maximum_stream_entries = 4096;
+constexpr std::uint32_t maximum_domain_bytes = 128;
 constexpr std::uint64_t fnv_offset = 14695981039346656037ULL;
 constexpr std::uint64_t fnv_prime = 1099511628211ULL;
 constexpr std::uint32_t maximum_archive_entries = 1'000'000;
@@ -38,6 +44,11 @@ class ArchiveWriter final {
     for (std::uint32_t shift = 0; shift < 64; shift += 8) {
       output_.push_back(static_cast<std::uint8_t>((value >> shift) & 0xFFU));
     }
+  }
+
+  void text(const std::string& value) {
+    u32(static_cast<std::uint32_t>(value.size()));
+    for (const char character : value) output_.push_back(static_cast<std::uint8_t>(character));
   }
 
   [[nodiscard]] std::vector<std::uint8_t> finish() {
@@ -107,6 +118,16 @@ class ArchiveReader final {
     return true;
   }
 
+  [[nodiscard]] bool text(std::string& value, const std::uint32_t maximum_bytes) {
+    std::uint32_t length = 0;
+    if (!u32(length) || length > maximum_bytes || position_ + length > content_size()) {
+      return false;
+    }
+    value.assign(reinterpret_cast<const char*>(input_.data() + position_), length);
+    position_ += length;
+    return true;
+  }
+
   [[nodiscard]] bool complete() const {
     return position_ == content_size();
   }
@@ -120,10 +141,40 @@ class ArchiveReader final {
   std::size_t position_{0};
 };
 
-bool read_header(ArchiveReader& reader, const std::array<std::uint8_t, 4>& magic) {
-  std::uint32_t version = 0;
+bool read_header(ArchiveReader& reader, const std::array<std::uint8_t, 4>& magic, std::uint32_t& version) {
   return reader.verify_checksum() && reader.magic(magic) && reader.u32(version) &&
-      version == archive_version;
+      (version == archive_version || version == archive_version_without_streams);
+}
+
+void write_streams(ArchiveWriter& writer, const std::vector<NamedRandomStream>& streams) {
+  writer.u32(static_cast<std::uint32_t>(streams.size()));
+  for (const auto& stream : streams) {
+    writer.text(stream.domain);
+    writer.u64(stream.instance);
+    writer.u64(stream.state.s0);
+    writer.u64(stream.state.s1);
+    writer.u64(stream.state.s2);
+    writer.u64(stream.state.s3);
+    writer.u64(stream.state.draws);
+  }
+}
+
+bool read_streams(ArchiveReader& reader, const std::uint32_t version, std::vector<NamedRandomStream>& streams) {
+  // A version 1 archive has no stream section: migrating means an empty set.
+  if (version == archive_version_without_streams) return true;
+  std::uint32_t count = 0;
+  if (!reader.u32(count) || count > maximum_stream_entries) return false;
+  for (std::uint32_t index = 0; index < count; ++index) {
+    NamedRandomStream stream{};
+    if (!reader.text(stream.domain, maximum_domain_bytes) || !reader.u64(stream.instance) ||
+        !reader.u64(stream.state.s0) || !reader.u64(stream.state.s1) ||
+        !reader.u64(stream.state.s2) || !reader.u64(stream.state.s3) ||
+        !reader.u64(stream.state.draws)) {
+      return false;
+    }
+    streams.push_back(std::move(stream));
+  }
+  return true;
 }
 
 }  // namespace
@@ -142,6 +193,7 @@ std::vector<std::uint8_t> encode_save(const SavedState& state) {
     writer.u32(key);
     writer.u64(static_cast<std::uint64_t>(value));
   }
+  write_streams(writer, state.streams);
   return writer.finish();
 }
 
@@ -151,8 +203,9 @@ bool decode_save(const std::span<const std::uint8_t> bytes, SavedState& state) {
   }
   ArchiveReader reader(bytes);
   std::uint32_t count = 0;
+  std::uint32_t version = 0;
   SavedState decoded{};
-  if (!read_header(reader, save_magic) || !reader.u64(decoded.tick) ||
+  if (!read_header(reader, save_magic, version) || !reader.u64(decoded.tick) ||
       !reader.u64(decoded.state_hash) || !reader.u32(count) || count > maximum_archive_entries) {
     return false;
   }
@@ -164,7 +217,7 @@ bool decode_save(const std::span<const std::uint8_t> bytes, SavedState& state) {
     }
     decoded.integers.emplace(key, static_cast<std::int64_t>(value));
   }
-  if (!reader.complete()) {
+  if (!read_streams(reader, version, decoded.streams) || !reader.complete()) {
     return false;
   }
   state = std::move(decoded);
@@ -190,6 +243,7 @@ std::vector<std::uint8_t> encode_replay(const ReplayState& replay) {
     writer.u32(key);
     writer.u64(static_cast<std::uint64_t>(value));
   }
+  write_streams(writer, replay.initial_state.streams);
   writer.u64(replay.expected_tick);
   writer.u64(replay.expected_hash);
   writer.u32(static_cast<std::uint32_t>(replay.frames.size()));
@@ -212,8 +266,9 @@ bool decode_replay(const std::span<const std::uint8_t> bytes, ReplayState& repla
   ArchiveReader reader(bytes);
   std::uint32_t integer_count = 0;
   std::uint32_t frame_count = 0;
+  std::uint32_t version = 0;
   ReplayState decoded{};
-  if (!read_header(reader, replay_magic) || !reader.u32(decoded.tick_rate_hz) ||
+  if (!read_header(reader, replay_magic, version) || !reader.u32(decoded.tick_rate_hz) ||
       !reader.u32(decoded.max_pending_inputs) || !reader.u64(decoded.seed) ||
       decoded.tick_rate_hz == 0U || decoded.max_pending_inputs == 0U ||
       decoded.max_pending_inputs > maximum_archive_entries ||
@@ -229,7 +284,8 @@ bool decode_replay(const std::span<const std::uint8_t> bytes, ReplayState& repla
     }
     decoded.initial_state.integers.emplace(key, static_cast<std::int64_t>(value));
   }
-  if (!reader.u64(decoded.expected_tick) ||
+  if (!read_streams(reader, version, decoded.initial_state.streams) ||
+      !reader.u64(decoded.expected_tick) ||
       !reader.u64(decoded.expected_hash) || !reader.u32(frame_count) ||
       frame_count > maximum_archive_entries) {
     return false;

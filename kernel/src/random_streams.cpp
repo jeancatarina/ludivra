@@ -79,4 +79,35 @@ const RandomStreamState& RandomStream::state() const noexcept {
   return state_;
 }
 
+RandomStreamRegistry::RandomStreamRegistry(const std::uint64_t root_seed) noexcept : root_seed_(root_seed) {}
+
+RandomStream& RandomStreamRegistry::stream(const std::string_view domain, const std::uint64_t instance) {
+  const auto key = std::make_pair(std::string(domain), instance);
+  const auto found = streams_.find(key);
+  if (found != streams_.end()) return found->second;
+  const auto inserted = streams_.emplace(key, RandomStream::derive(root_seed_, domain, instance));
+  return inserted.first->second;
+}
+
+std::vector<NamedRandomStream> RandomStreamRegistry::snapshot() const {
+  std::vector<NamedRandomStream> streams;
+  streams.reserve(streams_.size());
+  for (const auto& [key, stream] : streams_) {
+    streams.push_back({key.first, key.second, stream.state()});
+  }
+  return streams;
+}
+
+void RandomStreamRegistry::restore(const std::vector<NamedRandomStream>& streams) {
+  streams_.clear();
+  for (const auto& entry : streams) {
+    streams_.emplace(std::make_pair(entry.domain, entry.instance), RandomStream::restore(entry.state));
+  }
+}
+
+void RandomStreamRegistry::reset(const std::uint64_t root_seed) noexcept {
+  root_seed_ = root_seed;
+  streams_.clear();
+}
+
 }  // namespace ludivra::kernel

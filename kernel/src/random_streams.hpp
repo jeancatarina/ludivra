@@ -1,7 +1,11 @@
 #pragma once
 
 #include <cstdint>
+#include <map>
+#include <string>
 #include <string_view>
+#include <utility>
+#include <vector>
 
 namespace ludivra::kernel {
 
@@ -39,5 +43,29 @@ class RandomStream final {
 /// FNV-1a over the domain name. Names, not numbers, identify a domain, so a stream
 /// keeps its sequence when unrelated streams are added or removed.
 [[nodiscard]] std::uint64_t random_domain_hash(std::string_view domain) noexcept;
+
+/// One stream as it travels through save, replay and hash.
+struct NamedRandomStream final {
+  std::string domain;
+  std::uint64_t instance;
+  RandomStreamState state;
+};
+
+/// Streams owned by a runtime. Derivation is a pure function of root seed, domain
+/// and instance, so creating a stream on first use is deterministic and needs no
+/// declaration step; the ordered registry is what makes hashing and saving stable.
+class RandomStreamRegistry final {
+ public:
+  explicit RandomStreamRegistry(std::uint64_t root_seed) noexcept;
+
+  [[nodiscard]] RandomStream& stream(std::string_view domain, std::uint64_t instance);
+  [[nodiscard]] std::vector<NamedRandomStream> snapshot() const;
+  void restore(const std::vector<NamedRandomStream>& streams);
+  void reset(std::uint64_t root_seed) noexcept;
+
+ private:
+  std::uint64_t root_seed_;
+  std::map<std::pair<std::string, std::uint64_t>, RandomStream> streams_;
+};
 
 }  // namespace ludivra::kernel

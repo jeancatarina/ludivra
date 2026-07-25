@@ -1,5 +1,7 @@
 #pragma once
 
+#include "random_streams.hpp"
+
 #include <cstdint>
 #include <span>
 #include <unordered_map>
@@ -23,6 +25,9 @@ struct SavedState final {
   std::uint64_t tick;
   std::uint64_t state_hash;
   IntegerState integers;
+  /// Stream positions travel with the state: a replay that restored integers but
+  /// not the PRNG position would diverge on the first draw.
+  std::vector<NamedRandomStream> streams;
 };
 
 struct ReplayState final {

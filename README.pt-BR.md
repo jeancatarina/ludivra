@@ -39,7 +39,8 @@ Electron gera o aplicativo desktop/Steam
 - runtime nativo e WebAssembly verificados pelo mesmo hash;
 - apresentação TypeScript por protocolo agnóstico;
 - renderer Three.js isolado do gameplay;
-- saves binários versionados e replays verificáveis;
+- saves binários versionados e replays verificáveis, incluindo a posição dos streams de PRNG;
+- aritmética fixed-point inteira e streams de PRNG separados por domínio expostos ao Lua, com golden vectors verificados em duas linguagens;
 - autosave desktop atômico, backup e checkpoint no fechamento;
 - Electron com renderer sandboxed e IPC gerado por contrato;
 - adapters opcionais para Steam achievements, Cloud, usuário e overlay;

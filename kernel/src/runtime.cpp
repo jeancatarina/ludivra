@@ -17,11 +17,11 @@ constexpr std::uint8_t tick_marker = 0xA5U;
 }  // namespace
 
 Runtime::Runtime(const RuntimeConfig config)
-    : config_(config), max_pending_inputs_(config.max_pending_inputs) {
+    : config_(config), max_pending_inputs_(config.max_pending_inputs), random_streams_(config.seed) {
   mix_u32(state_hash_, config.tick_rate_hz);
   mix_u32(state_hash_, config.max_pending_inputs);
   mix_u64(state_hash_, config.seed);
-  replay_initial_state_ = {tick_, state_hash_, integer_state_};
+  replay_initial_state_ = {tick_, state_hash_, integer_state_, random_streams_.snapshot()};
 }
 
 RuntimeError Runtime::submit_input(const LogicalInput input) {
@@ -81,7 +81,7 @@ void Runtime::clear_presentation_events() noexcept {
 }
 
 std::vector<std::uint8_t> Runtime::save() const {
-  return encode_save({tick_, state_hash_, integer_state_});
+  return encode_save({tick_, state_hash_, integer_state_, random_streams_.snapshot()});
 }
 
 RuntimeError Runtime::load_save(const std::span<const std::uint8_t> bytes) {
@@ -96,6 +96,9 @@ RuntimeError Runtime::load_save(const std::span<const std::uint8_t> bytes) {
   tick_ = decoded.tick;
   state_hash_ = decoded.state_hash;
   integer_state_.swap(decoded.integers);
+  // A save written before streams existed migrates to the seeded initial set.
+  if (decoded.streams.empty()) random_streams_.reset(config_.seed);
+  else random_streams_.restore(decoded.streams);
   replay_initial_state_ = std::move(next_replay_state);
   replay_frames_.clear();
   commands_.clear();
@@ -120,6 +123,8 @@ RuntimeError Runtime::verify_replay(const std::span<const std::uint8_t> bytes) c
   verification.tick_ = decoded.initial_state.tick;
   verification.state_hash_ = decoded.initial_state.state_hash;
   verification.integer_state_ = decoded.initial_state.integers;
+  if (decoded.initial_state.streams.empty()) verification.random_streams_.reset(decoded.seed);
+  else verification.random_streams_.restore(decoded.initial_state.streams);
   verification.replay_initial_state_ = decoded.initial_state;
   for (const auto& frame : decoded.frames) {
     for (const auto& input : frame.inputs) {
@@ -164,7 +169,11 @@ RuntimeError Runtime::commit_tick() {
 
   commands_.clear();
   for (const auto& input : pending_inputs_) {
-    if (!lua_.on_input({input.action_id, input.value_milli, input.sequence}, integer_state_, commands_)) {
+    if (!lua_.on_input(
+            {input.action_id, input.value_milli, input.sequence},
+            integer_state_,
+            random_streams_,
+            commands_)) {
       commands_.clear();
       return RuntimeError::script_failure;
     }
@@ -199,6 +208,12 @@ RuntimeError Runtime::commit_tick() {
     mix_u64(state_hash_, input.sequence);
     mix_u32(state_hash_, input.action_id);
     mix_u32(state_hash_, static_cast<std::uint32_t>(input.value_milli));
+  }
+  for (const auto& stream : random_streams_.snapshot()) {
+    mix_byte(state_hash_, 0xD7U);
+    mix_u64(state_hash_, random_domain_hash(stream.domain));
+    mix_u64(state_hash_, stream.instance);
+    mix_u64(state_hash_, stream.state.draws);
   }
   pending_inputs_.clear();
   return RuntimeError::none;
