@@ -381,6 +381,8 @@ Run all commands from the engine root directory.
 | `game capture --raster --project <directory> --name <id>` | captures a real frame of the web bundle through the ElectronHost and compares it with the approved baseline |
 | `game audio render --project <directory>` | renders every audio recipe into canonical PCM, reusing the cache by recipe, generator version and seed |
 | `game audio inspect --project <directory>` | lists recipes with duration, level and hash without writing evidence |
+| `game content build --project <directory>` | compiles the validated JSONC into the versioned content pack |
+| `game content explain --symbol <id> --project <directory>` | traces a content value back to the file, pointer and line that authored it |
 | `game replay --project <directory> --replay <file>` | verifies a replay in the runtime |
 | `game report --project <directory> --run <id>` | summarizes a run without modifying its source evidence |
 | `game status --project <directory>` | regenerates canonical derived state |

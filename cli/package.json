@@ -12,6 +12,7 @@
   },
   "dependencies": {
     "@ludivra/audio-authoring": "workspace:*",
+    "@ludivra/content-compiler": "workspace:*",
     "@ludivra/presentation-protocol": "workspace:*",
     "@ludivra/runtime-web": "workspace:*"
   },

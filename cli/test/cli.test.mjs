@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
+import { createHash } from "node:crypto";
 import { cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { resolve } from "node:path";
@@ -470,6 +471,65 @@ test("game audio renders a recipe, reuses it by key and reports its analysis", (
     const broken = runCli(["audio", "render", "--project", project, "--format", "json"]);
     assert.equal(broken.execution.status, 2);
     assert.ok(broken.result.diagnostics.some(({ code }) => code === "AUDIO_RECIPE_INVALID"));
+  } finally {
+    rmSync(temporaryRoot, { recursive: true, force: true });
+  }
+});
+
+test("game content compiles a pack and traces a value to the line that authored it", () => {
+  const temporaryRoot = mkdtempSync(resolve(tmpdir(), "ludivra-content-"));
+  const project = resolve(temporaryRoot, "content-game");
+  try {
+    cpSync(resolve(fileURLToPath(new URL("../..", import.meta.url)), "examples/card-roguelite"), project, {
+      recursive: true,
+      filter: (source) => {
+        const normalized = source.replaceAll("\\", "/");
+        return !normalized.includes("/.ludivra") && !normalized.includes("/reports/runs/run_");
+      }
+    });
+
+    const built = runCli(["content", "build", "--project", project, "--format", "json"]);
+    assert.equal(built.execution.status, 0, built.execution.stdout);
+    assert.equal(built.result.data.reused, false);
+    assert.match(built.result.data.sha256, /^[a-f0-9]{64}$/);
+    assert.ok(existsSync(resolve(project, ".ludivra/content-pack.json")));
+    assert.ok(built.result.artifacts.some(({ kind }) => kind === "content-pack"));
+
+    // The stored file is exactly the canonical bytes the hash covers, so the hosts
+    // compare the same identity the compiler produced.
+    const storedBytes = readFileSync(resolve(project, ".ludivra/content-pack.json"));
+    assert.equal(createHash("sha256").update(storedBytes).digest("hex"), built.result.data.sha256);
+
+    // A second build with the same sources reuses the compiled pack.
+    const again = runCli(["content", "build", "--project", project, "--format", "json"]);
+    assert.equal(again.result.data.reused, true);
+    assert.equal(again.result.data.sha256, built.result.data.sha256);
+
+    // Every declared id is addressable, without the document id repeating itself.
+    const inspected = runCli(["content", "inspect", "--project", project, "--format", "json"]);
+    assert.ok(inspected.result.data.symbols.includes("ember-vault.run.card.strike"));
+    assert.ok(!inspected.result.data.symbols.some((symbol) => symbol.includes("run.ember-vault.run")));
+
+    const explained = runCli([
+      "content", "explain", "--symbol", "ember-vault.run.card.strike", "--project", project, "--format", "json"
+    ]);
+    assert.equal(explained.execution.status, 0);
+    assert.equal(explained.result.data.origin.file, "content/run.jsonc");
+    assert.equal(explained.result.data.origin.pointer, "/cards/0");
+    assert.ok(explained.result.data.origin.line > 1);
+
+    const missing = runCli([
+      "content", "explain", "--symbol", "absent.symbol", "--project", project, "--format", "json"
+    ]);
+    assert.equal(missing.execution.status, 2);
+    assert.ok(missing.result.diagnostics.some(({ code }) => code === "CONTENT_SYMBOL_UNKNOWN"));
+
+    // Editing a source changes the pack identity instead of reusing it.
+    const contentPath = resolve(project, "content/run.jsonc");
+    writeFileSync(contentPath, readFileSync(contentPath, "utf8").replace('"label": "Golpe"', '"label": "Golpe+"'));
+    const edited = runCli(["content", "build", "--project", project, "--format", "json"]);
+    assert.equal(edited.result.data.reused, false);
+    assert.notEqual(edited.result.data.sha256, built.result.data.sha256);
   } finally {
     rmSync(temporaryRoot, { recursive: true, force: true });
   }

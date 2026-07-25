@@ -3,6 +3,7 @@
 /cli/dist/
 /runtime-web/dist/
 /audio-authoring/dist/
+/content-compiler/dist/
 /presentation-protocol/dist/
 /platform-contracts/dist/
 /renderer-three/dist/
@@ -15,4 +16,6 @@ node_modules/
 !/reports/runs/.gitkeep
 **/.ludivra/project-state.json
 **/.ludivra/audio-index.json
+**/.ludivra/content-pack.json
+**/.ludivra/content-pack.meta.json
 **/.ludivra/cache/

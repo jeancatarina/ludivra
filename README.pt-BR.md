@@ -381,6 +381,8 @@ Todos os comandos devem ser executados na raiz da engine.
 | `game capture --raster --project <pasta> --name <id>` | captura um frame real do bundle web pelo ElectronHost e compara com a baseline aprovada |
 | `game audio render --project <pasta>` | renderiza as receitas de áudio em PCM canônico, reusando o cache por receita, versão do gerador e seed |
 | `game audio inspect --project <pasta>` | lista as receitas com duração, nível e hash sem gravar evidência |
+| `game content build --project <pasta>` | compila o JSONC validado no content pack versionado |
+| `game content explain --symbol <id> --project <pasta>` | rastreia um valor de conteúdo até o arquivo, ponteiro e linha que o autoraram |
 | `game replay --project <pasta> --replay <arquivo>` | verifica um replay no runtime |
 | `game report --project <pasta> --run <id>` | resume uma execução sem alterar o run original |
 | `game status --project <pasta>` | regenera o estado canônico derivado |

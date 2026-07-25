@@ -1,6 +1,7 @@
 packages:
   - audio-authoring
   - cli
+  - content-compiler
   - presentation-protocol
   - platform-contracts
   - renderer-three

@@ -30,7 +30,7 @@ contracts ──> packages ──> web-bundle
 
 Não haverá cache por arquivo individual, por comando arbitrário nem por invocação inteira da CLI.
 
-Uma família `content` para validação de `game.jsonc`, schemas e documentos do projeto foi prevista e **não** entra agora: a validação atual não produz artefato reutilizável, apenas diagnósticos, e cachear diagnóstico exigiria tratá-lo como saída versionada. Ela passa a fazer sentido junto do content pack do [ADR 0017](0017-content-pack-compilation-and-migrations.md), que cria o artefato correspondente. Registrado aqui para que a ausência seja decisão, não esquecimento.
+Uma família `content` para validação de `game.jsonc`, schemas e documentos do projeto foi prevista e **não** entra agora: a validação atual não produz artefato reutilizável, apenas diagnósticos, e cachear diagnóstico exigiria tratá-lo como saída versionada. O content pack do [ADR 0017](0017-content-pack-compilation-and-migrations.md) trouxe o artefato correspondente e, com ele, sua própria chave por conteúdo — mesma regra, proprietário diferente. Uma família adicional no registro duplicaria o mecanismo, então ela continua não existindo, agora por decisão medida e não por ausência do artefato.
 
 ### Chave de cache
 
