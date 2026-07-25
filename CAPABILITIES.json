@@ -276,6 +276,37 @@
           "message": "Save and replay compatibility are versioned but have not yet been proven across released engine upgrades."
         }
       ]
+    },
+    {
+      "id": "spatial.runtime-foundation",
+      "status": "experimental",
+      "version": "0.1.0",
+      "owner": "kernel",
+      "targets": [
+        "native-headless",
+        "browser",
+        "electron"
+      ],
+      "contracts": [
+        "runtime-c-api/include/ludivra/runtime.h"
+      ],
+      "examples": [
+        "tests/kernel/kernel_test.cpp"
+      ],
+      "dependencies": [],
+      "verification": [
+        "pnpm test:native"
+      ],
+      "limitations": [
+        {
+          "code": "SPATIAL_GENERATION_NOT_AVAILABLE",
+          "message": "Chunk identity, lifecycle and deterministic job commit exist; terrain generation, streaming, LOD and region persistence do not."
+        },
+        {
+          "code": "SPATIAL_NOT_EXPOSED_TO_LUA",
+          "message": "The foundation is kernel-internal: no gameplay surface exists until a game declares the capability."
+        }
+      ]
     }
   ],
   "platforms": {

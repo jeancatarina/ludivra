@@ -1,5 +1,8 @@
 #include "fixed_point.hpp"
 #include "random_streams.hpp"
+#include "world_chunks.hpp"
+#include "world_jobs.hpp"
+#include "world_position.hpp"
 
 #include <cstdint>
 #include <cstdio>
@@ -16,7 +19,23 @@ using ludivra::kernel::fixed_divide;
 using ludivra::kernel::fixed_multiply;
 using ludivra::kernel::fixed_rescale;
 using ludivra::kernel::FixedError;
+using ludivra::kernel::chunk_extent_scaled;
+using ludivra::kernel::chunk_seed;
+using ludivra::kernel::ChunkError;
+using ludivra::kernel::ChunkIdentity;
+using ludivra::kernel::ChunkRegistry;
+using ludivra::kernel::ChunkState;
+using ludivra::kernel::difference;
+using ludivra::kernel::JobKind;
+using ludivra::kernel::JobQueue;
+using ludivra::kernel::JobResult;
+using ludivra::kernel::normalize;
 using ludivra::kernel::RandomStream;
+using ludivra::kernel::same_place;
+using ludivra::kernel::translate;
+using ludivra::kernel::WorldOffset;
+using ludivra::kernel::WorldPosition;
+using ludivra::kernel::WorldPositionError;
 
 struct TestContext final {
   void expect(const bool condition, const char* message) {
@@ -160,12 +179,144 @@ void check_random_streams(TestContext& context) {
   context.expect(collapsed.range(5, 5) == 5, "single value range");
 }
 
+ChunkIdentity chunk_at(const std::int32_t x, const std::int32_t z) {
+  return ChunkIdentity{0U, x, 0, z, 1U, 1U};
+}
+
+void check_world_position(TestContext& context) {
+  // A local coordinate past the chunk edge carries into the chunk coordinate, so
+  // every place has exactly one representation.
+  const auto carried = normalize(WorldPosition{0U, 0, 0, 0, chunk_extent_scaled + 500, 0, 0});
+  context.expect(carried.error == WorldPositionError::none, "normalize succeeds");
+  context.expect(carried.value.chunk_x == 1 && carried.value.local_x == 500, "overflow carries east");
+
+  // Truncating division would put this position in chunk zero; flooring is what
+  // keeps the chunk west of the origin correct.
+  const auto west = normalize(WorldPosition{0U, 0, 0, 0, -1, 0, 0});
+  context.expect(west.value.chunk_x == -1, "a negative local lands in the previous chunk");
+  context.expect(west.value.local_x == chunk_extent_scaled - 1, "the local part stays positive");
+
+  // Precision does not decay with distance: the same step is exact far away.
+  const auto near = translate(WorldPosition{0U, 0, 0, 0, 0, 0, 0}, WorldOffset{1, 0, 0});
+  const auto far = translate(WorldPosition{0U, 1'000'000, 0, 0, 0, 0, 0}, WorldOffset{1, 0, 0});
+  context.expect(near.value.local_x == 1 && far.value.local_x == 1, "one milli is one milli anywhere");
+
+  WorldOffset offset{};
+  const auto measured = difference(
+      WorldPosition{0U, 0, 0, 0, 0, 0, 0},
+      WorldPosition{0U, 2, 0, 0, 250, 0, 0},
+      offset);
+  context.expect(measured == WorldPositionError::none, "difference succeeds");
+  context.expect(offset.x == 2 * chunk_extent_scaled + 250, "difference spans chunks exactly");
+  context.expect(
+      difference(WorldPosition{0U, 0, 0, 0, 0, 0, 0}, WorldPosition{1U, 0, 0, 0, 0, 0, 0}, offset) ==
+          WorldPositionError::dimension_mismatch,
+      "dimensions do not subtract");
+
+  context.expect(
+      same_place(WorldPosition{0U, 1, 0, 0, 0, 0, 0}, WorldPosition{0U, 0, 0, 0, chunk_extent_scaled, 0, 0}),
+      "the same place compares equal in any representation");
+}
+
+void check_chunk_lifecycle(TestContext& context) {
+  ChunkRegistry registry;
+  const auto identity = chunk_at(4, -7);
+  context.expect(registry.state(identity) == ChunkState::unloaded, "an unknown chunk is unloaded");
+  context.expect(registry.request(identity) == ChunkError::none, "a chunk can be requested");
+
+  // Skipping generation is a defect, not a shortcut.
+  context.expect(
+      registry.transition(identity, ChunkState::resident) == ChunkError::transition_invalid,
+      "an illegal transition is refused");
+  for (const auto next : {ChunkState::generating, ChunkState::ready_for_mesh, ChunkState::meshing, ChunkState::resident}) {
+    context.expect(registry.transition(identity, next) == ChunkError::none, "the declared path is allowed");
+  }
+
+  context.expect(registry.set_resident_resources(identity, 3U) == ChunkError::none, "resources are tracked");
+  context.expect(registry.transition(identity, ChunkState::evictable) == ChunkError::none, "resident can evict");
+  context.expect(
+      registry.discard(identity) == ChunkError::leaked_resources,
+      "a chunk holding resources is not discarded silently");
+  context.expect(registry.set_resident_resources(identity, 0U) == ChunkError::none, "resources are released");
+  context.expect(registry.discard(identity) == ChunkError::none, "a released chunk is discarded");
+  context.expect(registry.state(identity) == ChunkState::unloaded, "the discarded chunk is gone");
+  context.expect(registry.transition(identity, ChunkState::resident) == ChunkError::unknown_chunk, "unknown chunk");
+}
+
+void check_chunk_seed(TestContext& context) {
+  // Generation is a pure function of identity: neighbours and versions differ.
+  context.expect(chunk_seed(42U, chunk_at(0, 0)) == chunk_seed(42U, chunk_at(0, 0)), "same identity, same seed");
+  context.expect(chunk_seed(42U, chunk_at(0, 0)) != chunk_seed(42U, chunk_at(1, 0)), "neighbours differ");
+  context.expect(chunk_seed(42U, chunk_at(0, 0)) != chunk_seed(43U, chunk_at(0, 0)), "root seed matters");
+  ChunkIdentity newer = chunk_at(0, 0);
+  newer.generator_version = 2U;
+  context.expect(chunk_seed(42U, chunk_at(0, 0)) != chunk_seed(42U, newer), "generator version matters");
+}
+
+/// Applies results in commit order, which is what a world tick would do.
+std::uint64_t apply_results(ChunkRegistry& registry, const std::vector<JobResult>& results) {
+  for (const auto& result : results) {
+    if (registry.state(result.chunk) == ChunkState::unloaded) {
+      static_cast<void>(registry.request(result.chunk));
+      static_cast<void>(registry.transition(result.chunk, ChunkState::generating));
+      static_cast<void>(registry.transition(result.chunk, ChunkState::ready_for_mesh));
+    }
+    static_cast<void>(registry.set_content_hash(result.chunk, result.payload_hash));
+  }
+  return registry.world_hash();
+}
+
+void check_job_commit_order(TestContext& context) {
+  const std::vector<JobResult> results{
+      {JobKind::generate, chunk_at(1, 0), 1U, 0xAAAAULL},
+      {JobKind::generate, chunk_at(0, 1), 2U, 0xBBBBULL},
+      {JobKind::mesh, chunk_at(0, 0), 3U, 0xCCCCULL},
+      {JobKind::generate, chunk_at(0, 0), 4U, 0xDDDDULL},
+      {JobKind::io, chunk_at(-1, 0), 5U, 0xEEEEULL}};
+
+  // The same completions in a different order must produce the same world. This is
+  // the property that lets jobs run in parallel without breaking replay.
+  JobQueue forward;
+  for (const auto& result : results) forward.submit(result);
+  ChunkRegistry first;
+  const auto forward_hash = apply_results(first, forward.commit());
+
+  JobQueue reversed;
+  for (auto entry = results.rbegin(); entry != results.rend(); ++entry) reversed.submit(*entry);
+  ChunkRegistry second;
+  const auto reversed_hash = apply_results(second, reversed.commit());
+
+  JobQueue shuffled;
+  for (const auto index : {3U, 0U, 4U, 2U, 1U}) shuffled.submit(results[index]);
+  ChunkRegistry third;
+  const auto shuffled_hash = apply_results(third, shuffled.commit());
+
+  context.expect(forward_hash == reversed_hash, "reversed completion order produces the same world");
+  context.expect(forward_hash == shuffled_hash, "permuted completion order produces the same world");
+
+  JobQueue ordering;
+  for (auto entry = results.rbegin(); entry != results.rend(); ++entry) ordering.submit(*entry);
+  const auto committed = ordering.commit();
+  context.expect(committed.size() == results.size(), "every result is committed once");
+  // The declared key is kind first, then dimension and coordinate, then sequence.
+  context.expect(committed[0].kind == JobKind::generate && committed[0].chunk.z == 0, "generate (0,0) first");
+  context.expect(committed[1].kind == JobKind::generate && committed[1].chunk.z == 1, "then generate (0,1)");
+  context.expect(committed[2].kind == JobKind::generate && committed[2].chunk.x == 1, "then generate (1,0)");
+  context.expect(committed[3].kind == JobKind::mesh, "mesh commits after every generate");
+  context.expect(committed.back().kind == JobKind::io, "io commits last");
+  context.expect(ordering.pending() == 0U, "committing drains the queue");
+}
+
 }  // namespace
 
 int main() {
   TestContext context;
   check_fixed_point(context);
   check_random_streams(context);
+  check_world_position(context);
+  check_chunk_lifecycle(context);
+  check_chunk_seed(context);
+  check_job_commit_order(context);
   if (context.failures > 0) {
     std::fprintf(stderr, "%d kernel determinism checks failed\n", context.failures);
     return 1;

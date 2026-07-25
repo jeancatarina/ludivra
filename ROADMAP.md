@@ -66,7 +66,7 @@ Os estados são baseados em evidência. Código compilando, protótipo visual ou
 | 2 | Context Engine, CLI e Development Runner | `CONCLUÍDA` | cache por família com causa, watch afetado e lifecycle com dono único | nenhuma no gate atual |
 | 3 | Control Plane e observabilidade causal | `EM ANDAMENTO` | harness, replay, contratos de UI e captura raster com baseline | correlação completa e captura de erros de renderer |
 | 4 | Autoria text-first | `PARCIAL` | Lua, JSONC, schemas e content binding | UI declarativa e content pack |
-| 5 | Runtime espacial e mundo procedural | `PLANEJADA` | — | modelo espacial, chunks, jobs e streaming |
+| 5 | Runtime espacial e mundo procedural | `PARCIAL` | posição composta, identidade e lifecycle de chunk, commit determinístico de jobs | geração, streaming, LOD e persistência |
 | 6 | Motion, física e Mass Simulation | `PLANEJADA` | primitivas visuais não autoritativas | motion formal, adapters físicos e Mass Runtime |
 | 7 | Persistência, replay e multiplayer | `PARCIAL` | saves e replays lógicos | persistência mundial e rede player-hosted |
 | 8 | Renderer, UI e áudio escaláveis | `PARCIAL` | Three.js, Web Audio e partículas simples | buffers, instancing, LOD, UI real e budgets |
@@ -277,7 +277,7 @@ Uma sessão nova cria regras, conteúdo, tela, apresentação e cenário usando 
 
 | Campo | Valor |
 |---|---|
-| Estado | `PLANEJADA` |
+| Estado | `PARCIAL` |
 | Owners previstos | spatial runtime, world runtime e job system |
 | Dependência | Fase 4 |
 | ADR de base | [ADR 0018](docs/adr/0018-numeric-determinism-and-rng-streams.md), [ADR 0019](docs/adr/0019-spatial-model-chunk-lifecycle-and-job-commit.md), [ADR 0039](docs/adr/0039-entity-component-layer.md) e [ADR 0045](docs/adr/0045-wasm-threads-and-shared-memory.md) |
@@ -286,7 +286,15 @@ Uma sessão nova cria regras, conteúdo, tela, apresentação e cenário usando 
 
 Criar uma fundação opt-in comum para mapas pequenos, mundos extensos e sandboxes virtualmente infinitos.
 
-### Entregas técnicas
+### Entregue
+
+- posição composta por dimensão, coordenada de chunk e local em escala declarada, com divisão por piso, precisão constante à distância e forma canônica única;
+- identidade de chunk com gerador e versão, e seed derivada por separação de domínio;
+- lifecycle com os nove estados e transições legais declaradas, recusando salto de etapa;
+- descarte que recusa chunk ainda segurando recurso, em vez de liberar por esquecimento;
+- fila de jobs cujo commit é ordenado por chave declarada, provado por permutação da ordem de conclusão.
+
+### Entregas técnicas restantes
 
 - posição global composta por dimensão, região, chunk e posição local;
 - conversões e precisão testadas sem expor a estrutura interna como API permanente;
