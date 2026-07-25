@@ -24,6 +24,20 @@ hoje não muda o resultado de um replay gravado ontem por outro sistema.
 A posição de cada stream entra no hash de estado e viaja no save. Consumir um
 sorteio a mais, ou a menos, é divergência detectável, não ruído.
 
+## Estado por nome
+
+O manifest é dono das chaves numéricas. O host as declara antes de carregar o
+gameplay, e o script lê e escreve por nome:
+
+```lua
+local energia = ctx.state:get("energy")
+ctx.commands:add("energy", -1)
+```
+
+Um nome não declarado falha o tick com `SDK_SYMBOL_UNKNOWN`, em vez de ler a
+chave zero em silêncio. `ctx.query:get_i64` e `ctx.commands:add_i64` continuam
+existindo para a camada 0.
+
 ## Aritmética com escala declarada
 
 ```lua

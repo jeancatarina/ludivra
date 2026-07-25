@@ -63,6 +63,16 @@ RuntimeError Runtime::load_gameplay(const std::string_view source) {
   return RuntimeError::none;
 }
 
+RuntimeError Runtime::declare_state_symbol(const std::string_view name, const std::uint32_t key) {
+  const std::string symbol(name);
+  const auto existing = state_symbols_.find(symbol);
+  if (existing != state_symbols_.end() && existing->second != key) {
+    return RuntimeError::symbol_conflict;
+  }
+  state_symbols_[symbol] = key;
+  return RuntimeError::none;
+}
+
 std::int64_t Runtime::integer_state(const std::uint32_t key) const noexcept {
   const auto found = integer_state_.find(key);
   return found == integer_state_.end() ? 0 : found->second;
@@ -172,6 +182,7 @@ RuntimeError Runtime::commit_tick() {
     if (!lua_.on_input(
             {input.action_id, input.value_milli, input.sequence},
             integer_state_,
+            state_symbols_,
             random_streams_,
             commands_)) {
       commands_.clear();

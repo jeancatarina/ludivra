@@ -25,7 +25,8 @@ typedef enum ludivra_result {
   LUDIVRA_ERROR_REPLAY_MISMATCH = 9,
   LUDIVRA_ERROR_PENDING_INPUTS = 10,
   LUDIVRA_ERROR_BUFFER_TOO_SMALL = 11,
-  LUDIVRA_ERROR_PRESENTATION_LIMIT = 12
+  LUDIVRA_ERROR_PRESENTATION_LIMIT = 12,
+  LUDIVRA_ERROR_SYMBOL_CONFLICT = 13
 } ludivra_result;
 
 typedef struct ludivra_runtime_config {
@@ -83,6 +84,14 @@ ludivra_result ludivra_runtime_load_gameplay(
     ludivra_runtime* runtime,
     const char* source,
     uint32_t source_size);
+
+/* Declares the semantic name of an integer state before gameplay loads, so scripts
+   read state by name instead of repeating the manifest keys. */
+ludivra_result ludivra_runtime_declare_state_symbol(
+    ludivra_runtime* runtime,
+    const char* name,
+    uint32_t name_size,
+    uint32_t key);
 
 ludivra_result ludivra_runtime_integer_state(
     const ludivra_runtime* runtime,

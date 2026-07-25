@@ -36,6 +36,8 @@ ludivra_result to_public_result(const ludivra::kernel::RuntimeError error) noexc
       return LUDIVRA_ERROR_PENDING_INPUTS;
     case ludivra::kernel::RuntimeError::presentation_limit:
       return LUDIVRA_ERROR_PRESENTATION_LIMIT;
+    case ludivra::kernel::RuntimeError::symbol_conflict:
+      return LUDIVRA_ERROR_SYMBOL_CONFLICT;
   }
   return LUDIVRA_ERROR_INTERNAL;
 }
@@ -131,6 +133,8 @@ const char* ludivra_result_message(const ludivra_result result) {
       return "output buffer too small";
     case LUDIVRA_ERROR_PRESENTATION_LIMIT:
       return "presentation event limit reached; drain events before stepping again";
+    case LUDIVRA_ERROR_SYMBOL_CONFLICT:
+      return "state symbol already declared with a different key";
   }
   return "unknown result";
 }
@@ -219,6 +223,23 @@ ludivra_result ludivra_runtime_load_gameplay(
   }
   try {
     return to_public_result(runtime->value.load_gameplay({source, source_size}));
+  } catch (const std::bad_alloc&) {
+    return LUDIVRA_ERROR_ALLOCATION;
+  } catch (...) {
+    return LUDIVRA_ERROR_INTERNAL;
+  }
+}
+
+ludivra_result ludivra_runtime_declare_state_symbol(
+    ludivra_runtime* runtime,
+    const char* name,
+    const uint32_t name_size,
+    const uint32_t key) {
+  if (runtime == nullptr || name == nullptr || name_size == 0U || name_size > 128U) {
+    return LUDIVRA_ERROR_INVALID_ARGUMENT;
+  }
+  try {
+    return to_public_result(runtime->value.declare_state_symbol({name, name_size}, key));
   } catch (const std::bad_alloc&) {
     return LUDIVRA_ERROR_ALLOCATION;
   } catch (...) {

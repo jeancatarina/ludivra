@@ -48,6 +48,11 @@ const runtime = await LudivraRuntime.create(
   { tickRateHz: 60, maxPendingInputs: 4096, seed: 42n }
 );
 runtimeStarted = true;
+// The manifest owns the numeric keys; declaring them here is what lets gameplay
+// read state by name.
+for (const definition of manifest.inspection.integerStates) {
+  runtime.declareStateSymbol(definition.id, definition.key);
+}
 const boundContentDocuments = [createGameplayManifestDocument(manifest), ...contentDocuments];
 runtime.loadGameplay(composeGameplaySource(gameplaySource, boundContentDocuments));
 const desktop = await createDesktopCheckpointManager(runtime);

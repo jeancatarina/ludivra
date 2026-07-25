@@ -21,6 +21,7 @@ constexpr char execution_context_key = 0;
 
 struct ExecutionContext final {
   const IntegerState* state;
+  const StateSymbolTable* symbols;
   RandomStreamRegistry* random_streams;
   CommandBuffer* commands;
 };
@@ -108,6 +109,38 @@ int commands_spawn_effect(lua_State* state) {
     context(state).commands->spawn_effect(id, intensity, x, y, z);
   } catch (...) {
     return luaL_error(state, "unable to allocate effect command");
+  }
+  return 0;
+}
+
+/// Resolves a declared symbol. An unknown name fails the tick with a stable
+/// message instead of silently reading key zero.
+std::uint32_t resolved_symbol(lua_State* state, const int index) {
+  std::size_t length = 0;
+  const char* text = luaL_checklstring(state, index, &length);
+  const auto& symbols = *context(state).symbols;
+  const auto found = symbols.find(std::string(text, length));
+  if (found == symbols.end()) {
+    luaL_error(state, "SDK_SYMBOL_UNKNOWN: %s", text);
+  }
+  return found->second;
+}
+
+int state_get(lua_State* state) {
+  const auto key = resolved_symbol(state, 2);
+  const auto& values = *context(state).state;
+  const auto found = values.find(key);
+  lua_pushinteger(state, found == values.end() ? 0 : found->second);
+  return 1;
+}
+
+int commands_add(lua_State* state) {
+  const auto key = resolved_symbol(state, 2);
+  const auto value = luaL_checkinteger(state, 3);
+  try {
+    context(state).commands->add_integer(key, value);
+  } catch (...) {
+    return luaL_error(state, "unable to allocate state command");
   }
   return 0;
 }
@@ -202,9 +235,15 @@ void push_context_table(lua_State* state) {
   lua_pushcfunction(state, query_get_i64);
   lua_setfield(state, -2, "get_i64");
   lua_setfield(state, -2, "query");
+  lua_createtable(state, 0, 1);
+  lua_pushcfunction(state, state_get);
+  lua_setfield(state, -2, "get");
+  lua_setfield(state, -2, "state");
   lua_createtable(state, 0, 4);
   lua_pushcfunction(state, commands_add_i64);
   lua_setfield(state, -2, "add_i64");
+  lua_pushcfunction(state, commands_add);
+  lua_setfield(state, -2, "add");
   lua_pushcfunction(state, commands_play_audio);
   lua_setfield(state, -2, "play_audio");
   lua_pushcfunction(state, commands_stop_audio);
@@ -310,12 +349,13 @@ bool LuaSandbox::load(const std::string_view source) {
 bool LuaSandbox::on_input(
     const ScriptInput& input,
     const IntegerState& state,
+    const StateSymbolTable& symbols,
     RandomStreamRegistry& random_streams,
     CommandBuffer& commands) {
   if (behavior_reference_ == LUA_NOREF) {
     return true;
   }
-  ExecutionContext execution_context{&state, &random_streams, &commands};
+  ExecutionContext execution_context{&state, &symbols, &random_streams, &commands};
   set_context(state_, &execution_context);
   lua_rawgeti(state_, LUA_REGISTRYINDEX, behavior_reference_);
   lua_getfield(state_, -1, "on_input");

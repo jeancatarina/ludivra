@@ -248,6 +248,11 @@ async function handle(request: ControlRequest): Promise<ControlResponse> {
       runtime?.destroy();
       const payload = request.payload as { scenarioId: string; seed: number };
       runtime = await LudivraRuntime.create(moduleFactory, { tickRateHz: 60, maxPendingInputs: 4096, seed: BigInt(payload.seed) });
+      // Same declaration the BrowserHost makes: both hosts resolve the manifest
+      // symbols, so a script behaves identically headless and on screen.
+      for (const definition of manifest.inspection.integerStates) {
+        runtime.declareStateSymbol(definition.id, definition.key);
+      }
       runtime.loadGameplay(composedGameplaySource);
       scenarioId = payload.scenarioId;
       actionSequence = 0n;

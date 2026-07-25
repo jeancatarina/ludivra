@@ -7,10 +7,15 @@
 #include <cstdint>
 #include <string>
 #include <string_view>
+#include <unordered_map>
 
 struct lua_State;
 
 namespace ludivra::kernel {
+
+/// Semantic name to authoritative key. Built once when the host declares the
+/// manifest, then read by name: gameplay never repeats a numeric key.
+using StateSymbolTable = std::unordered_map<std::string, std::uint32_t>;
 
 struct ScriptInput final {
   std::uint32_t action_id;
@@ -29,6 +34,7 @@ class LuaSandbox final {
   [[nodiscard]] bool on_input(
       const ScriptInput& input,
       const IntegerState& state,
+      const StateSymbolTable& symbols,
       RandomStreamRegistry& random_streams,
       CommandBuffer& commands);
   [[nodiscard]] const std::string& last_error() const noexcept;

@@ -73,6 +73,10 @@ std::string determinism_gameplay() {
   return fixture("determinism.lua");
 }
 
+std::string symbol_gameplay() {
+  return fixture("symbols.lua");
+}
+
 std::vector<uint8_t> save_archive(TestContext& context, ludivra_runtime* runtime) {
   uint32_t size = 0;
   context.expect(ludivra_runtime_save_size(runtime, &size) == LUDIVRA_OK, "save size is available");
@@ -141,6 +145,34 @@ int main() {
   context.expect(ludivra_runtime_step(scripted, 1U) == LUDIVRA_OK, "Lua gameplay advances");
   context.expect(integer_state(context, scripted, 1U) == 1, "Lua changes state through commands");
   std::printf("wasm_equivalence_hash=%016" PRIx64 "\n", state_hash(context, scripted));
+
+  {
+    // ADR 0016 layer 1: state reached by declared name, and an undeclared name
+    // failing the tick instead of silently reading key zero.
+    auto* named = create_runtime(context);
+    context.expect(
+        ludivra_runtime_declare_state_symbol(named, "score", 5U, 1U) == LUDIVRA_OK,
+        "state symbol is declared");
+    context.expect(
+        ludivra_runtime_declare_state_symbol(named, "score", 5U, 1U) == LUDIVRA_OK,
+        "declaring the same symbol twice is idempotent");
+    context.expect(
+        ludivra_runtime_declare_state_symbol(named, "score", 5U, 2U) == LUDIVRA_ERROR_SYMBOL_CONFLICT,
+        "redeclaring a symbol with another key is a conflict");
+    const auto symbol_source = symbol_gameplay();
+    context.expect(
+        ludivra_runtime_load_gameplay(
+            named, symbol_source.data(), static_cast<uint32_t>(symbol_source.size())) == LUDIVRA_OK,
+        "symbol gameplay loads");
+    submit(context, named, 1U, 1000, 1U);
+    context.expect(ludivra_runtime_step(named, 1U) == LUDIVRA_OK, "named state tick advances");
+    context.expect(integer_state(context, named, 1U) == 5, "state written by name reaches the key");
+    submit(context, named, 2U, 1000, 2U);
+    context.expect(
+        ludivra_runtime_step(named, 1U) == LUDIVRA_ERROR_SCRIPT,
+        "an undeclared symbol fails the tick");
+    ludivra_runtime_destroy(named);
+  }
 
   {
     // ADR 0018 through the whole stack: draws and fixed-point reach the state, and
