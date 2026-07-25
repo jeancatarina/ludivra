@@ -20,6 +20,8 @@ import type { CommandContext, CommandOutcome } from "./result.js";
 const recipeSuffix = ".audio.jsonc";
 const recipeDirectory = "audio";
 
+export const AUDIO_INDEX_FILE = ".ludivra/audio-index.json";
+
 export interface RenderedRecipeRecord {
   id: string;
   recipe: string;
@@ -48,33 +50,24 @@ function parseRecipe(source: string, path: string): AudioRecipe {
   return parsed;
 }
 
-/**
- * Renders every recipe of a project through the cache. The recipe is the source of
- * truth; the WAV is derived and lives in the ignored cache, identified by recipe,
- * generator version and seed.
- */
-export async function runAudioCommand(
-  context: CommandContext,
-  arguments_: string[]
-): Promise<CommandOutcome> {
-  const action = arguments_[1] ?? "render";
-  if (!["render", "preview", "inspect"].includes(action)) {
-    return {
-      diagnostics: [{
-        code: "AUDIO_ACTION_UNKNOWN",
-        severity: "error",
-        message: `Unknown audio action: ${action}`
-      }],
-      nextActions: ["Use game audio render, preview or inspect"]
-    };
-  }
+export interface AudioRenderResult {
+  rendered: RenderedRecipeRecord[];
+  diagnostics: Diagnostic[];
+  recipes: number;
+}
 
-  const engineRoot = await findEngineRoot();
-  const project = await resolveProjectDirectory(arguments_);
-  const requestedId = optionValue(arguments_, "--id");
+/**
+ * Renders every recipe of a project through the cache and writes the index the
+ * hosts consume. The recipe is the source of truth; the WAV is derived, lives in
+ * the ignored cache and is identified by recipe, generator version and seed.
+ */
+export async function ensureProjectAudio(
+  engineRoot: string,
+  project: string,
+  options: { forceRender?: boolean; onlyId?: string } = {}
+): Promise<AudioRenderResult> {
   const schema = JSON.parse(await readFile(resolve(engineRoot, "schemas/audio-recipe.schema.json"), "utf8"));
   const validate = createContractValidator().compile(schema);
-
   const files = await collectRecipeFiles(resolve(project, recipeDirectory));
   const diagnostics: Diagnostic[] = [];
   const rendered: RenderedRecipeRecord[] = [];
@@ -105,15 +98,12 @@ export async function runAudioCommand(
       });
       continue;
     }
-    if (requestedId !== undefined && recipe.id !== requestedId) continue;
+    if (options.onlyId !== undefined && recipe.id !== options.onlyId) continue;
 
     const cacheKey = audioCacheKey(recipe);
     const output = resolve(cacheDirectory, `${cacheKey}.wav`);
     const existing = await hashArtifactPath(output).catch(() => null);
-
-    // A rendered file whose key matches is the same audio by construction, so the
-    // cache is consulted unless the caller asked for a fresh preview.
-    const stored = existing === null || action === "preview"
+    const stored = existing === null || options.forceRender === true
       ? null
       : (JSON.parse(await readFile(`${output}.json`, "utf8").catch(() => "null")) as
           | { sha256: string; analysis: AudioAnalysis }
@@ -160,7 +150,45 @@ export async function runAudioCommand(
     });
   }
 
-  if (requestedId !== undefined && rendered.length === 0 && diagnostics.length === 0) {
+  // The cooked index is what the host reads: it never resolves a recipe itself.
+  await writeFile(
+    resolve(project, AUDIO_INDEX_FILE),
+    `${JSON.stringify({
+      generatorVersion: AUDIO_GENERATOR_VERSION,
+      entries: rendered.map(({ id, recipe, output, sha256 }) => ({ id, recipe, output, sha256 }))
+    }, null, 2)}\n`,
+    "utf8"
+  );
+  return { rendered, diagnostics, recipes: files.length };
+}
+
+export async function runAudioCommand(
+  context: CommandContext,
+  arguments_: string[]
+): Promise<CommandOutcome> {
+  const action = arguments_[1] ?? "render";
+  if (!["render", "preview", "inspect"].includes(action)) {
+    return {
+      diagnostics: [{
+        code: "AUDIO_ACTION_UNKNOWN",
+        severity: "error",
+        message: `Unknown audio action: ${action}`
+      }],
+      nextActions: ["Use game audio render, preview or inspect"]
+    };
+  }
+
+  const engineRoot = await findEngineRoot();
+  const project = await resolveProjectDirectory(arguments_);
+  const requestedId = optionValue(arguments_, "--id");
+  const result = await ensureProjectAudio(engineRoot, project, {
+    // A preview is an explicit request for a fresh render, not for the cache.
+    forceRender: action === "preview",
+    ...(requestedId === undefined ? {} : { onlyId: requestedId })
+  });
+  const diagnostics = [...result.diagnostics];
+
+  if (requestedId !== undefined && result.rendered.length === 0 && diagnostics.length === 0) {
     diagnostics.push({
       code: "AUDIO_RECIPE_NOT_FOUND",
       severity: "error",
@@ -175,15 +203,11 @@ export async function runAudioCommand(
     const reportPath = resolve(runDirectory, "audio-render.json");
     await writeFile(reportPath, `${JSON.stringify({
       generatorVersion: AUDIO_GENERATOR_VERSION,
-      rendered
+      rendered: result.rendered
     }, null, 2)}\n`, "utf8");
     artifacts.push({ kind: "audio-render", path: reportPath, sha256: await hashArtifactPath(reportPath) });
-    for (const record of rendered) {
-      artifacts.push({
-        kind: "audio-asset",
-        path: resolve(project, record.output),
-        sha256: record.sha256
-      });
+    for (const record of result.rendered) {
+      artifacts.push({ kind: "audio-asset", path: resolve(project, record.output), sha256: record.sha256 });
     }
   }
 
@@ -194,8 +218,9 @@ export async function runAudioCommand(
       project,
       action,
       generatorVersion: AUDIO_GENERATOR_VERSION,
-      recipes: files.length,
-      rendered: rendered.map((record) => ({
+      recipes: result.recipes,
+      index: AUDIO_INDEX_FILE,
+      rendered: result.rendered.map((record) => ({
         id: record.id,
         recipe: record.recipe,
         output: record.output,
@@ -207,7 +232,7 @@ export async function runAudioCommand(
         sha256: record.sha256
       }))
     },
-    nextActions: files.length === 0
+    nextActions: result.recipes === 0
       ? [`Create a recipe in ${recipeDirectory}/<name>${recipeSuffix} and run game audio render`]
       : ["Reference the recipe from game.jsonc with the recipe field"]
   };

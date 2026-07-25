@@ -4,6 +4,7 @@ import { relative, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 import { optionValue } from "./arguments.js";
 import { ensureFamilies, type CacheDecision } from "./artifact-cache.js";
+import { ensureProjectAudio } from "./audio-forge.js";
 import { writeCacheDecisions } from "./build-runner.js";
 import { hashArtifactPath } from "./artifact-hash.js";
 import { createContractValidator } from "./contract-validator.js";
@@ -88,10 +89,15 @@ async function buildBundle(engineRoot: string, project: string): Promise<{
   failure: string | null;
   decisions: CacheDecision[];
 }> {
+  const audio = await ensureProjectAudio(engineRoot, project);
   const prepared = await ensureFamilies(["contracts", "packages", "wasm", "web-bundle"], {
     root: engineRoot,
+    project,
     environment: { ...process.env, LUDIVRA_GAME_DIR: project, LUDIVRA_BASE: "./" }
   });
+  if (audio.diagnostics.some(({ severity }) => severity === "error")) {
+    return { failure: audio.diagnostics.map(({ message }) => message).join("; "), decisions: prepared.decisions };
+  }
   return {
     failure: prepared.failure === null ? null : `${prepared.failure.family}: ${prepared.failure.message}`,
     decisions: prepared.decisions

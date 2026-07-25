@@ -20,6 +20,8 @@ export interface BuildRunRequest {
   root: string;
   /** Evidence root: the project when there is one, otherwise the engine. */
   evidenceRoot: string;
+  /** Game project whose content participates in the bundle key. */
+  project?: string;
   families: CacheFamilyId[];
   environment: NodeJS.ProcessEnv;
   watch: boolean;
@@ -88,11 +90,12 @@ export async function runFamilies(request: BuildRunRequest): Promise<BuildRunRes
   const rebuildsPath = resolve(runDirectory, "rebuilds.jsonl");
   const diagnostics: Diagnostic[] = [];
 
-  const initial = await ensureFamilies(request.families, {
+  const cacheOptions = {
     root: request.root,
     environment: request.environment,
-    force: request.force
-  });
+    ...(request.project === undefined ? {} : { project: request.project })
+  };
+  const initial = await ensureFamilies(request.families, { ...cacheOptions, force: request.force });
   const decisions = [...initial.decisions];
   if (initial.failure !== null) {
     diagnostics.push({
@@ -135,10 +138,7 @@ export async function runFamilies(request: BuildRunRequest): Promise<BuildRunRes
       }
       sequence += 1;
       const started = performance.now();
-      const result = await ensureFamilies([...affected], {
-        root: request.root,
-        environment: request.environment
-      });
+      const result = await ensureFamilies([...affected], cacheOptions);
       decisions.push(...result.decisions);
       rebuilds += 1;
       await appendFile(rebuildsPath, `${JSON.stringify({

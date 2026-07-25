@@ -16,7 +16,12 @@ interface GameManifest {
     actionId: number;
     keys: string[];
   }>;
-  audio?: Array<{ eventId: number; source?: string }>;
+  audio?: Array<{ eventId: number; source?: string; recipe?: string }>;
+}
+
+interface CookedAudioIndex {
+  generatorVersion: number;
+  entries: Array<{ id: string; recipe: string; output: string; sha256: string }>;
 }
 
 function withinProject(projectDirectory: string, path: string): string {
@@ -62,10 +67,28 @@ function gamePlugin(projectDirectory: string): Plugin {
         }
         contentDocuments.push({ id: descriptor.id, value });
       }
+      // Recipes are resolved by the Audio Forge, never by this plugin: the host
+      // consumes the cooked index and stays out of synthesis.
+      const cookedIndex = JSON.parse(
+        await readFile(resolve(projectDirectory, ".ludivra/audio-index.json"), "utf8").catch(() => "null")
+      ) as CookedAudioIndex | null;
+
       const audioSources: string[] = [];
       for (const audio of manifest.audio ?? []) {
-        if (audio.source === undefined) continue;
-        const sourcePath = withinProject(projectDirectory, audio.source);
+        if (audio.source === undefined && audio.recipe === undefined) continue;
+        let assetPath: string;
+        if (audio.recipe !== undefined) {
+          const cooked = cookedIndex?.entries.find((entry) => entry.recipe === audio.recipe);
+          if (cooked === undefined) {
+            throw new Error(
+              `audio recipe ${audio.recipe} has no cooked output; run game audio render before building`
+            );
+          }
+          assetPath = withinProject(projectDirectory, cooked.output);
+        } else {
+          assetPath = withinProject(projectDirectory, audio.source as string);
+        }
+        const sourcePath = assetPath;
         const reference = this.emitFile({
           type: "asset",
           name: basename(sourcePath),

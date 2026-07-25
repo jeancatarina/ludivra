@@ -43,6 +43,8 @@ interface FamilyDefinition {
   dependsOn: CacheFamilyId[];
   /** Environment variables that enter the key, by name. */
   environment: string[];
+  /** Whether the game project content participates in the key. */
+  usesProject?: boolean;
   command: readonly [string, ...string[]];
 }
 
@@ -104,6 +106,7 @@ const families: FamilyDefinition[] = [
     outputs: ["hosts/browser/dist"],
     dependsOn: ["packages", "wasm"],
     environment: ["LUDIVRA_GAME_DIR", "LUDIVRA_BASE"],
+    usesProject: true,
     command: ["pnpm", "--filter", "@ludivra/browser-host", "build"]
   }
 ];
@@ -158,6 +161,7 @@ interface CacheEntry {
   inputs: Record<string, string>;
   outputs: Record<string, string>;
   environment: Record<string, string>;
+  projectInputs: Record<string, string>;
   dependencies: Record<string, string>;
   toolchain: string;
 }
@@ -189,6 +193,12 @@ function changedKeys(before: Record<string, string>, after: Record<string, strin
 export interface CacheRunOptions {
   root: string;
   environment: NodeJS.ProcessEnv;
+  /**
+   * Absolute path of the game project. Families that bundle project content declare
+   * `usesProject`, and without this the bundle would keep a stale hit after the game
+   * changed.
+   */
+  project?: string;
   /** Skip every entry and rebuild, recorded as reason FORCED. */
   force?: boolean;
   maxChangedReported?: number;
@@ -217,6 +227,12 @@ export async function ensureFamily(
   ]);
   const environment: Record<string, string> = {};
   for (const name of family.environment) environment[name] = options.environment[name] ?? "";
+  const projectInputs: Record<string, string> = {};
+  if (family.usesProject === true && options.project !== undefined) {
+    for (const entry of ["game.jsonc", "scripts", "presentation", "content", "audio", ".ludivra/audio-index.json"]) {
+      projectInputs[entry] = await hashArtifactPath(resolve(options.project, entry)).catch(() => "absent");
+    }
+  }
   const dependencies: Record<string, string> = {};
   for (const dependency of family.dependsOn) dependencies[dependency] = resolvedKeys.get(dependency) ?? "unresolved";
   const toolchain = await hashArtifactPath(resolve(options.root, "toolchain.lock")).catch(() => "absent");
@@ -225,6 +241,7 @@ export async function ensureFamily(
     cacheFormatVersion: CACHE_FORMAT_VERSION,
     family: family.id,
     inputs,
+    projectInputs,
     environment,
     dependencies,
     toolchain
@@ -245,7 +262,10 @@ export async function ensureFamily(
     else if (previous.toolchain !== toolchain) reason = "TOOLCHAIN_CHANGED";
     else {
       const dependencyChanges = changedKeys(previous.dependencies, dependencies);
-      const inputChanges = changedKeys(previous.inputs, inputs);
+      const inputChanges = [
+        ...changedKeys(previous.inputs, inputs),
+        ...changedKeys(previous.projectInputs ?? {}, projectInputs).map((entry) => `project:${entry}`)
+      ];
       const environmentChanges = changedKeys(previous.environment, environment);
       if (dependencyChanges.includes("contracts")) {
         reason = "CONTRACT_CHANGED";
@@ -301,6 +321,7 @@ export async function ensureFamily(
     inputs,
     outputs: producedOutputs,
     environment,
+    projectInputs,
     dependencies,
     toolchain
   };

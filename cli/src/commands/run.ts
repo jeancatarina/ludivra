@@ -1,4 +1,5 @@
 import type { CacheFamilyId } from "../artifact-cache.js";
+import { ensureProjectAudio } from "../audio-forge.js";
 import { parseBuildOptions, runFamilies, summarizeDecisions } from "../build-runner.js";
 import { runProcess } from "../process-runner.js";
 import { resolveProjectDirectory } from "../project.js";
@@ -15,19 +16,21 @@ export async function runGame(context: CommandContext, arguments_: string[]): Pr
   const root = await findEngineRoot();
   const project = await resolveProjectDirectory(arguments_);
   const options = parseBuildOptions(arguments_);
+  const audio = await ensureProjectAudio(root, project);
   const prepared = await runFamilies({
     runId: context.runId,
     root,
     evidenceRoot: project,
+    project,
     families: runtimeFamilies,
     environment: { ...process.env, LUDIVRA_GAME_DIR: project },
     watch: false,
     force: options.force,
     debounceMs: options.debounceMs
   });
-  if (prepared.diagnostics.some(({ severity }) => severity === "error")) {
+  if ([...audio.diagnostics, ...prepared.diagnostics].some(({ severity }) => severity === "error")) {
     return {
-      diagnostics: prepared.diagnostics.map((diagnostic) => ({ ...diagnostic, code: "RUN_PREPARATION_FAILED" })),
+      diagnostics: [...audio.diagnostics, ...prepared.diagnostics.map((diagnostic) => ({ ...diagnostic, code: "RUN_PREPARATION_FAILED" }))],
       artifacts: prepared.artifacts,
       data: { project, cache: summarizeDecisions(prepared.decisions) },
       nextActions: ["Run game doctor and repair the toolchain"]

@@ -5,6 +5,7 @@ import { tmpdir } from "node:os";
 import { resolve } from "node:path";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
+import { parse as parseJsonc } from "jsonc-parser";
 import { normalizeRepositoryPath, validateCmakeGraph, validateWorkspaceGraph } from "../dist/commands/validate.js";
 import { createContractValidator } from "../dist/contract-validator.js";
 
@@ -89,7 +90,8 @@ test("new creates a schema-valid game project", () => {
     assert.ok(runManifest.artifacts.every(({ sha256 }) => /^[a-f0-9]{64}$/.test(sha256)));
 
     const manifestPath = resolve(project, "game.jsonc");
-    const manifest = JSON.parse(readFileSync(manifestPath, "utf8"));
+    // game.jsonc is JSONC by contract: comments are legal and JSON.parse is not.
+    const manifest = parseJsonc(readFileSync(manifestPath, "utf8"));
     manifest.name = "Changed Without Status";
     writeFileSync(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`);
     const stale = runCli(["validate", "--project", project, "--format", "json"]);
@@ -135,7 +137,8 @@ test("validate rejects duplicate semantic presentation event IDs", () => {
   try {
     assert.equal(runCli(["new", project, "--name", "Feedback Game", "--format", "json"]).execution.status, 0);
     const manifestPath = resolve(project, "game.jsonc");
-    const manifest = JSON.parse(readFileSync(manifestPath, "utf8"));
+    // game.jsonc is JSONC by contract: comments are legal and JSON.parse is not.
+    const manifest = parseJsonc(readFileSync(manifestPath, "utf8"));
     const audio = (id) => ({
       id,
       eventId: 1,
@@ -187,7 +190,8 @@ test("validate rejects card content that references an absent manifest action", 
     });
     assert.equal(runCli(["status", "--project", project, "--format", "json"]).execution.status, 0);
     const manifestPath = resolve(project, "game.jsonc");
-    const manifest = JSON.parse(readFileSync(manifestPath, "utf8"));
+    // game.jsonc is JSONC by contract: comments are legal and JSON.parse is not.
+    const manifest = parseJsonc(readFileSync(manifestPath, "utf8"));
     manifest.inputs = manifest.inputs.filter(({ id }) => id !== "play-strike");
     writeFileSync(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`);
     const validated = runCli(["validate", "--project", project, "--format", "json"]);

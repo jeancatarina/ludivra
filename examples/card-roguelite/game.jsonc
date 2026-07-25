@@ -63,7 +63,8 @@
       "volume": 0.3,
       "origin": "generated",
       "license": "project_owned",
-      "synth": { "waveform": "sawtooth", "frequency": 520, "durationMs": 90 }
+      // Renderizado pelo Audio Forge: a receita é a fonte, o WAV é derivado.
+      "recipe": "audio/ember-strike.audio.jsonc"
     },
     {
       "id": "audio.card.block",
