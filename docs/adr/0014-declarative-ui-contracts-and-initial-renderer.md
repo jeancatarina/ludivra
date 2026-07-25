@@ -49,9 +49,9 @@ IDs de nó são estáveis e determinísticos em função do estado lógico. ID d
 
 O renderer inicial de UI é **DOM acessível no BrowserHost, sem framework de UI**.
 
-A plataforma já fornece árvore de acessibilidade, foco, navegação por teclado, seleção de texto, IME, escala de texto e leitura por leitor de tela. Reimplementar isso em canvas antes de existir um consumidor que exija canvas seria custo sem evidência. A UI em canvas ou no renderer 3D permanece possível para elementos diegéticos, mas exige ADR próprio com o mesmo conjunto de propriedades de acessibilidade medidas.
+A plataforma já fornece árvore de acessibilidade, foco, navegação por teclado, seleção de texto, IME, escala de texto e leitura por leitor de tela. Reimplementar isso em canvas antes de existir um consumidor que exija canvas seria custo sem evidência. A UI em canvas ou no renderer 3D permanece possível para elementos diegéticos, sob as condições decididas pelo [ADR 0040](0040-ui-framework-and-diegetic-ui.md).
 
-Adicionar React, Vue ou equivalente exige ADR próprio pela regra de dependência de runtime. Este ADR não autoriza essa dependência.
+Adicionar React, Vue ou equivalente foi recusado em definitivo pelo [ADR 0040](0040-ui-framework-and-diegetic-ui.md).
 
 ### CSS e breakpoints
 
@@ -76,7 +76,7 @@ Códigos: `UI_NODE_ID_UNSTABLE`, `UI_INTENT_NOT_DECLARED`, `UI_LOCALE_KEY_MISSIN
 - evidência headless e evidência do navegador tornam-se distinguíveis por campo obrigatório;
 - a acessibilidade passa a ser verificável por dado, não por inspeção manual;
 - `ENG-017` ganha critério de aceitação observável: o BrowserHost produz `browser-dom-v1` a partir do layout real;
-- UI diegética em canvas e adoção de framework de UI passam a exigir ADR próprio;
+- UI diegética em canvas e framework de UI ficam decididos pelo [ADR 0040](0040-ui-framework-and-diegetic-ui.md);
 - o kernel continua sem conhecer pixels, e o renderer continua sem autoridade sobre a regra.
 
 ## Alternativas rejeitadas

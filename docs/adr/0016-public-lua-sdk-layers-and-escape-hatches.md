@@ -6,6 +6,7 @@
 - Complementa: [ADR 0004](0004-lua-sandbox.md) e [ADR 0011](0011-card-roguelite-content-and-authority.md)
 - Depende de: [ADR 0017](0017-content-pack-compilation-and-migrations.md) para a tabela de símbolos e [ADR 0018](0018-numeric-determinism-and-rng-streams.md) para os streams de RNG da camada 1
 - Fase: 4
+- Camada 2 decidida por: [ADR 0039](0039-entity-component-layer.md); último degrau da escada por: [ADR 0044](0044-approved-native-extension-process.md)
 
 ## Contexto
 
@@ -38,7 +39,7 @@ Símbolo sem consumidor atual é proibido. Depreciação exige condição objeti
 
 Símbolo desconhecido falha no carregamento com `SDK_SYMBOL_UNKNOWN`; resolução tardia por string é proibida.
 
-**Camada 2 — entidades, componentes, tags, relações e recursos.** Fica explicitamente fora da Fase 4. Sua API será decidida pelo ADR da fase cujo consumidor a exige — runtime espacial ou Mass Runtime — porque são esses requisitos que determinam identidade, armazenamento, iteração e persistência. Até lá, um jogo que precise de estruturas semelhantes as mantém no próprio jogo, conforme a regra de extração após segundo uso.
+**Camada 2 — entidades, componentes, tags, relações e recursos.** Fica explicitamente fora da Fase 4 e é decidida pelo [ADR 0039](0039-entity-component-layer.md), cujos consumidores são o runtime espacial e o Mass Runtime — são esses requisitos que determinam identidade, armazenamento, iteração e persistência. Até lá, um jogo que precise de estruturas semelhantes as mantém no próprio jogo, conforme a regra de extração após segundo uso.
 
 Esta é uma correção de escopo do roadmap: a Fase 4 fecha seu gate com as camadas 0 e 1 mais a escada de escape hatches, e a camada 2 passa a pertencer à fase do seu consumidor.
 
@@ -56,7 +57,7 @@ TypeScript de apresentação
 extensão nativa aprovada por ADR
 ```
 
-Cada degrau exige registro do motivo pelo qual o anterior é insuficiente. Pular degraus é proibido. O último degrau exige ADR próprio, benchmark quando aplicável e justificativa além de um jogo, conforme o ADR 0012.
+Cada degrau exige registro do motivo pelo qual o anterior é insuficiente. Pular degraus é proibido. O último degrau segue o processo do [ADR 0044](0044-approved-native-extension-process.md).
 
 ### Restrições que não mudam
 

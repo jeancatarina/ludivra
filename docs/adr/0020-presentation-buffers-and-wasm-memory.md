@@ -2,7 +2,7 @@
 
 - Status: provisório
 - Data: 2026-07-24
-- Revisão: antes de exigir `SharedArrayBuffer` ou de adicionar um segundo mecanismo de transporte de frame
+- Revisão: antes de adicionar um segundo mecanismo de transporte de frame; threads e memória compartilhada são decididas pelo [ADR 0045](0045-wasm-threads-and-shared-memory.md)
 - Complementa: [ADR 0002](0002-runtime-c-abi.md) e [ADR 0007](0007-semantic-audio-and-effects.md)
 - Depende de: [ADR 0018](0018-numeric-determinism-and-rng-streams.md)
 - Fecha: itens "presentation buffers" e "estratégia de memória compartilhada/cópia no WASM" da seção 36 de [architecture.md](../../architecture.md)
@@ -36,7 +36,7 @@ Números em buffer podem ser ponto flutuante, porque já estão fora do caminho 
 
 O consumo padrão é **leitura por view sobre a heap do módulo, sem cópia**, dentro de uma janela de empréstimo explícita por frame. Fora dessa janela a view é inválida, porque crescimento da heap troca o `ArrayBuffer` subjacente. Reter view entre frames é `PRESENTATION_VIEW_RETAINED`.
 
-Cópia permanece o caminho obrigatório em duas situações declaradas: atravessar boundary de worker e persistir qualquer amostra para evidência. `SharedArrayBuffer` e memória compartilhada entre threads **não** são exigidos por esta decisão, porque obrigariam todo host que sirva o jogo a configurar COOP e COEP. Adotá-los exige ADR próprio com benchmark que demonstre que a cópia no boundary de worker é o gargalo real.
+Cópia permanece o caminho obrigatório em duas situações declaradas: atravessar boundary de worker e persistir qualquer amostra para evidência. `SharedArrayBuffer` e memória compartilhada entre threads **não** são exigidos por esta decisão, porque obrigariam todo host que sirva o jogo a configurar COOP e COEP. O [ADR 0045](0045-wasm-threads-and-shared-memory.md) decide que a versão 1 não os adota e declara a condição de revisão.
 
 ### Capacidade e degradação
 

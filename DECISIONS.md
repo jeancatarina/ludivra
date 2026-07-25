@@ -32,4 +32,18 @@
 | [0028](docs/adr/0028-diagnose-repair-verify-and-repair-classes.md) | provisório | Registro único de códigos, ciclo de reparo e classes de reparo |
 | [0029](docs/adr/0029-benchmark-registry-profiles-and-baselines.md) | provisório | Registry de métricas, profiles, inconclusivo e baselines numéricas |
 | [0030](docs/adr/0030-target-hardening-signing-and-distribution.md) | provisório | Assinatura por plataforma, smoke instalado e publicação autorizada |
-| [0031](docs/adr/0031-native-diagnostic-host-trigger-and-criteria.md) | provisório | Gatilhos e critérios do `NativeDiagnosticHost` sem escolher backend |
+| [0031](docs/adr/0031-native-diagnostic-host-trigger-and-criteria.md) | provisório | Gatilhos e critérios do `NativeDiagnosticHost` |
+| [0032](docs/adr/0032-audio-forge-recipes-and-deterministic-renderer.md) | provisório | Audio Forge: receitas textuais e renderizador determinístico |
+| [0033](docs/adr/0033-visual-forge-procedural-characters-and-generated-surfaces.md) | provisório | Visual Forge: personagens skeleton-first e superfícies geradas |
+| [0034](docs/adr/0034-world-forge-textual-world-recipes.md) | provisório | World Forge: receitas de terreno, bioma e distribuição |
+| [0035](docs/adr/0035-construction-forge-style-grammars.md) | provisório | Construction Forge: gramáticas de estilo arquitetônico |
+| [0036](docs/adr/0036-physics-forge-collider-and-stability-recipes.md) | provisório | Physics Forge: collider derivado e cenários de estabilidade |
+| [0037](docs/adr/0037-physics-solver-selection.md) | provisório | Jolt para 3D e Box2D v3 para 2D como vendor em adapter |
+| [0038](docs/adr/0038-network-transport-adapters.md) | provisório | Loopback, WebRTC DataChannel e Steam Networking |
+| [0039](docs/adr/0039-entity-component-layer.md) | provisório | Camada 2: handles geracionais, archetypes e queries declarativas |
+| [0040](docs/adr/0040-ui-framework-and-diegetic-ui.md) | provisório | Nenhum framework de UI e limites da UI diegética |
+| [0041](docs/adr/0041-c-abi-binding-mechanism.md) | provisório | Bindings da C ABI gerados de contrato único |
+| [0042](docs/adr/0042-final-monorepo-layout.md) | provisório | Layout plano final do monorepo e categorias de pacote |
+| [0043](docs/adr/0043-native-diagnostic-host-backend.md) | provisório | SDL3 como backend do `NativeDiagnosticHost` |
+| [0044](docs/adr/0044-approved-native-extension-process.md) | provisório | Processo e fronteira de extensão nativa aprovada |
+| [0045](docs/adr/0045-wasm-threads-and-shared-memory.md) | provisório | Versão 1 sem threads nem memória compartilhada no WASM |

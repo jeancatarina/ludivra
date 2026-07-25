@@ -1114,34 +1114,36 @@ O `NativeHeadlessHost` prova cedo a portabilidade lógica. Um `NativeDiagnosticH
 
 ### 31.1 Engine
 
+O layout é plano e final, decidido pelo [ADR 0042](docs/adr/0042-final-monorepo-layout.md). Diretórios marcados como previstos só existem quando o ADR correspondente for implementado; diretório vazio à espera de implementação é proibido.
+
 ```text
 ludivra/
-├── kernel/
-├── runtime-c-api/
-├── lua-sdk/
-├── schemas/
-├── content-compiler/
-├── asset-cooker/
-├── presentation-protocol/
-├── control-protocol/
-├── renderer-three/
-├── ui-renderers/
+├── kernel/                 núcleo autoritativo
+├── runtime-c-api/          C ABI e headers gerados
+├── runtime-wasm/           artefato WebAssembly
+├── runtime-web/            único adapter da C ABI para WASM
+├── contracts/              schemas de contrato e ABI
+├── schemas/                schemas de projeto, cenário e receita
+├── platform-contracts/     IPC de host gerado
+├── presentation-protocol/  protocolo de apresentação, UI e projeção
+├── renderer-three/         único importador do vendor de render
+├── audio-runtime-web/      previsto pelo ADR 0032
+├── audio-authoring/        previsto pelo ADR 0032
+├── visual-authoring/       previsto pelo ADR 0033
+├── lua-sdk/                previsto pelo ADR 0016
+├── content-compiler/       previsto pelo ADR 0017
 ├── hosts/
 │   ├── browser/
 │   ├── electron/
-│   ├── capacitor-android/
-│   ├── capacitor-ios/
 │   ├── native-headless/
-│   └── native-diagnostic/
-├── platform-contracts/
-├── platform-adapters/
-├── capabilities/
-├── harness/
-├── cli/
-├── templates/
-├── examples/
+│   └── native-diagnostic/  previsto pelos ADRs 0031 e 0043
+├── capabilities/           catálogo declarado
+├── cli/                    API operacional
+├── tools/                  geradores, build e testes de integração
+├── tests/                  fixtures e testes de boundary
+├── examples/               starter e jogos de exemplo
+├── reports/                evidência por execução
 ├── docs/
-│   ├── contracts/
 │   ├── guardrails/
 │   ├── recipes/
 │   └── adr/
@@ -1269,26 +1271,22 @@ Este documento define a direção. As escolhas abaixo exigem ADR próprio, e a t
 |---|---|
 | algoritmo e representação de fixed-point | fechada pelo [ADR 0018](docs/adr/0018-numeric-determinism-and-rng-streams.md) |
 | PRNG e estratégia de streams | fechada pelo [ADR 0018](docs/adr/0018-numeric-determinism-and-rng-streams.md) |
-| formato de content pack | container e mapa de símbolos fechados pelo [ADR 0017](docs/adr/0017-content-pack-compilation-and-migrations.md); encoding binário por seção condicionado a benchmark |
+| formato de content pack | fechada pelo [ADR 0017](docs/adr/0017-content-pack-compilation-and-migrations.md), com JSON canônico na versão 1 |
 | formato dos presentation buffers | fechada pelo [ADR 0020](docs/adr/0020-presentation-buffers-and-wasm-memory.md) |
-| memória compartilhada ou cópia no WASM | fechada pelo [ADR 0020](docs/adr/0020-presentation-buffers-and-wasm-memory.md); `SharedArrayBuffer` exigiria ADR novo |
+| memória compartilhada ou cópia no WASM | fechada pelo [ADR 0020](docs/adr/0020-presentation-buffers-and-wasm-memory.md) e pelo [ADR 0045](docs/adr/0045-wasm-threads-and-shared-memory.md) |
 | renderer de UI inicial | fechada pelo [ADR 0014](docs/adr/0014-declarative-ui-contracts-and-initial-renderer.md) |
 | backend de áudio por host | fechada pelo [ADR 0025](docs/adr/0025-audio-backends-voice-budgets-and-fallback.md) |
 | versão e configuração exatas de Lua | fechada pelo [ADR 0004](docs/adr/0004-lua-sandbox.md) |
 | ferramenta de build C++ | fechada pelo [ADR 0001](docs/adr/0001-build-system.md) |
-| layout final do monorepo | **aberta** até a primeira versão estável |
-| mecanismo de bindings da C ABI | **aberta**; pertence à revisão do [ADR 0002](docs/adr/0002-runtime-c-abi.md) |
+| layout final do monorepo | fechada pelo [ADR 0042](docs/adr/0042-final-monorepo-layout.md) |
+| mecanismo de bindings da C ABI | fechada pelo [ADR 0041](docs/adr/0041-c-abi-binding-mechanism.md) |
 | política de compatibilidade N/N-1 por protocolo | fechada pelo [ADR 0024](docs/adr/0024-player-hosted-multiplayer-and-protocol-compatibility.md) |
-| backend do `NativeDiagnosticHost` | gatilhos e critérios no [ADR 0031](docs/adr/0031-native-diagnostic-host-trigger-and-criteria.md); backend concreto **aberto** |
+| backend do `NativeDiagnosticHost` | gatilhos no [ADR 0031](docs/adr/0031-native-diagnostic-host-trigger-and-criteria.md) e backend no [ADR 0043](docs/adr/0043-native-diagnostic-host-backend.md) |
 | estratégia de assinatura e distribuição por plataforma | fechada pelo [ADR 0030](docs/adr/0030-target-hardening-signing-and-distribution.md) |
 
-Estas escolhas permanecem abertas por decisão explícita e exigem ADR quando seu gatilho ocorrer:
+Nenhuma escolha desta seção permanece sem ADR. As que antes apareciam como pendência foram decididas: solver físico no [ADR 0037](docs/adr/0037-physics-solver-selection.md), transportes de rede no [ADR 0038](docs/adr/0038-network-transport-adapters.md), camada de entidades no [ADR 0039](docs/adr/0039-entity-component-layer.md), framework de UI e UI diegética no [ADR 0040](docs/adr/0040-ui-framework-and-diegetic-ui.md), extensão nativa no [ADR 0044](docs/adr/0044-approved-native-extension-process.md) e threads no WebAssembly no [ADR 0045](docs/adr/0045-wasm-threads-and-shared-memory.md).
 
-- solver físico 2D ou 3D concreto — [ADR 0021](docs/adr/0021-motion-and-physics-adapter-authority.md);
-- transporte de rede concreto além do local — [ADR 0024](docs/adr/0024-player-hosted-multiplayer-and-protocol-compatibility.md);
-- framework de UI — [ADR 0014](docs/adr/0014-declarative-ui-contracts-and-initial-renderer.md);
-- camada 2 do SDK Lua, com entidades, componentes, tags, relações e recursos — [ADR 0016](docs/adr/0016-public-lua-sdk-layers-and-escape-hatches.md);
-- extensão nativa solicitada por um jogo — [ADR 0016](docs/adr/0016-public-lua-sdk-layers-and-escape-hatches.md).
+Um ADR pode declarar condição de revisão — todos declaram — mas nenhum depende de um ADR que não exista.
 
 Um ADR deve registrar contexto, decisão, consequências, alternativas rejeitadas, evidência e condição de revisão. Não se cria ADR para detalhes locais reversíveis.
 

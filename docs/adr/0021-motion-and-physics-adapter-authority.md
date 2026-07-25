@@ -2,7 +2,7 @@
 
 - Status: provisório
 - Data: 2026-07-24
-- Revisão: antes de adotar qualquer solver físico concreto
+- Revisão: ao registrar o primeiro benchmark oficial de física; a escolha de solver está no [ADR 0037](0037-physics-solver-selection.md)
 - Depende de: [ADR 0018](0018-numeric-determinism-and-rng-streams.md) e [ADR 0019](0019-spatial-model-chunk-lifecycle-and-job-commit.md)
 - Complementa: [ADR 0008](0008-mandatory-scale-and-procedural-capabilities.md)
 - Fase: 6
@@ -49,7 +49,7 @@ Determinismo competitivo entre plataformas continua não prometido, conforme o A
 
 ### Escolha de solver
 
-Este ADR decide a fronteira, não o produto. Adotar um solver 2D ou 3D concreto exige ADR próprio, porque é dependência de runtime: licença, targets, build WebAssembly, memória, estabilidade, observabilidade e resultado de benchmark precisam ser registrados.
+Este ADR decide a fronteira, não o produto. Os solvers concretos são decididos pelo [ADR 0037](0037-physics-solver-selection.md): Jolt para 3D e Box2D v3 para 2D, ambos como vendor em adapter de borda.
 
 Até existir um solver adotado, o contrato é exercitado por um adapter de referência mínimo, suficiente para cenários e testes de boundary. Character controllers, ragdolls, grabs e breakables só entram depois dos fundamentos, cada um com consumidor declarado.
 
@@ -61,14 +61,14 @@ Códigos: `MOTION_AUTHORITY_VIOLATION`, `MOTION_LOGICAL_TIME_REQUIRED`, `MOTION_
 - física com autoridade de gameplay passa a ter ponto único de quantização, que é onde a divergência pode ser localizada;
 - trocar de solver não muda o contrato nem o formato de save;
 - adapter sem determinismo de replay continua utilizável, com autoridade reduzida e declarada;
-- cada solver concreto passa a exigir ADR com licença e benchmark;
+- a escolha de solver vive no ADR 0037 e pode mudar sem tocar este contrato;
 - ragdoll, grab e breakable ficam explicitamente depois dos fundamentos;
 - o cenário de divergência precisa comparar posições quantizadas, não posições do solver.
 
 ## Alternativas rejeitadas
 
 - **Engine física própria:** recusada pelo ADR 0008 e sem justificativa de escopo.
-- **Escolher o solver neste ADR:** dependência de runtime sem benchmark, build WASM verificado nem avaliação de licença.
+- **Misturar a escolha de solver com o contrato:** trocar de biblioteca passaria a mexer no contrato; a escolha vive no ADR 0037 e não muda save, replay nem autoridade.
 - **Deixar o solver escrever direto no estado autoritativo:** injetaria ponto flutuante e ordem de operações de biblioteca externa no hash.
 - **Prometer determinismo cross-platform de física:** não é sustentável com solvers flutuantes e criaria alegação falsa de multiplayer competitivo.
 - **Motion com autoridade sobre a regra:** faz apresentação decidir gameplay e torna o defeito invisível no estado lógico.

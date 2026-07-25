@@ -20,7 +20,7 @@ Duas restrições delimitam a decisão. Pixels de GPU não são idênticos entre
 
 A captura raster do bundle web usa o **ElectronHost existente como adapter de captura**, por `webContents.capturePage`, em janela offscreen com viewport e escala declaradas.
 
-Nenhum navegador de automação novo é adicionado. Se um defeito específico de um motor exigir captura em outro navegador, isso será um adapter novo com ADR próprio, não uma extensão silenciosa deste.
+Nenhum navegador de automação novo é adicionado. Um segundo backend de captura só entra por revisão deste ADR, com o defeito específico de motor como evidência, nunca por extensão silenciosa.
 
 O adapter de captura é borda: ele não conhece regra de jogo e não decide quando capturar.
 
@@ -70,7 +70,7 @@ Códigos: `CAPTURE_RASTER_UNAVAILABLE`, `CAPTURE_NOT_QUIESCENT`, `CAPTURE_FRAME_
 - baselines entram no Git e passam a exigir revisão intencional de imagem;
 - cenários visuais precisam declarar quiescência, o que elimina uma classe inteira de teste intermitente;
 - perfis e viewports suportados tornam-se lista fechada e auditável;
-- captura em outro navegador, vídeo e profiling permanecem trabalho futuro com ADR próprio.
+- captura em outro navegador, vídeo e profiling permanecem trabalho futuro, condicionado à revisão deste ADR.
 
 ## Alternativas rejeitadas
 

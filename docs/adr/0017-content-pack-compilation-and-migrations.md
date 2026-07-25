@@ -4,7 +4,7 @@
 - Data: 2026-07-24
 - Revisão: antes de codificar qualquer seção em binário ou de aceitar um segundo formato autoritativo de conteúdo
 - Complementa: [ADR 0011](0011-card-roguelite-content-and-authority.md) e [ADR 0016](0016-public-lua-sdk-layers-and-escape-hatches.md)
-- Fecha em parte: item "formato binário de content pack" da seção 36 de [architecture.md](../../architecture.md)
+- Fecha: item "formato de content pack" da seção 36 de [architecture.md](../../architecture.md), com encoding JSON canônico na versão 1
 - Fase: 4
 
 ## Contexto
@@ -13,7 +13,7 @@ O ADR 0011 tornou o JSONC a autoridade textual do conteúdo e criou uma ponte ex
 
 A ponte tem dois limites conhecidos. Ela mistura dado e código no mesmo chunk, o que impede rastrear um valor em execução até a linha que o autorou. E ela não possui versão de formato, portanto não há como migrar conteúdo antigo nem recusar conteúdo futuro sem comparar texto.
 
-A seção 36 pede um formato binário. Não existe benchmark que demonstre que o custo de parse do conteúdo importa: o volume atual é de poucos documentos pequenos, e as regras de engenharia proíbem otimizar sem medição. O que já é comprovadamente necessário é versão, determinismo de bytes, mapa de símbolos e origem para diagnóstico.
+A seção 36 pedia um formato binário. Não existe benchmark que demonstre que o custo de parse do conteúdo importa: o volume atual é de poucos documentos pequenos, e as regras de engenharia proíbem otimizar sem medição. O que já é comprovadamente necessário é versão, determinismo de bytes, mapa de símbolos e origem para diagnóstico — e o container permite trocar o encoding de uma seção depois, sem migrar formato.
 
 ## Decisão
 
@@ -27,9 +27,9 @@ O pack pertence à família `content` do cache definido pelo ADR 0013 e seu hash
 
 O formato é um container com `packFormatVersion`, cabeçalho, índice de seções e hash por seção. As seções são, no mínimo: símbolos, documentos de conteúdo, mapa de origem e strings de localização.
 
-Cada seção declara seu encoding. O encoding inicial de todas é JSON canônico — ordem de chaves determinada, sem espaço redundante, sem número em ponto flutuante quando o valor é lógico, sem timestamp, sem caminho absoluto e sem dependência de locale. Uma seção pode migrar para encoding binário quando um benchmark demonstrar que seu custo de parse importa, sem trocar o container e sem quebrar as demais.
+Cada seção declara seu encoding. O encoding inicial de todas é JSON canônico — ordem de chaves determinada, sem espaço redundante, sem número em ponto flutuante quando o valor é lógico, sem timestamp, sem caminho absoluto e sem dependência de locale.
 
-É por isso que o item da seção 36 é fechado apenas em parte: o container, a versão, o índice e o mapa de símbolos ficam decididos aqui; a codificação binária de uma seção continua condicionada a benchmark, com este ADR como ponto de revisão. Buffers de apresentação são problema separado e não compartilham este formato.
+O encoding da versão 1 fica decidido aqui: **JSON canônico em todas as seções**. Não há decisão pendente — trocar uma seção para binário exige benchmark que demonstre custo de parse relevante e revisão deste ADR, que é a condição declarada no cabeçalho. Buffers de apresentação são problema separado e não compartilham este formato.
 
 ### Determinismo de bytes
 

@@ -2,9 +2,9 @@
 
 - Status: provisório
 - Data: 2026-07-24
-- Revisão: quando um dos gatilhos abaixo ocorrer; a escolha do backend concreto exige ADR próprio
+- Revisão: quando um dos gatilhos abaixo ocorrer; o backend concreto está decidido no [ADR 0043](0043-native-diagnostic-host-backend.md)
 - Complementa: [ADR 0002](0002-runtime-c-abi.md) e [ADR 0005](0005-first-steam-delivery.md)
-- Fecha em parte: item "backend do `NativeDiagnosticHost`" da seção 36 de [architecture.md](../../architecture.md)
+- Fecha: item "backend do `NativeDiagnosticHost`" da seção 36 de [architecture.md](../../architecture.md), junto do [ADR 0043](0043-native-diagnostic-host-backend.md)
 - Fase: 11
 
 ## Contexto
@@ -39,7 +39,7 @@ Preferência por tecnologia nativa, desconforto com o stack web ou expectativa d
 
 ### Escolha de backend
 
-A camada concreta de janela, input e áudio será escolhida no momento em que um gatilho ocorrer, por ADR próprio, com avaliação registrada de licença, plataformas suportadas, tamanho, portabilidade para console e observabilidade. Este ADR não elege candidato, porque a avaliação depende dos targets que o gatilho trouxer.
+A camada concreta de janela, input e áudio está decidida pelo [ADR 0043](0043-native-diagnostic-host-backend.md): SDL3, como vendor em adapter de borda, fixado apenas quando um gatilho ocorrer.
 
 Código: `HOST_NATIVE_DIAGNOSTIC_NOT_AVAILABLE`, usado para classificar explicitamente qualquer evidência que exigiria esse host.
 
@@ -54,7 +54,7 @@ Código: `HOST_NATIVE_DIAGNOSTIC_NOT_AVAILABLE`, usado para classificar explicit
 
 ## Alternativas rejeitadas
 
-- **Escolher a camada nativa agora:** dependência de runtime com manutenção por plataforma para um host sem consumidor.
+- **Instalar e compilar a camada nativa agora:** dependência com manutenção por plataforma para um host sem consumidor; a escolha está registrada no ADR 0043, a adoção não.
 - **Remover o host do plano:** perderia a sonda de portabilidade que o port de console exige.
 - **Deixar o item aberto sem critério:** permite adição oportunista da dependência sob qualquer pretexto.
 - **Implementar um host nativo com renderer próprio fora dos contratos:** criaria segundo caminho de apresentação e de evidência.

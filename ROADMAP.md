@@ -238,7 +238,7 @@ Evidência atual: `game capture --raster` grava frame, `RenderedUiSnapshot` medi
 | Estado | `PARCIAL` |
 | Owners principais | kernel, Lua SDK, schemas, content compiler e presentation protocol |
 | Dependência | Fase 3 |
-| ADR de base | [ADR 0004](docs/adr/0004-lua-sandbox.md), [ADR 0016](docs/adr/0016-public-lua-sdk-layers-and-escape-hatches.md), [ADR 0017](docs/adr/0017-content-pack-compilation-and-migrations.md) e [ADR 0018](docs/adr/0018-numeric-determinism-and-rng-streams.md) |
+| ADR de base | [ADR 0004](docs/adr/0004-lua-sandbox.md), [ADR 0016](docs/adr/0016-public-lua-sdk-layers-and-escape-hatches.md), [ADR 0017](docs/adr/0017-content-pack-compilation-and-migrations.md), [ADR 0018](docs/adr/0018-numeric-determinism-and-rng-streams.md) e [ADR 0044](docs/adr/0044-approved-native-extension-process.md) |
 
 ### Objetivo
 
@@ -280,7 +280,7 @@ Uma sessão nova cria regras, conteúdo, tela, apresentação e cenário usando 
 | Estado | `PLANEJADA` |
 | Owners previstos | spatial runtime, world runtime e job system |
 | Dependência | Fase 4 |
-| ADR de base | [ADR 0018](docs/adr/0018-numeric-determinism-and-rng-streams.md) e [ADR 0019](docs/adr/0019-spatial-model-chunk-lifecycle-and-job-commit.md) |
+| ADR de base | [ADR 0018](docs/adr/0018-numeric-determinism-and-rng-streams.md), [ADR 0019](docs/adr/0019-spatial-model-chunk-lifecycle-and-job-commit.md), [ADR 0039](docs/adr/0039-entity-component-layer.md) e [ADR 0045](docs/adr/0045-wasm-threads-and-shared-memory.md) |
 
 ### Objetivo
 
@@ -321,7 +321,7 @@ O runtime gera, carrega, descarta e regenera chunks determinísticos; viagens lo
 | Estado | `PLANEJADA` |
 | Owners previstos | motion, physics adapters e mass runtime |
 | Dependência | Fase 5 |
-| ADR de base | [ADR 0021](docs/adr/0021-motion-and-physics-adapter-authority.md), [ADR 0022](docs/adr/0022-mass-runtime-storage-levels-and-budgets.md) e [ADR 0020](docs/adr/0020-presentation-buffers-and-wasm-memory.md) |
+| ADR de base | [ADR 0021](docs/adr/0021-motion-and-physics-adapter-authority.md), [ADR 0037](docs/adr/0037-physics-solver-selection.md), [ADR 0022](docs/adr/0022-mass-runtime-storage-levels-and-budgets.md), [ADR 0039](docs/adr/0039-entity-component-layer.md) e [ADR 0020](docs/adr/0020-presentation-buffers-and-wasm-memory.md) |
 
 ### Objetivo
 
@@ -371,7 +371,7 @@ A IA explica por que uma entidade não se moveu, um corpo atravessou um collider
 | Estado | `PARCIAL` |
 | Owners principais | kernel, storage e network runtime futuro |
 | Dependências | Fases 5 e 6 |
-| ADR de base | [ADR 0023](docs/adr/0023-world-persistence-and-region-storage.md) e [ADR 0024](docs/adr/0024-player-hosted-multiplayer-and-protocol-compatibility.md) |
+| ADR de base | [ADR 0023](docs/adr/0023-world-persistence-and-region-storage.md), [ADR 0024](docs/adr/0024-player-hosted-multiplayer-and-protocol-compatibility.md) e [ADR 0038](docs/adr/0038-network-transport-adapters.md) |
 
 ### Já entregue
 
@@ -416,7 +416,7 @@ Save local e mundial sobrevivem a crash e migration; replay encontra a primeira 
 | Estado | `PARCIAL` |
 | Owners principais | presentation protocol, renderer-three, UI renderer e hosts |
 | Dependências | Fases 3, 4, 5, 6 e 7 |
-| ADR de base | [ADR 0020](docs/adr/0020-presentation-buffers-and-wasm-memory.md), [ADR 0014](docs/adr/0014-declarative-ui-contracts-and-initial-renderer.md), [ADR 0015](docs/adr/0015-raster-capture-and-visual-baselines.md) e [ADR 0025](docs/adr/0025-audio-backends-voice-budgets-and-fallback.md) |
+| ADR de base | [ADR 0020](docs/adr/0020-presentation-buffers-and-wasm-memory.md), [ADR 0014](docs/adr/0014-declarative-ui-contracts-and-initial-renderer.md), [ADR 0040](docs/adr/0040-ui-framework-and-diegetic-ui.md), [ADR 0015](docs/adr/0015-raster-capture-and-visual-baselines.md) e [ADR 0025](docs/adr/0025-audio-backends-voice-budgets-and-fallback.md) |
 
 ### Já entregue
 
@@ -466,7 +466,7 @@ A IA diferencia objeto inexistente, fora da câmera, cullado, transparente, asse
 | Estado | `PLANEJADA` |
 | Owners previstos | construction runtime, geometry compiler e authoring toolkit |
 | Dependências | Fases 5, 6 e 8 |
-| ADR de base | [ADR 0026](docs/adr/0026-construction-graph-as-source-of-truth.md) |
+| ADR de base | [ADR 0026](docs/adr/0026-construction-graph-as-source-of-truth.md) e [ADR 0035](docs/adr/0035-construction-forge-style-grammars.md) |
 
 ### Objetivo
 
@@ -501,7 +501,7 @@ Mover uma parede reconstrói apenas a região necessária; undo/redo e replay re
 | Estado | `PLANEJADA` |
 | Owners previstos | ferramentas independentes de authoring/build time |
 | Dependências | Fases 4–9 conforme o Forge |
-| ADR de base | [ADR 0027](docs/adr/0027-forge-output-contract-and-authoring-boundary.md) |
+| ADR de base | [ADR 0027](docs/adr/0027-forge-output-contract-and-authoring-boundary.md) e as famílias [0032](docs/adr/0032-audio-forge-recipes-and-deterministic-renderer.md), [0033](docs/adr/0033-visual-forge-procedural-characters-and-generated-surfaces.md), [0034](docs/adr/0034-world-forge-textual-world-recipes.md), [0035](docs/adr/0035-construction-forge-style-grammars.md) e [0036](docs/adr/0036-physics-forge-collider-and-stability-recipes.md) |
 
 ### Contrato comum
 
@@ -555,7 +555,7 @@ Os cinco Forges produzem artefatos rastreáveis usados nas fixtures e preparados
 | Estado | `PARCIAL` |
 | Owners principais | CLI, harness, diagnósticos e benchmark registry |
 | Dependência | Gates de observabilidade das fases anteriores |
-| ADR de base | [ADR 0028](docs/adr/0028-diagnose-repair-verify-and-repair-classes.md), [ADR 0029](docs/adr/0029-benchmark-registry-profiles-and-baselines.md), [ADR 0030](docs/adr/0030-target-hardening-signing-and-distribution.md) e [ADR 0031](docs/adr/0031-native-diagnostic-host-trigger-and-criteria.md) |
+| ADR de base | [ADR 0028](docs/adr/0028-diagnose-repair-verify-and-repair-classes.md), [ADR 0029](docs/adr/0029-benchmark-registry-profiles-and-baselines.md), [ADR 0030](docs/adr/0030-target-hardening-signing-and-distribution.md), [ADR 0031](docs/adr/0031-native-diagnostic-host-trigger-and-criteria.md) e [ADR 0043](docs/adr/0043-native-diagnostic-host-backend.md) |
 
 ### Já entregue
 

@@ -2,7 +2,7 @@
 
 - Status: provisório
 - Data: 2026-07-24
-- Revisão: antes de adotar qualquer transporte de rede concreto
+- Revisão: antes de adicionar um transporte além dos aprovados pelo [ADR 0038](0038-network-transport-adapters.md)
 - Depende de: [ADR 0018](0018-numeric-determinism-and-rng-streams.md), [ADR 0019](0019-spatial-model-chunk-lifecycle-and-job-commit.md) e [ADR 0021](0021-motion-and-physics-adapter-authority.md)
 - Complementa: [ADR 0008](0008-mandatory-scale-and-procedural-capabilities.md)
 - Fecha: item "política de compatibilidade N/N-1 por protocolo" da seção 36 de [architecture.md](../../architecture.md)
@@ -36,7 +36,7 @@ Divergência é detectada por comparação de hash e localizada por cenário at�
 
 O protocolo é lógico e independente de transporte. O primeiro transporte é **local**, em processo ou loopback, porque é ele que roda em CI e em cenário reproduzível.
 
-WebRTC, Steam Networking, P2P de plataforma e UDP direto são adapters, cada um exigindo ADR próprio por serem dependência de runtime com implicações de licença, plataforma e privacidade. Relay é fallback de transporte e nunca servidor de gameplay: relay que interprete estado é violação de arquitetura, não otimização.
+Os transportes aprovados são decididos pelo [ADR 0038](0038-network-transport-adapters.md): loopback local, WebRTC DataChannel e Steam Networking, cada um como adapter. Relay é fallback de transporte e nunca servidor de gameplay: relay que interprete estado é violação de arquitetura, não otimização.
 
 ### Compatibilidade N/N-1
 

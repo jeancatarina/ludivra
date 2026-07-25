@@ -22,6 +22,8 @@
 | ENG-018 | alta | concluído | Adicionar captura raster e cenário visual do BrowserHost usando a fixture card roguelite ([ADR 0015](docs/adr/0015-raster-capture-and-visual-baselines.md)) |
 | ENG-019 | alta | concluído | Completar cache/watch incremental com invalidação explicável no Development Runner ([ADR 0013](docs/adr/0013-development-runner-cache-and-lifecycle.md)) |
 | ENG-020 | alta | concluído | Validar lifecycle, rebuild afetado e encerramento limpo do Development Runner ([ADR 0013](docs/adr/0013-development-runner-cache-and-lifecycle.md)) |
+| AUD-001 | alta | em andamento | Implementar o Audio Forge: receita JSONC, compilador determinístico, cache e `game audio` ([ADR 0032](docs/adr/0032-audio-forge-recipes-and-deterministic-renderer.md)) |
+| VIS-001 | média | planejado | Implementar o Visual Forge para humanoides estilizados ([ADR 0033](docs/adr/0033-visual-forge-procedural-characters-and-generated-surfaces.md)) |
 
 O P0 de operabilidade está concluído: contratos de UI versionados, captura raster com baseline, cache por família de artefato e lifecycle de processos com dono único. O roadmap canônico está em [ROADMAP.md](ROADMAP.md).
 
