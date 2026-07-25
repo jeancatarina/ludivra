@@ -9,7 +9,9 @@ enum class CommandKind : std::uint8_t {
   add_integer,
   play_audio,
   stop_audio,
-  spawn_effect
+  spawn_effect,
+  start_timer,
+  cancel_timer
 };
 
 struct GameplayCommand final {
@@ -32,6 +34,8 @@ class CommandBuffer final {
       std::int32_t x_milli,
       std::int32_t y_milli,
       std::int32_t z_milli);
+  void start_timer(std::uint32_t key, std::uint64_t ticks);
+  void cancel_timer(std::uint32_t key);
   void clear() noexcept;
   [[nodiscard]] const std::vector<GameplayCommand>& entries() const noexcept;
 

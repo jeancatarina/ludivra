@@ -23,6 +23,14 @@ void CommandBuffer::spawn_effect(
   entries_.push_back({CommandKind::spawn_effect, id, intensity_milli, x_milli, y_milli, z_milli});
 }
 
+void CommandBuffer::start_timer(const std::uint32_t key, const std::uint64_t ticks) {
+  entries_.push_back({CommandKind::start_timer, key, static_cast<std::int64_t>(ticks), 0, 0, 0});
+}
+
+void CommandBuffer::cancel_timer(const std::uint32_t key) {
+  entries_.push_back({CommandKind::cancel_timer, key, 0, 0, 0, 0});
+}
+
 void CommandBuffer::clear() noexcept {
   entries_.clear();
 }

@@ -1,6 +1,7 @@
 add_library(ludivra_kernel STATIC
   src/command_buffer.cpp
   src/fixed_point.cpp
+  src/logical_timers.cpp
   src/lua_sandbox.cpp
   src/random_streams.cpp
   src/runtime.cpp

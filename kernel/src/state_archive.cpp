@@ -11,7 +11,9 @@ namespace {
 
 constexpr std::array<std::uint8_t, 4> save_magic{'L', 'D', 'S', 'V'};
 constexpr std::array<std::uint8_t, 4> replay_magic{'L', 'D', 'R', 'P'};
-constexpr std::uint32_t archive_version = 2;
+constexpr std::uint32_t archive_version = 3;
+/// Version 2 predates logical timers and migrates to an empty timer set.
+constexpr std::uint32_t archive_version_without_timers = 2;
 /// Version 1 predates PRNG streams. It is still readable and migrates to an empty
 /// stream set, which is exactly what a save written before streams existed means.
 constexpr std::uint32_t archive_version_without_streams = 1;
@@ -143,7 +145,28 @@ class ArchiveReader final {
 
 bool read_header(ArchiveReader& reader, const std::array<std::uint8_t, 4>& magic, std::uint32_t& version) {
   return reader.verify_checksum() && reader.magic(magic) && reader.u32(version) &&
-      (version == archive_version || version == archive_version_without_streams);
+      (version == archive_version || version == archive_version_without_timers ||
+       version == archive_version_without_streams);
+}
+
+void write_timers(ArchiveWriter& writer, const std::vector<LogicalTimer>& timers) {
+  writer.u32(static_cast<std::uint32_t>(timers.size()));
+  for (const auto& timer : timers) {
+    writer.u32(timer.key);
+    writer.u64(timer.remaining_ticks);
+  }
+}
+
+bool read_timers(ArchiveReader& reader, const std::uint32_t version, std::vector<LogicalTimer>& timers) {
+  if (version != archive_version) return true;
+  std::uint32_t count = 0;
+  if (!reader.u32(count) || count > maximum_stream_entries) return false;
+  for (std::uint32_t index = 0; index < count; ++index) {
+    LogicalTimer timer{};
+    if (!reader.u32(timer.key) || !reader.u64(timer.remaining_ticks)) return false;
+    timers.push_back(timer);
+  }
+  return true;
 }
 
 void write_streams(ArchiveWriter& writer, const std::vector<NamedRandomStream>& streams) {
@@ -194,6 +217,7 @@ std::vector<std::uint8_t> encode_save(const SavedState& state) {
     writer.u64(static_cast<std::uint64_t>(value));
   }
   write_streams(writer, state.streams);
+  write_timers(writer, state.timers);
   return writer.finish();
 }
 
@@ -217,7 +241,8 @@ bool decode_save(const std::span<const std::uint8_t> bytes, SavedState& state) {
     }
     decoded.integers.emplace(key, static_cast<std::int64_t>(value));
   }
-  if (!read_streams(reader, version, decoded.streams) || !reader.complete()) {
+  if (!read_streams(reader, version, decoded.streams) ||
+      !read_timers(reader, version, decoded.timers) || !reader.complete()) {
     return false;
   }
   state = std::move(decoded);
@@ -244,6 +269,7 @@ std::vector<std::uint8_t> encode_replay(const ReplayState& replay) {
     writer.u64(static_cast<std::uint64_t>(value));
   }
   write_streams(writer, replay.initial_state.streams);
+  write_timers(writer, replay.initial_state.timers);
   writer.u64(replay.expected_tick);
   writer.u64(replay.expected_hash);
   writer.u32(static_cast<std::uint32_t>(replay.frames.size()));
@@ -285,6 +311,7 @@ bool decode_replay(const std::span<const std::uint8_t> bytes, ReplayState& repla
     decoded.initial_state.integers.emplace(key, static_cast<std::int64_t>(value));
   }
   if (!read_streams(reader, version, decoded.initial_state.streams) ||
+      !read_timers(reader, version, decoded.initial_state.timers) ||
       !reader.u64(decoded.expected_tick) ||
       !reader.u64(decoded.expected_hash) || !reader.u32(frame_count) ||
       frame_count > maximum_archive_entries) {

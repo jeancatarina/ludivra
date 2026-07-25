@@ -183,11 +183,11 @@ export class LudivraRuntime {
   ) {}
 
   /**
-   * Declares the semantic name of an integer state before gameplay loads. It is
-   * what lets a script read `ctx.state:get("energy")` instead of repeating the
-   * numeric key the manifest already owns.
+   * Declares the semantic name of a state or timer before gameplay loads. It is
+   * what lets a script use `ctx.state:get("energy")` or
+   * `ctx.timers:start("attack.windup", 12)` instead of repeating manifest keys.
    */
-  declareStateSymbol(name: string, key: number): void {
+  declareSymbol(kind: "state" | "timer", name: string, key: number): void {
     const bytes = new TextEncoder().encode(name);
     const pointer = this.module._malloc(bytes.length);
     try {
@@ -195,8 +195,9 @@ export class LudivraRuntime {
       requireOk(
         this.module,
         "state symbol declaration",
-        call(this.module, "ludivra_runtime_declare_state_symbol", [
+        call(this.module, "ludivra_runtime_declare_symbol", [
           this.liveHandle(),
+          kind === "state" ? 0 : 1,
           pointer,
           bytes.length,
           key

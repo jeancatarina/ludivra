@@ -251,7 +251,10 @@ async function handle(request: ControlRequest): Promise<ControlResponse> {
       // Same declaration the BrowserHost makes: both hosts resolve the manifest
       // symbols, so a script behaves identically headless and on screen.
       for (const definition of manifest.inspection.integerStates) {
-        runtime.declareStateSymbol(definition.id, definition.key);
+        runtime.declareSymbol("state", definition.id, definition.key);
+      }
+      for (const definition of manifest.timers ?? []) {
+        runtime.declareSymbol("timer", definition.id, definition.key);
       }
       runtime.loadGameplay(composedGameplaySource);
       scenarioId = payload.scenarioId;

@@ -21,7 +21,7 @@ Runtime::Runtime(const RuntimeConfig config)
   mix_u32(state_hash_, config.tick_rate_hz);
   mix_u32(state_hash_, config.max_pending_inputs);
   mix_u64(state_hash_, config.seed);
-  replay_initial_state_ = {tick_, state_hash_, integer_state_, random_streams_.snapshot()};
+  replay_initial_state_ = {tick_, state_hash_, integer_state_, random_streams_.snapshot(), timers_.snapshot()};
 }
 
 RuntimeError Runtime::submit_input(const LogicalInput input) {
@@ -63,14 +63,25 @@ RuntimeError Runtime::load_gameplay(const std::string_view source) {
   return RuntimeError::none;
 }
 
-RuntimeError Runtime::declare_state_symbol(const std::string_view name, const std::uint32_t key) {
+RuntimeError Runtime::declare_symbol(
+    const SymbolKind kind,
+    const std::string_view name,
+    const std::uint32_t key) {
   const std::string symbol(name);
-  const auto existing = state_symbols_.find(symbol);
-  if (existing != state_symbols_.end() && existing->second != key) {
+  auto& table = symbols_.of(kind);
+  const auto existing = table.find(symbol);
+  if (existing != table.end() && existing->second != key) {
     return RuntimeError::symbol_conflict;
   }
-  state_symbols_[symbol] = key;
+  table[symbol] = key;
   return RuntimeError::none;
+}
+
+std::string Runtime::timer_name(const std::uint32_t key) const {
+  for (const auto& [name, declared] : symbols_.timer) {
+    if (declared == key) return name;
+  }
+  return {};
 }
 
 std::int64_t Runtime::integer_state(const std::uint32_t key) const noexcept {
@@ -91,7 +102,7 @@ void Runtime::clear_presentation_events() noexcept {
 }
 
 std::vector<std::uint8_t> Runtime::save() const {
-  return encode_save({tick_, state_hash_, integer_state_, random_streams_.snapshot()});
+  return encode_save({tick_, state_hash_, integer_state_, random_streams_.snapshot(), timers_.snapshot()});
 }
 
 RuntimeError Runtime::load_save(const std::span<const std::uint8_t> bytes) {
@@ -109,6 +120,7 @@ RuntimeError Runtime::load_save(const std::span<const std::uint8_t> bytes) {
   // A save written before streams existed migrates to the seeded initial set.
   if (decoded.streams.empty()) random_streams_.reset(config_.seed);
   else random_streams_.restore(decoded.streams);
+  timers_.restore(decoded.timers);
   replay_initial_state_ = std::move(next_replay_state);
   replay_frames_.clear();
   commands_.clear();
@@ -135,6 +147,8 @@ RuntimeError Runtime::verify_replay(const std::span<const std::uint8_t> bytes) c
   verification.integer_state_ = decoded.initial_state.integers;
   if (decoded.initial_state.streams.empty()) verification.random_streams_.reset(decoded.seed);
   else verification.random_streams_.restore(decoded.initial_state.streams);
+  verification.timers_.restore(decoded.initial_state.timers);
+  verification.symbols_ = symbols_;
   verification.replay_initial_state_ = decoded.initial_state;
   for (const auto& frame : decoded.frames) {
     for (const auto& input : frame.inputs) {
@@ -171,7 +185,29 @@ void Runtime::mix_u64(std::uint64_t& hash, const std::uint64_t value) noexcept {
   }
 }
 
+RuntimeError Runtime::fire_expired_timers() {
+  const auto expired = timers_.advance();
+  if (expired.empty()) return RuntimeError::none;
+  commands_.clear();
+  for (const auto key : expired) {
+    const auto name = timer_name(key);
+    if (name.empty()) continue;
+    if (!lua_.on_timer(name, integer_state_, symbols_, timers_, random_streams_, commands_)) {
+      commands_.clear();
+      return RuntimeError::script_failure;
+    }
+  }
+  const auto result = apply_commands();
+  commands_.clear();
+  return result;
+}
+
 RuntimeError Runtime::commit_tick() {
+  // Timers expire before the inputs of the tick they land on, so a script that
+  // both receives an expiry and an input sees them in a declared order.
+  const auto timer_result = fire_expired_timers();
+  if (timer_result != RuntimeError::none) return timer_result;
+
   std::sort(pending_inputs_.begin(), pending_inputs_.end(), [](const auto& left, const auto& right) {
     return std::tie(left.sequence, left.action_id, left.value_milli) <
            std::tie(right.sequence, right.action_id, right.value_milli);
@@ -182,7 +218,8 @@ RuntimeError Runtime::commit_tick() {
     if (!lua_.on_input(
             {input.action_id, input.value_milli, input.sequence},
             integer_state_,
-            state_symbols_,
+            symbols_,
+            timers_,
             random_streams_,
             commands_)) {
       commands_.clear();
@@ -220,6 +257,11 @@ RuntimeError Runtime::commit_tick() {
     mix_u32(state_hash_, input.action_id);
     mix_u32(state_hash_, static_cast<std::uint32_t>(input.value_milli));
   }
+  for (const auto& timer : timers_.snapshot()) {
+    mix_byte(state_hash_, 0xB1U);
+    mix_u32(state_hash_, timer.key);
+    mix_u64(state_hash_, timer.remaining_ticks);
+  }
   for (const auto& stream : random_streams_.snapshot()) {
     mix_byte(state_hash_, 0xD7U);
     mix_u64(state_hash_, random_domain_hash(stream.domain));
@@ -232,6 +274,7 @@ RuntimeError Runtime::commit_tick() {
 
 RuntimeError Runtime::apply_commands() {
   IntegerState committed = integer_state_;
+  LogicalTimerStore committed_timers = timers_;
   auto committed_events = presentation_events_;
   auto committed_sequence = next_presentation_sequence_;
   std::uint64_t committed_hash = state_hash_;
@@ -250,6 +293,22 @@ RuntimeError Runtime::apply_commands() {
         mix_byte(committed_hash, 0xC1U);
         mix_u32(committed_hash, command.id);
         mix_u64(committed_hash, static_cast<std::uint64_t>(value));
+        break;
+      }
+      case CommandKind::start_timer: {
+        committed_timers.start(command.id, static_cast<std::uint64_t>(command.value));
+        mix_byte(committed_hash, 0xB2U);
+        mix_u32(committed_hash, command.id);
+        mix_u64(committed_hash, static_cast<std::uint64_t>(command.value));
+        break;
+      }
+      case CommandKind::cancel_timer: {
+        // Cancelling a timer that is not running is a no-op, not an error: a rule
+        // may cancel defensively without knowing the current state.
+        if (committed_timers.cancel(command.id)) {
+          mix_byte(committed_hash, 0xB3U);
+          mix_u32(committed_hash, command.id);
+        }
         break;
       }
       case CommandKind::play_audio:
@@ -279,6 +338,7 @@ RuntimeError Runtime::apply_commands() {
     }
   }
   integer_state_.swap(committed);
+  timers_ = committed_timers;
   presentation_events_.swap(committed_events);
   next_presentation_sequence_ = committed_sequence;
   state_hash_ = committed_hash;

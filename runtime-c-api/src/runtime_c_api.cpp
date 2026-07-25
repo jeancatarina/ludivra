@@ -230,16 +230,21 @@ ludivra_result ludivra_runtime_load_gameplay(
   }
 }
 
-ludivra_result ludivra_runtime_declare_state_symbol(
+ludivra_result ludivra_runtime_declare_symbol(
     ludivra_runtime* runtime,
+    const ludivra_symbol_kind kind,
     const char* name,
     const uint32_t name_size,
     const uint32_t key) {
-  if (runtime == nullptr || name == nullptr || name_size == 0U || name_size > 128U) {
+  if (runtime == nullptr || name == nullptr || name_size == 0U || name_size > 128U ||
+      (kind != LUDIVRA_SYMBOL_STATE && kind != LUDIVRA_SYMBOL_TIMER)) {
     return LUDIVRA_ERROR_INVALID_ARGUMENT;
   }
   try {
-    return to_public_result(runtime->value.declare_state_symbol({name, name_size}, key));
+    const auto symbol_kind = kind == LUDIVRA_SYMBOL_STATE
+        ? ludivra::kernel::SymbolKind::state
+        : ludivra::kernel::SymbolKind::timer;
+    return to_public_result(runtime->value.declare_symbol(symbol_kind, {name, name_size}, key));
   } catch (const std::bad_alloc&) {
     return LUDIVRA_ERROR_ALLOCATION;
   } catch (...) {

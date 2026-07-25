@@ -8,7 +8,7 @@
 extern "C" {
 #endif
 
-#define LUDIVRA_RUNTIME_ABI_VERSION 2U
+#define LUDIVRA_RUNTIME_ABI_VERSION 3U
 
 typedef struct ludivra_runtime ludivra_runtime;
 
@@ -85,10 +85,16 @@ ludivra_result ludivra_runtime_load_gameplay(
     const char* source,
     uint32_t source_size);
 
-/* Declares the semantic name of an integer state before gameplay loads, so scripts
-   read state by name instead of repeating the manifest keys. */
-ludivra_result ludivra_runtime_declare_state_symbol(
+typedef enum ludivra_symbol_kind {
+  LUDIVRA_SYMBOL_STATE = 0,
+  LUDIVRA_SYMBOL_TIMER = 1
+} ludivra_symbol_kind;
+
+/* Declares the semantic name of a state or timer before gameplay loads, so scripts
+   use names instead of repeating the manifest keys. */
+ludivra_result ludivra_runtime_declare_symbol(
     ludivra_runtime* runtime,
+    ludivra_symbol_kind kind,
     const char* name,
     uint32_t name_size,
     uint32_t key);

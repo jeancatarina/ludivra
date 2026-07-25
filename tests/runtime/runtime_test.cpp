@@ -77,6 +77,10 @@ std::string symbol_gameplay() {
   return fixture("symbols.lua");
 }
 
+std::string timer_gameplay() {
+  return fixture("timers.lua");
+}
+
 std::vector<uint8_t> save_archive(TestContext& context, ludivra_runtime* runtime) {
   uint32_t size = 0;
   context.expect(ludivra_runtime_save_size(runtime, &size) == LUDIVRA_OK, "save size is available");
@@ -103,7 +107,7 @@ std::vector<uint8_t> replay_archive(TestContext& context, ludivra_runtime* runti
 
 int main() {
   TestContext context;
-  context.expect(ludivra_runtime_abi_version() == 2U, "ABI version is stable");
+  context.expect(ludivra_runtime_abi_version() == 3U, "ABI version is stable");
   context.expect(
       ludivra_runtime_create(nullptr, nullptr) == LUDIVRA_ERROR_INVALID_ARGUMENT,
       "invalid creation arguments are rejected");
@@ -151,13 +155,13 @@ int main() {
     // failing the tick instead of silently reading key zero.
     auto* named = create_runtime(context);
     context.expect(
-        ludivra_runtime_declare_state_symbol(named, "score", 5U, 1U) == LUDIVRA_OK,
+        ludivra_runtime_declare_symbol(named, LUDIVRA_SYMBOL_STATE, "score", 5U, 1U) == LUDIVRA_OK,
         "state symbol is declared");
     context.expect(
-        ludivra_runtime_declare_state_symbol(named, "score", 5U, 1U) == LUDIVRA_OK,
+        ludivra_runtime_declare_symbol(named, LUDIVRA_SYMBOL_STATE, "score", 5U, 1U) == LUDIVRA_OK,
         "declaring the same symbol twice is idempotent");
     context.expect(
-        ludivra_runtime_declare_state_symbol(named, "score", 5U, 2U) == LUDIVRA_ERROR_SYMBOL_CONFLICT,
+        ludivra_runtime_declare_symbol(named, LUDIVRA_SYMBOL_STATE, "score", 5U, 2U) == LUDIVRA_ERROR_SYMBOL_CONFLICT,
         "redeclaring a symbol with another key is a conflict");
     const auto symbol_source = symbol_gameplay();
     context.expect(
@@ -172,6 +176,72 @@ int main() {
         ludivra_runtime_step(named, 1U) == LUDIVRA_ERROR_SCRIPT,
         "an undeclared symbol fails the tick");
     ludivra_runtime_destroy(named);
+  }
+
+  {
+    // ADR 0016 layer 1 timers: logical ticks, observable expiry and cancellation.
+    auto* timed = create_runtime(context);
+    context.expect(
+        ludivra_runtime_declare_symbol(timed, LUDIVRA_SYMBOL_STATE, "score", 5U, 1U) == LUDIVRA_OK,
+        "timer scenario declares its state");
+    context.expect(
+        ludivra_runtime_declare_symbol(timed, LUDIVRA_SYMBOL_TIMER, "attack.windup", 13U, 7U) == LUDIVRA_OK,
+        "timer symbol is declared");
+    const auto timer_source = timer_gameplay();
+    context.expect(
+        ludivra_runtime_load_gameplay(
+            timed, timer_source.data(), static_cast<uint32_t>(timer_source.size())) == LUDIVRA_OK,
+        "timer gameplay loads");
+
+    submit(context, timed, 1U, 0, 1U);
+    context.expect(ludivra_runtime_step(timed, 1U) == LUDIVRA_OK, "timer starts");
+    submit(context, timed, 3U, 0, 2U);
+    context.expect(ludivra_runtime_step(timed, 1U) == LUDIVRA_OK, "remaining is readable");
+    context.expect(integer_state(context, timed, 1U) == 2, "remaining counts down in logical ticks");
+
+    // Two more ticks reach the expiry, which fires on_timer once.
+    context.expect(ludivra_runtime_step(timed, 2U) == LUDIVRA_OK, "timer reaches its expiry");
+    context.expect(integer_state(context, timed, 1U) == 102, "expiry fires exactly once");
+    context.expect(ludivra_runtime_step(timed, 3U) == LUDIVRA_OK, "later ticks do not refire");
+    context.expect(integer_state(context, timed, 1U) == 102, "an expired timer is gone");
+
+    // A cancelled timer never fires, and remaining reports its absence.
+    submit(context, timed, 1U, 0, 3U);
+    context.expect(ludivra_runtime_step(timed, 1U) == LUDIVRA_OK, "timer restarts");
+    submit(context, timed, 2U, 0, 4U);
+    context.expect(ludivra_runtime_step(timed, 1U) == LUDIVRA_OK, "timer is cancelled");
+    submit(context, timed, 3U, 0, 5U);
+    context.expect(ludivra_runtime_step(timed, 1U) == LUDIVRA_OK, "remaining after cancel is readable");
+    context.expect(integer_state(context, timed, 1U) == 101, "cancelled timer reports no remaining");
+    context.expect(ludivra_runtime_step(timed, 5U) == LUDIVRA_OK, "cancelled timer never fires");
+    context.expect(integer_state(context, timed, 1U) == 101, "cancelled timer stayed cancelled");
+
+    // A pending timer survives save and load.
+    submit(context, timed, 1U, 0, 6U);
+    context.expect(ludivra_runtime_step(timed, 1U) == LUDIVRA_OK, "timer starts before saving");
+    const auto timer_archive = save_archive(context, timed);
+    auto* resumed = create_runtime(context);
+    context.expect(
+        ludivra_runtime_declare_symbol(resumed, LUDIVRA_SYMBOL_STATE, "score", 5U, 1U) == LUDIVRA_OK,
+        "resumed runtime declares its state");
+    context.expect(
+        ludivra_runtime_declare_symbol(resumed, LUDIVRA_SYMBOL_TIMER, "attack.windup", 13U, 7U) == LUDIVRA_OK,
+        "resumed runtime declares its timer");
+    context.expect(
+        ludivra_runtime_load_gameplay(
+            resumed, timer_source.data(), static_cast<uint32_t>(timer_source.size())) == LUDIVRA_OK,
+        "resumed gameplay loads");
+    context.expect(
+        ludivra_runtime_load_save(
+            resumed, timer_archive.data(), static_cast<uint32_t>(timer_archive.size())) == LUDIVRA_OK,
+        "save with a pending timer loads");
+    context.expect(ludivra_runtime_step(resumed, 3U) == LUDIVRA_OK, "resumed run reaches the expiry");
+    context.expect(
+        integer_state(context, resumed, 1U) == integer_state(context, timed, 1U) + 100,
+        "the restored timer fired after the remaining ticks");
+
+    ludivra_runtime_destroy(resumed);
+    ludivra_runtime_destroy(timed);
   }
 
   {

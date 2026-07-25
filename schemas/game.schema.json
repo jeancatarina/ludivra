@@ -68,6 +68,19 @@
         }
       }
     },
+    "timers": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "key"],
+        "properties": {
+          "id": { "type": "string", "pattern": "^[a-z][a-z0-9.-]*$" },
+          "key": { "type": "integer", "minimum": 1 }
+        }
+      }
+    },
     "inspection": {
       "type": "object",
       "additionalProperties": false,

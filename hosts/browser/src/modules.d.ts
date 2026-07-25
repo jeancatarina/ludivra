@@ -4,6 +4,7 @@ declare module "virtual:ludivra-game" {
     inspection: {
       integerStates: Array<{ id: string; label: string; key: number }>;
     };
+    timers?: Array<{ id: string; key: number }>;
     inputs: Array<{
       id: string;
       label: string;

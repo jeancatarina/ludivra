@@ -1,5 +1,6 @@
 #pragma once
 
+#include "logical_timers.hpp"
 #include "random_streams.hpp"
 
 #include <cstdint>
@@ -28,6 +29,9 @@ struct SavedState final {
   /// Stream positions travel with the state: a replay that restored integers but
   /// not the PRNG position would diverge on the first draw.
   std::vector<NamedRandomStream> streams;
+  /// Timers are authoritative too: restoring without them would drop a pending
+  /// expiry that the original run was counting on.
+  std::vector<LogicalTimer> timers;
 };
 
 struct ReplayState final {

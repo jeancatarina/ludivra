@@ -21,7 +21,8 @@ constexpr char execution_context_key = 0;
 
 struct ExecutionContext final {
   const IntegerState* state;
-  const StateSymbolTable* symbols;
+  const SymbolTables* symbols;
+  const LogicalTimerStore* timers;
   RandomStreamRegistry* random_streams;
   CommandBuffer* commands;
 };
@@ -115,10 +116,10 @@ int commands_spawn_effect(lua_State* state) {
 
 /// Resolves a declared symbol. An unknown name fails the tick with a stable
 /// message instead of silently reading key zero.
-std::uint32_t resolved_symbol(lua_State* state, const int index) {
+std::uint32_t resolved_symbol(lua_State* state, const int index, const SymbolKind kind) {
   std::size_t length = 0;
   const char* text = luaL_checklstring(state, index, &length);
-  const auto& symbols = *context(state).symbols;
+  const auto& symbols = context(state).symbols->of(kind);
   const auto found = symbols.find(std::string(text, length));
   if (found == symbols.end()) {
     luaL_error(state, "SDK_SYMBOL_UNKNOWN: %s", text);
@@ -127,7 +128,7 @@ std::uint32_t resolved_symbol(lua_State* state, const int index) {
 }
 
 int state_get(lua_State* state) {
-  const auto key = resolved_symbol(state, 2);
+  const auto key = resolved_symbol(state, 2, SymbolKind::state);
   const auto& values = *context(state).state;
   const auto found = values.find(key);
   lua_pushinteger(state, found == values.end() ? 0 : found->second);
@@ -135,7 +136,7 @@ int state_get(lua_State* state) {
 }
 
 int commands_add(lua_State* state) {
-  const auto key = resolved_symbol(state, 2);
+  const auto key = resolved_symbol(state, 2, SymbolKind::state);
   const auto value = luaL_checkinteger(state, 3);
   try {
     context(state).commands->add_integer(key, value);
@@ -143,6 +144,45 @@ int commands_add(lua_State* state) {
     return luaL_error(state, "unable to allocate state command");
   }
   return 0;
+}
+
+/// Starts or restarts a timer measured in logical ticks. Zero ticks is refused:
+/// an immediate expiry is a call, not a timer.
+int timers_start(lua_State* state) {
+  const auto key = resolved_symbol(state, 2, SymbolKind::timer);
+  const auto ticks = luaL_checkinteger(state, 3);
+  if (ticks <= 0) {
+    return luaL_argerror(state, 3, "timer ticks must be positive");
+  }
+  try {
+    context(state).commands->start_timer(key, static_cast<std::uint64_t>(ticks));
+  } catch (...) {
+    return luaL_error(state, "unable to allocate timer command");
+  }
+  return 0;
+}
+
+int timers_cancel(lua_State* state) {
+  const auto key = resolved_symbol(state, 2, SymbolKind::timer);
+  try {
+    context(state).commands->cancel_timer(key);
+  } catch (...) {
+    return luaL_error(state, "unable to allocate timer command");
+  }
+  return 0;
+}
+
+/// Remaining ticks, or nil when the timer is not running. Cancellation and expiry
+/// are therefore observable from the script itself.
+int timers_remaining(lua_State* state) {
+  const auto key = resolved_symbol(state, 2, SymbolKind::timer);
+  const auto remaining = context(state).timers->remaining(key);
+  if (!remaining.has_value()) {
+    lua_pushnil(state);
+    return 1;
+  }
+  lua_pushinteger(state, static_cast<lua_Integer>(*remaining));
+  return 1;
 }
 
 std::string_view checked_domain(lua_State* state, const int index) {
@@ -265,6 +305,14 @@ void push_context_table(lua_State* state) {
   lua_pushcfunction(state, fixed_rescale_binding);
   lua_setfield(state, -2, "rescale");
   lua_setfield(state, -2, "fixed");
+  lua_createtable(state, 0, 3);
+  lua_pushcfunction(state, timers_start);
+  lua_setfield(state, -2, "start");
+  lua_pushcfunction(state, timers_cancel);
+  lua_setfield(state, -2, "cancel");
+  lua_pushcfunction(state, timers_remaining);
+  lua_setfield(state, -2, "remaining");
+  lua_setfield(state, -2, "timers");
 }
 
 void push_input_table(lua_State* state, const ScriptInput& input) {
@@ -349,19 +397,57 @@ bool LuaSandbox::load(const std::string_view source) {
 bool LuaSandbox::on_input(
     const ScriptInput& input,
     const IntegerState& state,
-    const StateSymbolTable& symbols,
+    const SymbolTables& symbols,
+    const LogicalTimerStore& timers,
     RandomStreamRegistry& random_streams,
     CommandBuffer& commands) {
   if (behavior_reference_ == LUA_NOREF) {
     return true;
   }
-  ExecutionContext execution_context{&state, &symbols, &random_streams, &commands};
+  ExecutionContext execution_context{&state, &symbols, &timers, &random_streams, &commands};
   set_context(state_, &execution_context);
   lua_rawgeti(state_, LUA_REGISTRYINDEX, behavior_reference_);
   lua_getfield(state_, -1, "on_input");
   lua_remove(state_, -2);
   push_context_table(state_);
   push_input_table(state_, input);
+  lua_sethook(state_, budget_hook, LUA_MASKCOUNT, instruction_budget);
+  const int result = lua_pcall(state_, 2, 0, 0);
+  lua_sethook(state_, nullptr, 0, 0);
+  set_context(state_, nullptr);
+  if (result != LUA_OK) {
+    last_error_ = lua_tostring(state_, -1);
+    lua_pop(state_, 1);
+    return false;
+  }
+  return true;
+}
+
+bool LuaSandbox::on_timer(
+    const std::string_view timer_name,
+    const IntegerState& state,
+    const SymbolTables& symbols,
+    const LogicalTimerStore& timers,
+    RandomStreamRegistry& random_streams,
+    CommandBuffer& commands) {
+  if (behavior_reference_ == LUA_NOREF) {
+    return true;
+  }
+  ExecutionContext execution_context{&state, &symbols, &timers, &random_streams, &commands};
+  set_context(state_, &execution_context);
+  lua_rawgeti(state_, LUA_REGISTRYINDEX, behavior_reference_);
+  lua_getfield(state_, -1, "on_timer");
+  if (lua_isnil(state_, -1)) {
+    // A module without on_timer simply ignores expirations.
+    lua_pop(state_, 2);
+    set_context(state_, nullptr);
+    return true;
+  }
+  lua_remove(state_, -2);
+  push_context_table(state_);
+  lua_createtable(state_, 0, 1);
+  lua_pushlstring(state_, timer_name.data(), timer_name.size());
+  lua_setfield(state_, -2, "timer");
   lua_sethook(state_, budget_hook, LUA_MASKCOUNT, instruction_budget);
   const int result = lua_pcall(state_, 2, 0, 0);
   lua_sethook(state_, nullptr, 0, 0);

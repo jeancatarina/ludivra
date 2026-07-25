@@ -65,7 +65,7 @@ class Runtime final {
   /// Declares the semantic name of an integer state, so gameplay stops repeating
   /// the numeric keys the manifest already owns. Declaring twice with different
   /// keys is a defect, not a redefinition.
-  [[nodiscard]] RuntimeError declare_state_symbol(std::string_view name, std::uint32_t key);
+  [[nodiscard]] RuntimeError declare_symbol(SymbolKind kind, std::string_view name, std::uint32_t key);
   [[nodiscard]] std::int64_t integer_state(std::uint32_t key) const noexcept;
   [[nodiscard]] std::vector<std::uint8_t> save() const;
   [[nodiscard]] RuntimeError load_save(std::span<const std::uint8_t> bytes);
@@ -80,6 +80,8 @@ class Runtime final {
   static void mix_u32(std::uint64_t& hash, std::uint32_t value) noexcept;
   static void mix_u64(std::uint64_t& hash, std::uint64_t value) noexcept;
   [[nodiscard]] RuntimeError commit_tick();
+  [[nodiscard]] RuntimeError fire_expired_timers();
+  [[nodiscard]] std::string timer_name(std::uint32_t key) const;
   [[nodiscard]] RuntimeError apply_commands();
 
   RuntimeConfig config_;
@@ -88,7 +90,8 @@ class Runtime final {
   std::uint32_t max_pending_inputs_;
   std::vector<LogicalInput> pending_inputs_;
   IntegerState integer_state_;
-  StateSymbolTable state_symbols_;
+  SymbolTables symbols_;
+  LogicalTimerStore timers_;
   RandomStreamRegistry random_streams_;
   CommandBuffer commands_;
   LuaSandbox lua_;

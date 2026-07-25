@@ -51,7 +51,10 @@ runtimeStarted = true;
 // The manifest owns the numeric keys; declaring them here is what lets gameplay
 // read state by name.
 for (const definition of manifest.inspection.integerStates) {
-  runtime.declareStateSymbol(definition.id, definition.key);
+  runtime.declareSymbol("state", definition.id, definition.key);
+}
+for (const definition of manifest.timers ?? []) {
+  runtime.declareSymbol("timer", definition.id, definition.key);
 }
 const boundContentDocuments = [createGameplayManifestDocument(manifest), ...contentDocuments];
 runtime.loadGameplay(composeGameplaySource(gameplaySource, boundContentDocuments));

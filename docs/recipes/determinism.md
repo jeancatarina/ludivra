@@ -38,6 +38,29 @@ Um nome não declarado falha o tick com `SDK_SYMBOL_UNKNOWN`, em vez de ler a
 chave zero em silêncio. `ctx.query:get_i64` e `ctx.commands:add_i64` continuam
 existindo para a camada 0.
 
+## Timers em tempo lógico
+
+Timers contam ticks, nunca milissegundos de relógio. O manifest declara o nome:
+
+```jsonc
+"timers": [{ "id": "attack.windup", "key": 1 }]
+```
+
+```lua
+ctx.timers:start("attack.windup", 12)   -- reinicia se já estiver rodando
+ctx.timers:cancel("attack.windup")
+local faltam = ctx.timers:remaining("attack.windup")  -- nil quando não roda
+
+-- A expiração chega pelo callback opcional do módulo.
+on_timer = function(ctx, event)
+  if event.timer == "attack.windup" then ... end
+end
+```
+
+Expirações acontecem **antes** dos inputs do tick em que caem, e timers que
+expiram no mesmo tick disparam em ordem de chave. Timer pendente entra no hash e
+viaja no save, então retomar um jogo salvo retoma a contagem em vez de perdê-la.
+
 ## Aritmética com escala declarada
 
 ```lua
