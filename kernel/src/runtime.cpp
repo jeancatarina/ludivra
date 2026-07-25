@@ -1,4 +1,6 @@
 #include "runtime.hpp"
+
+#include "fixed_point.hpp"
 #include "generated/presentation_events.hpp"
 
 #include <algorithm>
@@ -212,11 +214,12 @@ RuntimeError Runtime::apply_commands() {
       case CommandKind::add_integer: {
         const auto found = committed.find(command.id);
         const auto current = found == committed.end() ? 0 : found->second;
-        if ((command.value > 0 && current > std::numeric_limits<std::int64_t>::max() - command.value) ||
-            (command.value < 0 && current < std::numeric_limits<std::int64_t>::min() - command.value)) {
+        // One owner for the overflow rule: saturation is never a result.
+        const auto sum = fixed_add(current, command.value);
+        if (sum.error != FixedError::none) {
           return RuntimeError::integer_overflow;
         }
-        const auto value = current + command.value;
+        const auto value = sum.value;
         committed[command.id] = value;
         mix_byte(committed_hash, 0xC1U);
         mix_u32(committed_hash, command.id);

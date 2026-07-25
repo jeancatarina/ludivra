@@ -27,5 +27,6 @@ add_subdirectory(hosts/native-headless)
 
 if(LUDIVRA_BUILD_TESTS)
   enable_testing()
+  add_subdirectory(tests/kernel)
   add_subdirectory(tests/runtime)
 endif()

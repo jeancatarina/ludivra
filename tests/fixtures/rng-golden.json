@@ -1,0 +1,12 @@
+{
+  "schemaVersion": 1,
+  "rootSeed": 42,
+  "streams": [
+    { "domain": "world.generation", "instance": 0, "draws": ["d73e5f23d216b02a", "a439c6de0385a681", "a6fe9d6c74847b47", "9699b1611709a069"], "range1to6": [3, 2, 6, 2, 4, 3] },
+    { "domain": "world.generation", "instance": 1, "draws": ["2f0bc52c4c1f21be", "f439b87816e178bb", "8eab95dcaca47da4", "07439c8c724aff1e"], "range1to6": [3, 2, 3, 1, 1, 1] },
+    { "domain": "combat.damage", "instance": 0, "draws": ["c6d45722e69f80d4", "ddd6f0996ad1e1d0", "5d489138e70f9a90", "30f788ac3f34d282"], "range1to6": [1, 5, 5, 3, 2, 1] },
+    { "domain": "combat.damage", "instance": 1, "draws": ["25d1e587974e8525", "35330015daead27d", "2f175b3874e96005", "881c33d23d50653d"], "range1to6": [2, 4, 2, 6, 3, 6] },
+    { "domain": "loot.drop", "instance": 0, "draws": ["30b24b3931a08af0", "6cf155caa56dd54c", "8060b790bea1130f", "140c5533cd7e7a55"], "range1to6": [1, 3, 4, 2, 6, 4] },
+    { "domain": "loot.drop", "instance": 1, "draws": ["5dcc1d290dadcd45", "1aa21b02aba2dbf1", "497be796835ebcc3", "8ee023f9a2fce730"], "range1to6": [6, 6, 4, 3, 4, 1] }
+  ]
+}

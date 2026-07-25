@@ -33,6 +33,9 @@ function domainHash(domain: string): bigint {
 }
 
 export interface RandomStream {
+  /** Raw 64-bit draw. Exposed so the golden vectors can compare this
+   *  implementation against the kernel one bit for bit. */
+  nextU64(): bigint;
   /** Next value in [0, 1). */
   unit(): number;
   /** Next value in [-1, 1). */
@@ -62,6 +65,7 @@ export function createStream(rootSeed: number | bigint, domain: string, instance
   };
 
   return {
+    nextU64: nextUint64,
     unit() {
       // 53 significant bits keep the conversion exact in double precision.
       return Number(nextUint64() >> 11n) / 9007199254740992;
