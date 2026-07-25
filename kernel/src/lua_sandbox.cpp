@@ -361,7 +361,7 @@ LuaSandbox::~LuaSandbox() {
 bool LuaSandbox::load(const std::string_view source) {
   last_error_.clear();
   if (luaL_loadbuffer(state_, source.data(), source.size(), "@gameplay.lua") != LUA_OK) {
-    last_error_ = lua_tostring(state_, -1);
+    record_error(lua_tostring(state_, -1));
     lua_pop(state_, 1);
     return false;
   }
@@ -369,12 +369,12 @@ bool LuaSandbox::load(const std::string_view source) {
   const int load_result = lua_pcall(state_, 0, 1, 0);
   lua_sethook(state_, nullptr, 0, 0);
   if (load_result != LUA_OK) {
-    last_error_ = lua_tostring(state_, -1);
+    record_error(lua_tostring(state_, -1));
     lua_pop(state_, 1);
     return false;
   }
   if (!lua_istable(state_, -1)) {
-    last_error_ = "gameplay module must return a table";
+    record_error("gameplay module must return a table");
     lua_pop(state_, 1);
     return false;
   }
@@ -382,7 +382,7 @@ bool LuaSandbox::load(const std::string_view source) {
   const bool valid = lua_isfunction(state_, -1);
   lua_pop(state_, 1);
   if (!valid) {
-    last_error_ = "gameplay module must define on_input(ctx, event)";
+    record_error("gameplay module must define on_input(ctx, event)");
     lua_pop(state_, 1);
     return false;
   }
@@ -416,7 +416,7 @@ bool LuaSandbox::on_input(
   lua_sethook(state_, nullptr, 0, 0);
   set_context(state_, nullptr);
   if (result != LUA_OK) {
-    last_error_ = lua_tostring(state_, -1);
+    record_error(lua_tostring(state_, -1));
     lua_pop(state_, 1);
     return false;
   }
@@ -453,15 +453,47 @@ bool LuaSandbox::on_timer(
   lua_sethook(state_, nullptr, 0, 0);
   set_context(state_, nullptr);
   if (result != LUA_OK) {
-    last_error_ = lua_tostring(state_, -1);
+    record_error(lua_tostring(state_, -1));
     lua_pop(state_, 1);
     return false;
   }
   return true;
 }
 
+/**
+ * Extracts a stable code from a script failure. Bindings raise errors shaped as
+ * `CODE: detail`, so a caller can report `SDK_SYMBOL_UNKNOWN` instead of matching
+ * on a message that changes with Lua's formatting.
+ */
+void LuaSandbox::record_error(std::string message) {
+  last_error_code_.clear();
+  // Lua prefixes `chunk:line: `; the code, when present, follows it.
+  std::size_t start = 0;
+  const auto prefix = message.rfind(": ", message.size());
+  if (prefix != std::string::npos) {
+    const auto candidate_start = message.rfind(' ', prefix);
+    start = candidate_start == std::string::npos ? 0 : candidate_start + 1;
+  }
+  for (std::size_t index = start; index < message.size(); ++index) {
+    const char character = message[index];
+    if (character == ':') {
+      const auto candidate = message.substr(start, index - start);
+      const bool stable = !candidate.empty() &&
+          candidate.find_first_not_of("ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_") == std::string::npos;
+      if (stable) last_error_code_ = candidate;
+      break;
+    }
+    if (character == ' ') break;
+  }
+  last_error_ = std::move(message);
+}
+
 const std::string& LuaSandbox::last_error() const noexcept {
   return last_error_;
+}
+
+const std::string& LuaSandbox::last_error_code() const noexcept {
+  return last_error_code_;
 }
 
 }  // namespace ludivra::kernel

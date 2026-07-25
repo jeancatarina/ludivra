@@ -145,7 +145,18 @@ function requireOk(module: RuntimeModule, operation: string, result: number, han
     ? ""
     : module.UTF8ToString(call(module, "ludivra_runtime_last_error", [handle]));
   const detail = runtimeDetail.length > 0 ? `${message}: ${runtimeDetail}` : message;
-  throw new Error(`${operation} failed: ${detail}`);
+  const failure = new RuntimeFailure(`${operation} failed: ${detail}`);
+  // A stable code lets a caller diagnose by code instead of matching on prose.
+  const code = handle === undefined
+    ? ""
+    : module.UTF8ToString(call(module, "ludivra_runtime_last_error_code", [handle]));
+  if (code.length > 0) failure.code = code;
+  throw failure;
+}
+
+/** Failure carrying the stable code the kernel reported, when there is one. */
+export class RuntimeFailure extends Error {
+  code?: string;
 }
 
 export class LudivraRuntime {

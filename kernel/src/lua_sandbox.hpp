@@ -67,11 +67,17 @@ class LuaSandbox final {
       RandomStreamRegistry& random_streams,
       CommandBuffer& commands);
   [[nodiscard]] const std::string& last_error() const noexcept;
+  /// Stable code extracted from the script failure, empty when the error carries
+  /// none. It is what lets a diagnostic be reported by code instead of by prose.
+  [[nodiscard]] const std::string& last_error_code() const noexcept;
 
  private:
+  void record_error(std::string message);
+
   lua_State* state_{nullptr};
   int behavior_reference_{-2};
   std::string last_error_;
+  std::string last_error_code_;
 };
 
 }  // namespace ludivra::kernel

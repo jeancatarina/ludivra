@@ -152,6 +152,9 @@ ludivra_result ludivra_runtime_presentation_events_clear(
 /* Pointer remains valid until the next non-const operation or runtime destruction. */
 const char* ludivra_runtime_last_error(const ludivra_runtime* runtime);
 
+/* Stable code of the last script failure, empty when the failure carries none. */
+const char* ludivra_runtime_last_error_code(const ludivra_runtime* runtime);
+
 #ifdef __cplusplus
 }
 #endif

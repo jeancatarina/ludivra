@@ -93,6 +93,10 @@ const std::string& Runtime::last_error() const noexcept {
   return lua_.last_error();
 }
 
+const std::string& Runtime::last_error_code() const noexcept {
+  return lua_.last_error_code();
+}
+
 const std::vector<PresentationEvent>& Runtime::presentation_events() const noexcept {
   return presentation_events_;
 }

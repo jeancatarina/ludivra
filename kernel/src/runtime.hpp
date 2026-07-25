@@ -74,6 +74,7 @@ class Runtime final {
   [[nodiscard]] const std::vector<PresentationEvent>& presentation_events() const noexcept;
   void clear_presentation_events() noexcept;
   [[nodiscard]] const std::string& last_error() const noexcept;
+  [[nodiscard]] const std::string& last_error_code() const noexcept;
 
  private:
   static void mix_byte(std::uint64_t& hash, std::uint8_t value) noexcept;

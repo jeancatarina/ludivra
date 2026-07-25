@@ -175,6 +175,9 @@ int main() {
     context.expect(
         ludivra_runtime_step(named, 1U) == LUDIVRA_ERROR_SCRIPT,
         "an undeclared symbol fails the tick");
+    context.expect(
+        std::string(ludivra_runtime_last_error_code(named)) == "SDK_SYMBOL_UNKNOWN",
+        "the script failure carries a stable code");
     ludivra_runtime_destroy(named);
   }
 

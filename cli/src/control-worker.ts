@@ -16,7 +16,7 @@ import {
   type UiProjectionInput,
   type UiViewModel
 } from "@ludivra/presentation-protocol";
-import { composeGameplaySource, createGameplayManifestDocument, LudivraRuntime, type GameplayContentDocument, type PresentationEvent, type RuntimeModuleFactory } from "@ludivra/runtime-web";
+import { composeGameplaySource, createGameplayManifestDocument, LudivraRuntime, RuntimeFailure, type GameplayContentDocument, type PresentationEvent, type RuntimeModuleFactory } from "@ludivra/runtime-web";
 import { parse, type ParseError } from "jsonc-parser";
 import { createContractValidator } from "./contract-validator.js";
 import {
@@ -315,12 +315,14 @@ async function handle(request: ControlRequest): Promise<ControlResponse> {
 
 function failure(requestId: number, error: unknown): ControlResponse {
   const message = error instanceof Error ? error.message : "Control operation failed";
+  // A kernel failure carries its own stable code; prefer it over matching prose.
+  const kernelCode = error instanceof RuntimeFailure ? error.code : undefined;
   return {
     protocolVersion: CONTROL_PROTOCOL_VERSION,
     requestId: Math.max(1, requestId),
     status: "FAIL",
     diagnostic: {
-      code: /^[A-Z][A-Z0-9_]+$/.test(message) ? message : "CONTROL_OPERATION_FAILED",
+      code: kernelCode ?? (/^[A-Z][A-Z0-9_]+$/.test(message) ? message : "CONTROL_OPERATION_FAILED"),
       message
     }
   };

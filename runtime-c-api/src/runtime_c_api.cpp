@@ -372,3 +372,7 @@ ludivra_result ludivra_runtime_presentation_events_clear(ludivra_runtime* runtim
 const char* ludivra_runtime_last_error(const ludivra_runtime* runtime) {
   return runtime == nullptr ? "invalid runtime" : runtime->value.last_error().c_str();
 }
+
+const char* ludivra_runtime_last_error_code(const ludivra_runtime* runtime) {
+  return runtime == nullptr ? "" : runtime->value.last_error_code().c_str();
+}
