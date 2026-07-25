@@ -425,3 +425,48 @@ test("the recording renderer links projector intent to the captured frame", asyn
   assert.equal(next.particleBursts, 0);
   assert.equal(next.visuals.length, 1);
 });
+
+test("game audio renders a recipe, reuses it by key and reports its analysis", () => {
+  const temporaryRoot = mkdtempSync(resolve(tmpdir(), "ludivra-audio-"));
+  const project = resolve(temporaryRoot, "audio-game");
+  try {
+    cpSync(resolve(fileURLToPath(new URL("../..", import.meta.url)), "examples/card-roguelite"), project, {
+      recursive: true,
+      filter: (source) => {
+        const normalized = source.replaceAll("\\", "/");
+        return !normalized.includes("/.ludivra") && !normalized.includes("/reports/runs/run_");
+      }
+    });
+
+    const first = runCli(["audio", "render", "--project", project, "--format", "json"]);
+    assert.equal(first.execution.status, 0, first.execution.stdout);
+    assert.equal(first.result.data.recipes, 1);
+    const [rendered] = first.result.data.rendered;
+    assert.equal(rendered.id, "audio.card.strike");
+    assert.equal(rendered.reused, false);
+    assert.equal(rendered.durationMs, 340);
+    assert.equal(rendered.sampleRate, 48000);
+    assert.ok(existsSync(resolve(project, rendered.output)), "the rendered wav exists");
+    assert.ok(first.result.artifacts.some(({ kind }) => kind === "audio-asset"));
+
+    // The same recipe and generator version must reuse the render instead of redoing it.
+    const second = runCli(["audio", "render", "--project", project, "--format", "json"]);
+    assert.equal(second.result.data.rendered[0].reused, true);
+    assert.equal(second.result.data.rendered[0].sha256, rendered.sha256);
+
+    // Changing the recipe changes the identity of the artifact.
+    const recipePath = resolve(project, "audio/ember-strike.audio.jsonc");
+    writeFileSync(recipePath, readFileSync(recipePath, "utf8").replace('"seed": 48192', '"seed": 7'));
+    const varied = runCli(["audio", "render", "--project", project, "--format", "json"]);
+    assert.notEqual(varied.result.data.rendered[0].sha256, rendered.sha256);
+    assert.equal(varied.result.data.rendered[0].reused, false);
+
+    // An invalid recipe fails with a stable code instead of producing audio.
+    writeFileSync(recipePath, JSON.stringify({ schemaVersion: 1, id: "audio.broken", kind: "sfx" }));
+    const broken = runCli(["audio", "render", "--project", project, "--format", "json"]);
+    assert.equal(broken.execution.status, 2);
+    assert.ok(broken.result.diagnostics.some(({ code }) => code === "AUDIO_RECIPE_INVALID"));
+  } finally {
+    rmSync(temporaryRoot, { recursive: true, force: true });
+  }
+});

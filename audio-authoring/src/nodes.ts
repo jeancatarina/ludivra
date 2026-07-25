@@ -203,6 +203,25 @@ export function applyFilter(samples: Float64Array, filter: FilterSpec, sampleRat
   }
 }
 
+/**
+ * One-pole DC blocker. Layers such as brown noise carry energy at 0 Hz, and a short
+ * envelope turns that into a constant push that wastes headroom and stresses
+ * speakers. Removing it in the master is cheaper and more predictable than asking
+ * every recipe to avoid it.
+ */
+export function removeDirectCurrent(samples: Float64Array): void {
+  const pole = 0.999;
+  let previousInput = 0;
+  let previousOutput = 0;
+  for (let index = 0; index < samples.length; index += 1) {
+    const input = samples[index] ?? 0;
+    const output = input - previousInput + pole * previousOutput;
+    samples[index] = output;
+    previousInput = input;
+    previousOutput = output;
+  }
+}
+
 /** Soft clip without transcendentals: a rational curve that stays inside [-1, 1]. */
 export function applyDistortion(samples: Float64Array, amount: number): void {
   const drive = 1 + amount * 24;

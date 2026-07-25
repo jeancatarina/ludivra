@@ -6,6 +6,7 @@ import {
   applyDistortion,
   applyFilter,
   applyRingModulator,
+  removeDirectCurrent,
   renderNoise,
   renderOscillator,
   renderResonator
@@ -16,8 +17,10 @@ import { writeWav } from "./wav.js";
 /**
  * Version of the synthesis itself. It enters the cache key, so improving a node
  * regenerates every sound instead of leaving stale audio behind.
+ *
+ * 2: master gained a DC blocker after a real recipe rendered with 0.22 of offset.
  */
-export const AUDIO_GENERATOR_VERSION = 1;
+export const AUDIO_GENERATOR_VERSION = 2;
 
 export interface RenderedAudio {
   wav: Uint8Array;
@@ -90,6 +93,7 @@ function applyEffects(recipe: AudioRecipe, samples: Float64Array): void {
 
 function applyMaster(recipe: AudioRecipe, samples: Float64Array): void {
   const sampleRate = recipe.render.sampleRate;
+  removeDirectCurrent(samples);
   const fadeIn = Math.min(Math.round(((recipe.master?.fadeInMs ?? 0) * sampleRate) / 1000), samples.length);
   const fadeOut = Math.min(Math.round(((recipe.master?.fadeOutMs ?? 8) * sampleRate) / 1000), samples.length);
 

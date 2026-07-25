@@ -10,6 +10,7 @@ import { runNew } from "./commands/new.js";
 import { runPackage } from "./commands/package.js";
 import { runGame } from "./commands/run.js";
 import { runStatus } from "./commands/status.js";
+import { runAudio } from "./commands/audio.js";
 import { runCapture } from "./commands/capture.js";
 import { runContext } from "./commands/context.js";
 import { runReplay } from "./commands/replay.js";
@@ -66,6 +67,8 @@ async function dispatch(command: string, context: CommandContext, arguments_: st
       return runSimulate(context, arguments_);
     case "capture":
       return runCapture(context, arguments_);
+    case "audio":
+      return runAudio(context, arguments_);
     case "replay":
       return runReplay(context, arguments_);
     case "report":
@@ -73,7 +76,7 @@ async function dispatch(command: string, context: CommandContext, arguments_: st
     case "help":
       return {
         diagnostics: [],
-        data: { commands: ["build", "capture", "context", "doctor", "inspect", "new", "package", "replay", "report", "run", "simulate", "status", "test", "validate"] },
+        data: { commands: ["audio", "build", "capture", "context", "doctor", "inspect", "new", "package", "replay", "report", "run", "simulate", "status", "test", "validate"] },
         nextActions: ["Run game doctor --format json"]
       };
     default:

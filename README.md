@@ -378,6 +378,8 @@ Run all commands from the engine root directory.
 | `game simulate --project <directory> --scenario <file>` | executes assertions and produces an artifact bundle |
 | `game capture --project <directory> --scenario <file>` | produces a semantic capture linked to state |
 | `game capture --raster --project <directory> --name <id>` | captures a real frame of the web bundle through the ElectronHost and compares it with the approved baseline |
+| `game audio render --project <directory>` | renders every audio recipe into canonical PCM, reusing the cache by recipe, generator version and seed |
+| `game audio inspect --project <directory>` | lists recipes with duration, level and hash without writing evidence |
 | `game replay --project <directory> --replay <file>` | verifies a replay in the runtime |
 | `game report --project <directory> --run <id>` | summarizes a run without modifying its source evidence |
 | `game status --project <directory>` | regenerates canonical derived state |

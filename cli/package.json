@@ -11,6 +11,7 @@
     "test": "node --test test/*.test.mjs"
   },
   "dependencies": {
+    "@ludivra/audio-authoring": "workspace:*",
     "@ludivra/presentation-protocol": "workspace:*",
     "@ludivra/runtime-web": "workspace:*"
   },

@@ -112,6 +112,7 @@
           "origin": { "type": "string", "minLength": 1 },
           "license": { "type": "string", "minLength": 1 },
           "source": { "type": "string", "minLength": 1 },
+          "recipe": { "type": "string", "minLength": 1 },
           "synth": {
             "type": "object",
             "additionalProperties": false,
@@ -124,8 +125,9 @@
           }
         },
         "oneOf": [
-          { "required": ["source"], "not": { "required": ["synth"] } },
-          { "required": ["synth"], "not": { "required": ["source"] } }
+          { "required": ["source"], "not": { "anyOf": [{ "required": ["synth"] }, { "required": ["recipe"] }] } },
+          { "required": ["synth"], "not": { "anyOf": [{ "required": ["source"] }, { "required": ["recipe"] }] } },
+          { "required": ["recipe"], "not": { "anyOf": [{ "required": ["source"] }, { "required": ["synth"] }] } }
         ]
       }
     },

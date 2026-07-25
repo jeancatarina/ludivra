@@ -26,6 +26,9 @@ importers:
 
   cli:
     dependencies:
+      '@ludivra/audio-authoring':
+        specifier: workspace:*
+        version: link:../audio-authoring
       '@ludivra/presentation-protocol':
         specifier: workspace:*
         version: link:../presentation-protocol

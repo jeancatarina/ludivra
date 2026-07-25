@@ -378,6 +378,8 @@ Todos os comandos devem ser executados na raiz da engine.
 | `game simulate --project <pasta> --scenario <arquivo>` | executa assertions e produz artifact bundle |
 | `game capture --project <pasta> --scenario <arquivo>` | produz captura semântica vinculada ao estado |
 | `game capture --raster --project <pasta> --name <id>` | captura um frame real do bundle web pelo ElectronHost e compara com a baseline aprovada |
+| `game audio render --project <pasta>` | renderiza as receitas de áudio em PCM canônico, reusando o cache por receita, versão do gerador e seed |
+| `game audio inspect --project <pasta>` | lista as receitas com duração, nível e hash sem gravar evidência |
 | `game replay --project <pasta> --replay <arquivo>` | verifica um replay no runtime |
 | `game report --project <pasta> --run <id>` | resume uma execução sem alterar o run original |
 | `game status --project <pasta>` | regenera o estado canônico derivado |

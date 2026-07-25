@@ -1,0 +1,46 @@
+{
+  // Impacto do golpe: madeira e brasa. A receita é a fonte de verdade;
+  // o WAV é derivado e vive no cache ignorado pelo Git.
+  "schemaVersion": 1,
+  "id": "audio.card.strike",
+  "kind": "sfx",
+  "seed": 48192,
+
+  "render": {
+    "sampleRate": 48000,
+    "channels": 1,
+    "durationMs": 340
+  },
+
+  "layers": [
+    {
+      // Corpo do impacto.
+      "type": "noise",
+      "noise": "brown",
+      "gain": 0.5,
+      "envelope": { "attackMs": 1, "decayMs": 150, "sustain": 0, "releaseMs": 0 },
+      "filter": { "type": "lowpass", "frequency": 900, "resonance": 0.9 }
+    },
+    {
+      // Queda de tom que dá peso à pancada.
+      "type": "oscillator",
+      "waveform": "triangle",
+      "frequency": { "from": 420, "to": 110, "curve": "exponential" },
+      "gain": 0.35,
+      "envelope": { "attackMs": 1, "decayMs": 280, "sustain": 0, "releaseMs": 0 }
+    },
+    {
+      // Ressonância de brasa estalando.
+      "type": "resonator",
+      "frequencies": [327, 693, 1172],
+      "decayMs": 240,
+      "gain": 0.22
+    }
+  ],
+
+  "effects": [
+    { "type": "distortion", "amount": 0.1 }
+  ],
+
+  "master": { "fadeOutMs": 24, "peakDb": -1 }
+}
