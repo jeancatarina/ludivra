@@ -324,30 +324,45 @@ export async function runValidate(arguments_: string[] = []): Promise<CommandOut
   const root = await findEngineRoot();
   const diagnostics: Diagnostic[] = [];
   let contentFilesChecked = 0;
-
-  for (const file of requiredFiles) {
-    try {
-      await readFile(resolve(root, file));
-    } catch {
-      diagnostics.push({
-        code: "REQUIRED_FILE_MISSING",
+  const scope = optionValue(arguments_, "--scope") ?? "all";
+  if (!["all", "engine", "project"].includes(scope)) {
+    return {
+      diagnostics: [{
+        code: "VALIDATE_SCOPE_INVALID",
         severity: "error",
-        message: `Required file is missing: ${file}`,
-        file
-      });
-    }
+        message: "Validate scope must be all, engine or project"
+      }],
+      nextActions: ["Use --scope all, --scope engine or --scope project"]
+    };
   }
+  const validateEngine = scope !== "project";
+  const validateProject = scope !== "engine";
 
-  for (const file of jsonFiles) {
-    try {
-      JSON.parse(await readFile(resolve(root, file), "utf8"));
-    } catch (error) {
-      diagnostics.push({
-        code: "JSON_INVALID",
-        severity: "error",
-        message: error instanceof Error ? error.message : `Invalid JSON: ${file}`,
-        file
-      });
+  if (validateEngine) {
+    for (const file of requiredFiles) {
+      try {
+        await readFile(resolve(root, file));
+      } catch {
+        diagnostics.push({
+          code: "REQUIRED_FILE_MISSING",
+          severity: "error",
+          message: `Required file is missing: ${file}`,
+          file
+        });
+      }
+    }
+
+    for (const file of jsonFiles) {
+      try {
+        JSON.parse(await readFile(resolve(root, file), "utf8"));
+      } catch (error) {
+        diagnostics.push({
+          code: "JSON_INVALID",
+          severity: "error",
+          message: error instanceof Error ? error.message : `Invalid JSON: ${file}`,
+          file
+        });
+      }
     }
   }
 
@@ -365,114 +380,117 @@ export async function runValidate(arguments_: string[] = []): Promise<CommandOut
     }
   }
 
-  const generationChecks = [
-    "tools/contracts/generate-cli-result.mjs",
-    "tools/contracts/generate-control.mjs",
-    "tools/contracts/generate-desktop-host.mjs",
-    "tools/contracts/generate-presentation-events.mjs",
-    "tools/contracts/generate-operability.mjs",
-    "tools/contracts/generate-capabilities.mjs",
-    "tools/contracts/generate-ui.mjs",
-    "tools/program-status/generate.mjs"
-  ];
-  for (const script of generationChecks) {
-    const execution = spawnSync("node", [resolve(root, script), "--check"], { encoding: "utf8" });
-    if (execution.status !== 0) {
-      diagnostics.push({
-        code: "GENERATED_FILE_STALE",
-        severity: "error",
-        message: `${script} reports stale output`,
-        file: script,
-        details: { stderr: execution.stderr.trim() }
-      });
-    }
-  }
-
-  for (const file of await collectSourceFiles(resolve(root, "kernel"))) {
-    const content = await readFile(file, "utf8");
-    // Comments are prose: a sentence mentioning a forbidden name is not a
-    // dependency, and matching it would punish documentation.
-    const code = stripComments(content);
-    for (const forbidden of kernelForbiddenPatterns) {
-      if (forbidden.pattern.test(code)) {
+  const generationChecks = ["tools/contracts/synchronize.mjs"];
+  let workspacePackagesChecked = 0;
+  let buildDependenciesChecked = 0;
+  let cmakeTargetsChecked = 0;
+  if (validateEngine) {
+    for (const script of generationChecks) {
+      const execution = spawnSync("node", [resolve(root, script), "--check"], { encoding: "utf8" });
+      if (execution.status !== 0) {
         diagnostics.push({
-          code: forbidden.code,
+          code: "GENERATED_FILE_STALE",
           severity: "error",
-          message: `Forbidden kernel dependency detected in ${relative(root, file)}`,
-          file: relative(root, file)
+          message: `${script} reports stale output`,
+          file: script,
+          details: { stderr: execution.stderr.trim() }
         });
       }
     }
-  }
 
-  const boundaryFiles = await collectBoundaryFiles(root, diagnostics);
-  for (const file of boundaryFiles) {
-    const path = normalizeRepositoryPath(relative(root, file));
-    const content = await readFile(file, "utf8");
-    if (/(?:from\s+|import\s*\()["']three(?:\/[^"']*)?["']/.test(content) && !path.startsWith("renderer-three/")) {
-      diagnostics.push({
-        code: "THREE_IMPORT_OUTSIDE_ADAPTER",
-        severity: "error",
-        message: "Three.js may only be imported by renderer-three",
-        file: path
-      });
+    for (const file of await collectSourceFiles(resolve(root, "kernel"))) {
+      const content = await readFile(file, "utf8");
+      // Comments are prose: a sentence mentioning a forbidden name is not a
+      // dependency, and matching it would punish documentation.
+      const code = stripComments(content);
+      for (const forbidden of kernelForbiddenPatterns) {
+        if (forbidden.pattern.test(code)) {
+          diagnostics.push({
+            code: forbidden.code,
+            severity: "error",
+            message: `Forbidden kernel dependency detected in ${relative(root, file)}`,
+            file: relative(root, file)
+          });
+        }
+      }
     }
-    if (/(?:from\s+|require\s*\()["']electron["']/.test(content) && !path.startsWith("hosts/electron/")) {
-      diagnostics.push({
-        code: "ELECTRON_IMPORT_OUTSIDE_HOST",
-        severity: "error",
-        message: "Electron may only be imported by ElectronHost",
-        file: path
-      });
+
+    const boundaryFiles = await collectBoundaryFiles(root, diagnostics);
+    for (const file of boundaryFiles) {
+      const path = normalizeRepositoryPath(relative(root, file));
+      const content = await readFile(file, "utf8");
+      if (/(?:from\s+|import\s*\()["']three(?:\/[^"']*)?["']/.test(content) && !path.startsWith("renderer-three/")) {
+        diagnostics.push({
+          code: "THREE_IMPORT_OUTSIDE_ADAPTER",
+          severity: "error",
+          message: "Three.js may only be imported by renderer-three",
+          file: path
+        });
+      }
+      if (/(?:from\s+|require\s*\()["']electron["']/.test(content) && !path.startsWith("hosts/electron/")) {
+        diagnostics.push({
+          code: "ELECTRON_IMPORT_OUTSIDE_HOST",
+          severity: "error",
+          message: "Electron may only be imported by ElectronHost",
+          file: path
+        });
+      }
+      if (/(?:from\s+|require\s*\()["']steamworks\.js["']/.test(content) && !path.startsWith("hosts/electron/")) {
+        diagnostics.push({
+          code: "STEAMWORKS_IMPORT_OUTSIDE_ADAPTER",
+          severity: "error",
+          message: "steamworks.js may only be imported by the Electron Steam adapter",
+          file: path
+        });
+      }
+      if (/(?:from\s+|require\s*\()["']@capacitor\//.test(content) && !path.startsWith("hosts/capacitor-")) {
+        diagnostics.push({
+          code: "CAPACITOR_IMPORT_OUTSIDE_HOST",
+          severity: "error",
+          message: "Capacitor packages may only be imported by Capacitor hosts",
+          file: path
+        });
+      }
+      if (/from\s+["']@ludivra\/[^"'/]+\//.test(content)) {
+        diagnostics.push({
+          code: "DEEP_IMPORT_FORBIDDEN",
+          severity: "error",
+          message: "Cross-package deep imports are forbidden",
+          file: path
+        });
+      }
+      if (!path.startsWith("cli/") && !path.startsWith("tools/") &&
+          (/LUDIVRA_CONTROL_TOKEN/.test(content) || /["'][^"']*(?:control-client|control-worker|generated\/control-protocol)[^"']*["']/.test(content))) {
+        diagnostics.push({
+          code: "CONTROL_PROTOCOL_OUTSIDE_TOOLING",
+          severity: "error",
+          message: "The development control protocol may only be imported or configured by CLI/tooling code",
+          file: path
+        });
+      }
+      if (extname(file) === ".lua" && /\b(?:debug|io|os|package)\s*[.:]/.test(content)) {
+        diagnostics.push({
+          code: "LUA_HOST_ACCESS_FORBIDDEN",
+          severity: "error",
+          message: "Gameplay Lua cannot access host libraries",
+          file: path
+        });
+      }
     }
-    if (/(?:from\s+|require\s*\()["']steamworks\.js["']/.test(content) && !path.startsWith("hosts/electron/")) {
-      diagnostics.push({
-        code: "STEAMWORKS_IMPORT_OUTSIDE_ADAPTER",
-        severity: "error",
-        message: "steamworks.js may only be imported by the Electron Steam adapter",
-        file: path
-      });
-    }
-    if (/(?:from\s+|require\s*\()["']@capacitor\//.test(content) && !path.startsWith("hosts/capacitor-")) {
-      diagnostics.push({
-        code: "CAPACITOR_IMPORT_OUTSIDE_HOST",
-        severity: "error",
-        message: "Capacitor packages may only be imported by Capacitor hosts",
-        file: path
-      });
-    }
-    if (/from\s+["']@ludivra\/[^"'/]+\//.test(content)) {
-      diagnostics.push({
-        code: "DEEP_IMPORT_FORBIDDEN",
-        severity: "error",
-        message: "Cross-package deep imports are forbidden",
-        file: path
-      });
-    }
-    if (!path.startsWith("cli/") && !path.startsWith("tools/") &&
-        (/LUDIVRA_CONTROL_TOKEN/.test(content) || /["'][^"']*(?:control-client|control-worker|generated\/control-protocol)[^"']*["']/.test(content))) {
-      diagnostics.push({
-        code: "CONTROL_PROTOCOL_OUTSIDE_TOOLING",
-        severity: "error",
-        message: "The development control protocol may only be imported or configured by CLI/tooling code",
-        file: path
-      });
-    }
-    if (extname(file) === ".lua" && /\b(?:debug|io|os|package)\s*[.:]/.test(content)) {
-      diagnostics.push({
-        code: "LUA_HOST_ACCESS_FORBIDDEN",
-        severity: "error",
-        message: "Gameplay Lua cannot access host libraries",
-        file: path
-      });
-    }
+    workspacePackagesChecked = await validateWorkspaceGraph(root, boundaryFiles, diagnostics);
+    buildDependenciesChecked = await validateBuildScriptCoverage(root, diagnostics);
+    cmakeTargetsChecked = await validateCmakeGraph(root, diagnostics);
   }
-  const workspacePackagesChecked = await validateWorkspaceGraph(root, boundaryFiles, diagnostics);
-  const buildDependenciesChecked = await validateBuildScriptCoverage(root, diagnostics);
-  const cmakeTargetsChecked = await validateCmakeGraph(root, diagnostics);
 
   const projectArgument = optionValue(arguments_, "--project");
-  if (projectArgument !== undefined) {
+  if (scope === "project" && projectArgument === undefined) {
+    diagnostics.push({
+      code: "VALIDATE_PROJECT_REQUIRED",
+      severity: "error",
+      message: "Project scope requires --project"
+    });
+  }
+  if (validateProject && projectArgument !== undefined) {
     const project = resolve(projectArgument);
     const gamePath = resolve(project, "game.jsonc");
     const parseErrors: ParseError[] = [];
@@ -728,15 +746,15 @@ export async function runValidate(arguments_: string[] = []): Promise<CommandOut
   return {
     diagnostics,
     data: {
-      requiredFilesChecked: requiredFiles.length,
-      jsonFilesChecked: jsonFiles.length,
+      requiredFilesChecked: validateEngine ? requiredFiles.length : 0,
+      jsonFilesChecked: validateEngine ? jsonFiles.length : 0,
       contractSchemasChecked: contractSchemaFiles.length,
       contentFilesChecked,
-      generationChecks: generationChecks.length,
+      generationChecks: validateEngine ? generationChecks.length : 0,
       workspacePackagesChecked,
       buildDependenciesChecked,
       cmakeTargetsChecked,
-      gameProjectChecked: projectArgument !== undefined
+      gameProjectChecked: validateProject && projectArgument !== undefined
     },
     nextActions: diagnostics.length === 0
       ? ["Run pnpm test"]

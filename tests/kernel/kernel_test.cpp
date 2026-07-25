@@ -368,13 +368,17 @@ void check_generation(TestContext& context) {
   context.expect(largest_step < 4'000, "adjacent samples are continuous, not white noise");
 }
 
-/// Applies a plan the way a world tick would: request, generate, mesh, evict.
+/// Applies a plan the way a world tick would: request, commit generated identity, mesh, evict.
+///
+/// Generation quality and seams are covered by check_generation. Streaming only
+/// owns residency and lifecycle, so constructing a full heightfield here would
+/// couple two tests and multiply their cost by every step of the long walk.
 void advance_streaming(ChunkRegistry& registry, const WorldPosition viewer, const StreamingWindow& window) {
   const auto plan = plan_streaming(registry, viewer, window);
   for (const auto& identity : plan.to_request) {
     static_cast<void>(registry.request(identity));
     static_cast<void>(registry.transition(identity, ChunkState::generating));
-    static_cast<void>(registry.set_content_hash(identity, chunk_content_hash(generate_chunk(42U, identity))));
+    static_cast<void>(registry.set_content_hash(identity, chunk_seed(42U, identity)));
     static_cast<void>(registry.transition(identity, ChunkState::ready_for_mesh));
     static_cast<void>(registry.transition(identity, ChunkState::meshing));
     static_cast<void>(registry.transition(identity, ChunkState::resident));

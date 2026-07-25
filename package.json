@@ -8,7 +8,8 @@
     "jsonc-parser": "3.3.1"
   },
   "scripts": {
-    "contracts": "node tools/contracts/generate-cli-result.mjs && node tools/contracts/generate-control.mjs && node tools/contracts/generate-desktop-host.mjs && node tools/contracts/generate-presentation-events.mjs && node tools/contracts/generate-operability.mjs && node tools/contracts/generate-capabilities.mjs && node tools/contracts/generate-ui.mjs && pnpm run docs",
+    "contracts": "node tools/contracts/synchronize.mjs",
+    "contracts:check": "node tools/contracts/synchronize.mjs --check",
     "docs": "node tools/program-status/generate.mjs",
     "docs:check": "node tools/program-status/generate.mjs --check",
     "build:cli": "pnpm contracts && pnpm --filter @ludivra/presentation-protocol build && pnpm --filter @ludivra/audio-authoring build && pnpm --filter @ludivra/content-compiler build && pnpm --filter @ludivra/runtime-web build && pnpm --filter @ludivra/cli build",
@@ -16,7 +17,8 @@
     "build:wasm": "tools/build/build-wasm.sh",
     "build:web": "pnpm build:packages && pnpm build:wasm && pnpm --filter @ludivra/browser-host build",
     "build:native": "cmake --preset dev && cmake --build --preset dev",
-    "build": "pnpm build:cli && pnpm build:packages && pnpm build:native",
+    "build:typescript": "pnpm --filter @ludivra/cli... --filter @ludivra/platform-contracts --filter @ludivra/renderer-three run build",
+    "build": "pnpm contracts && pnpm build:typescript && pnpm build:native",
     "test:cli": "pnpm --filter @ludivra/cli test",
     "test:desktop": "pnpm --filter @ludivra/electron-host check && pnpm --filter @ludivra/electron-host test",
     "test:native": "ctest --preset dev",
@@ -24,6 +26,7 @@
     "test:cold-session": "node tools/tests/cold-session.mjs",
     "test:card-roguelite": "node tools/tests/card-roguelite.mjs",
     "test:wasm-equivalence": "pnpm build:native && pnpm build:wasm && pnpm --filter @ludivra/runtime-web build && node tools/tests/wasm-equivalence.mjs",
+    "test:quick": "pnpm build && pnpm test:program-status && pnpm test:cli && pnpm test:audio && pnpm test:rng && pnpm test:content && pnpm test:desktop && pnpm test:native",
     "test": "pnpm build && pnpm test:program-status && pnpm test:cli && pnpm test:audio && pnpm test:rng && pnpm test:content && pnpm test:desktop && pnpm test:native && pnpm test:wasm-equivalence && pnpm test:harness && pnpm test:cold-session && pnpm test:card-roguelite",
     "test:program-status": "node --test tools/program-status/program-status.test.mjs",
     "game": "node cli/dist/index.js",

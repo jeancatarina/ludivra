@@ -371,7 +371,7 @@ Run all commands from the engine root directory.
 | `game inspect` | lists the engine version, platforms, and capabilities |
 | `game context --task <description>` | locates capabilities and contracts with cited sources |
 | `game new <directory>` | creates a game from the starter |
-| `game validate --project <directory>` | validates schemas and architectural rules |
+| `game validate --project <directory> [--scope all\|engine\|project]` | validates all rules by default; limits repeated checks when a narrower scope is sufficient |
 | `game test` | runs the test suite and writes a log to `reports/runs/` |
 | `game run --project <directory>` | starts the local preview |
 | `game run --control --project <directory>` | runs the default scenario through the control protocol |
@@ -440,8 +440,9 @@ The generated evolution plan lives in [ROADMAP.md](ROADMAP.md), and generated ex
 Read [AGENTS.md](AGENTS.md) before changing the engine. Changes must preserve architectural boundaries, include evidence, and pass:
 
 ```sh
+pnpm test:quick # inner loop; omits cross-target and cold-session gates
 pnpm game -- validate --format json
-pnpm test
+pnpm test       # mandatory full gate before completion
 ```
 
 Distributed dependencies and assets must have verifiable versions, origins, and licenses.

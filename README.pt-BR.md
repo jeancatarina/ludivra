@@ -372,7 +372,7 @@ Todos os comandos devem ser executados na raiz da engine.
 | `game inspect` | lista versão, plataformas e capacidades |
 | `game context --task <descrição>` | localiza capabilities e contratos com fontes citáveis |
 | `game new <pasta>` | cria um jogo a partir do starter |
-| `game validate --project <pasta>` | valida schema e regras arquiteturais |
+| `game validate --project <pasta> [--scope all\|engine\|project]` | valida tudo por padrão; limita verificações repetidas quando um escopo menor basta |
 | `game test` | executa a suíte e grava o log em `reports/runs/` |
 | `game run --project <pasta>` | inicia o preview local |
 | `game run --control --project <pasta>` | executa o cenário padrão pelo control protocol |
@@ -441,8 +441,9 @@ O plano de evolução gerado está em [ROADMAP.md](ROADMAP.md), e o trabalho exe
 Leia [AGENTS.md](AGENTS.md) antes de alterar a engine. Mudanças devem preservar os boundaries, incluir evidência e passar em:
 
 ```sh
+pnpm test:quick # ciclo interno; omite gates cross-target e de sessão fria
 pnpm game -- validate --format json
-pnpm test
+pnpm test       # gate completo obrigatório antes da conclusão
 ```
 
 Dependências e assets distribuídos precisam de versão, origem e licença verificáveis.

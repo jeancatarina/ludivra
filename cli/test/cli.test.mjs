@@ -57,13 +57,20 @@ test("an invalid project target is not created for evidence output", () => {
   const temporaryRoot = mkdtempSync(resolve(tmpdir(), "ludivra-invalid-project-"));
   const missingProject = resolve(temporaryRoot, "missing");
   try {
-    const { execution, result } = runCli(["validate", "--project", missingProject, "--format", "json"]);
+    const { execution, result } = runCli(["validate", "--scope", "project", "--project", missingProject, "--format", "json"]);
     assert.equal(execution.status, 2);
     assert.equal(existsSync(missingProject), false);
+    assert.equal(result.data.requiredFilesChecked, 0);
     assert.ok(result.artifacts.some(({ kind }) => kind === "run-manifest"));
   } finally {
     rmSync(temporaryRoot, { recursive: true, force: true });
   }
+});
+
+test("validate rejects an unknown scope", () => {
+  const { execution, result } = runCli(["validate", "--scope", "fast", "--format", "json"]);
+  assert.equal(execution.status, 2);
+  assert.equal(result.diagnostics[0].code, "VALIDATE_SCOPE_INVALID");
 });
 
 test("new creates a schema-valid game project", () => {
@@ -95,7 +102,7 @@ test("new creates a schema-valid game project", () => {
     const manifest = parseJsonc(readFileSync(manifestPath, "utf8"));
     manifest.name = "Changed Without Status";
     writeFileSync(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`);
-    const stale = runCli(["validate", "--project", project, "--format", "json"]);
+    const stale = runCli(["validate", "--scope", "project", "--project", project, "--format", "json"]);
     assert.equal(stale.execution.status, 2);
     assert.ok(stale.result.diagnostics.some(({ code }) => code === "PROJECT_STATE_STALE"));
   } finally {
@@ -154,7 +161,7 @@ test("validate rejects duplicate semantic presentation event IDs", () => {
     manifest.audio = [audio("audio.one"), audio("audio.two")];
     writeFileSync(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`);
 
-    const validated = runCli(["validate", "--project", project, "--format", "json"]);
+    const validated = runCli(["validate", "--scope", "project", "--project", project, "--format", "json"]);
     assert.equal(validated.execution.status, 2);
     assert.equal(validated.result.diagnostics[0].code, "PRESENTATION_EVENT_ID_DUPLICATE");
 
@@ -170,7 +177,7 @@ test("validate rejects duplicate semantic presentation event IDs", () => {
       source: "assets/audio/missing.ogg"
     }];
     writeFileSync(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`);
-    const missingAsset = runCli(["validate", "--project", project, "--format", "json"]);
+    const missingAsset = runCli(["validate", "--scope", "project", "--project", project, "--format", "json"]);
     assert.equal(missingAsset.execution.status, 2);
     assert.ok(missingAsset.result.diagnostics.some(({ code }) => code === "AUDIO_SOURCE_MISSING"));
   } finally {
@@ -195,7 +202,7 @@ test("validate rejects card content that references an absent manifest action", 
     const manifest = parseJsonc(readFileSync(manifestPath, "utf8"));
     manifest.inputs = manifest.inputs.filter(({ id }) => id !== "play-strike");
     writeFileSync(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`);
-    const validated = runCli(["validate", "--project", project, "--format", "json"]);
+    const validated = runCli(["validate", "--scope", "project", "--project", project, "--format", "json"]);
     assert.equal(validated.execution.status, 2);
     assert.ok(validated.result.diagnostics.some(({ code }) => code === "CONTENT_CARD_CONTRACT_INVALID"));
   } finally {
@@ -346,6 +353,7 @@ test("artifact families own their inputs and declare their dependents", async ()
   assert.equal(owningFamily("contracts/ui-view-model.schema.json"), "contracts");
   assert.equal(owningFamily("docs/program-status.json"), "contracts");
   assert.equal(owningFamily("docs/adr/0046-generated-program-documentation.md"), "contracts");
+  assert.equal(owningFamily("runtime-web/tsconfig.json"), "packages");
   // A path no family declares must not trigger a rebuild by accident.
   assert.equal(owningFamily("README.md"), null);
 
