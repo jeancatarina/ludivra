@@ -50,10 +50,9 @@ assert.equal(first, second);
 assert.throws(() => composeGameplaySource("return {}", [{ id: "x", value: null }]), /does not support null/);
 assert.throws(() => composeGameplaySource("return {}", [{ id: "x", value: {} }, { id: "x", value: {} }]), /duplicate/);
 
-run("pnpm", ["--filter", "@ludivra/browser-host", "build"], {
-  ...process.env,
-  LUDIVRA_GAME_DIR: project,
-  LUDIVRA_BASE: "/"
-});
+// The bundle consumes the cooked audio index, which is derived and not versioned.
+// Building through the CLI is what guarantees recipes are rendered first; calling
+// vite directly would only work on a machine that happened to have the index.
+game(["build", "--project", project, "--target", "web"]);
 
 process.stdout.write("card_roguelite=PASS\n");
