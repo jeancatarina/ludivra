@@ -1,5 +1,6 @@
 import type { CacheFamilyId } from "../artifact-cache.js";
 import { ensureProjectAudio } from "../audio-forge.js";
+import { ensureContentPack } from "../content-forge.js";
 import { parseBuildOptions, runFamilies, summarizeDecisions } from "../build-runner.js";
 import { runProcess } from "../process-runner.js";
 import { resolveProjectDirectory } from "../project.js";
@@ -16,6 +17,7 @@ export async function runGame(context: CommandContext, arguments_: string[]): Pr
   const root = await findEngineRoot();
   const project = await resolveProjectDirectory(arguments_);
   const options = parseBuildOptions(arguments_);
+  const content = await ensureContentPack(project);
   const audio = await ensureProjectAudio(root, project);
   const prepared = await runFamilies({
     runId: context.runId,
@@ -28,9 +30,9 @@ export async function runGame(context: CommandContext, arguments_: string[]): Pr
     force: options.force,
     debounceMs: options.debounceMs
   });
-  if ([...audio.diagnostics, ...prepared.diagnostics].some(({ severity }) => severity === "error")) {
+  if ([...content.diagnostics, ...audio.diagnostics, ...prepared.diagnostics].some(({ severity }) => severity === "error")) {
     return {
-      diagnostics: [...audio.diagnostics, ...prepared.diagnostics.map((diagnostic) => ({ ...diagnostic, code: "RUN_PREPARATION_FAILED" }))],
+      diagnostics: [...content.diagnostics, ...audio.diagnostics, ...prepared.diagnostics.map((diagnostic) => ({ ...diagnostic, code: "RUN_PREPARATION_FAILED" }))],
       artifacts: prepared.artifacts,
       data: { project, cache: summarizeDecisions(prepared.decisions) },
       nextActions: ["Run game doctor and repair the toolchain"]

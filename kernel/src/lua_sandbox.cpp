@@ -1,5 +1,6 @@
 #include "lua_sandbox.hpp"
 
+#include "content_pack.hpp"
 #include "fixed_point.hpp"
 
 #include <cstring>
@@ -418,6 +419,15 @@ bool LuaSandbox::on_input(
   if (result != LUA_OK) {
     record_error(lua_tostring(state_, -1));
     lua_pop(state_, 1);
+    return false;
+  }
+  return true;
+}
+
+bool LuaSandbox::load_content_pack(const std::string_view bytes) {
+  std::string error;
+  if (!ContentPack::install(state_, bytes, error)) {
+    record_error(std::move(error));
     return false;
   }
   return true;

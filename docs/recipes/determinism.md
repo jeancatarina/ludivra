@@ -38,6 +38,23 @@ Um nome não declarado falha o tick com `SDK_SYMBOL_UNKNOWN`, em vez de ler a
 chave zero em silêncio. `ctx.query:get_i64` e `ctx.commands:add_i64` continuam
 existindo para a camada 0.
 
+## Conteúdo compilado
+
+O conteúdo chega ao gameplay pelo content pack, como um global `CONTENT`
+somente leitura, montado pelo kernel antes de o módulo carregar:
+
+```lua
+local RUN = CONTENT["ember-vault.run"]
+local GAME = CONTENT["ludivra.game"]
+```
+
+Escrever em `CONTENT` falha com `SDK_CONTENT_READ_ONLY`: seria estado escondido,
+fora do save e do replay. Para saber de onde veio um valor:
+
+```sh
+game content explain --symbol ember-vault.run.card.strike --project <pasta>
+```
+
 ## Timers em tempo lógico
 
 Timers contam ticks, nunca milissegundos de relógio. O manifest declara o nome:

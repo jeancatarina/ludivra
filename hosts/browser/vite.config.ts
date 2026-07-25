@@ -55,18 +55,6 @@ function gamePlugin(projectDirectory: string): Plugin {
         withinProject(projectDirectory, manifest.entrypoints.gameplay),
         "utf8"
       );
-      const contentDocuments: Array<{ id: string; value: unknown }> = [];
-      for (const descriptor of manifest.content ?? []) {
-        const contentErrors: import("jsonc-parser").ParseError[] = [];
-        const value = parse(
-          await readFile(withinProject(projectDirectory, descriptor.source), "utf8"),
-          contentErrors
-        );
-        if (contentErrors.length > 0) {
-          throw new Error(`invalid content ${descriptor.source}: JSONC error ${contentErrors[0]?.error}`);
-        }
-        contentDocuments.push({ id: descriptor.id, value });
-      }
       // Recipes are resolved by the Audio Forge, never by this plugin: the host
       // consumes the cooked index and stays out of synthesis.
       const cookedIndex = JSON.parse(
@@ -96,9 +84,15 @@ function gamePlugin(projectDirectory: string): Plugin {
         });
         audioSources.push(`${JSON.stringify(audio.eventId)}: import.meta.ROLLUP_FILE_URL_${reference}`);
       }
+      // The compiled pack is embedded as bytes; the plugin never composes content
+      // into the script, and it never compiles content itself.
+      const packSource = await readFile(resolve(projectDirectory, ".ludivra/content-pack.json"), "utf8")
+        .catch(() => {
+          throw new Error("content pack is missing; run game content build before building");
+        });
       return `export const manifest = ${JSON.stringify(manifest)};\n` +
         `export const gameplaySource = ${JSON.stringify(gameplay)};\n` +
-        `export const contentDocuments = ${JSON.stringify(contentDocuments)};\n` +
+        `export const contentPackSource = ${JSON.stringify(packSource)};\n` +
         `export const audioSources = {${audioSources.join(",")}};`;
     }
   };

@@ -6,10 +6,10 @@ import {
   type UiProjectionInput
 } from "@ludivra/presentation-protocol";
 import { createThreeRenderer } from "@ludivra/renderer-three";
-import { composeGameplaySource, createGameplayManifestDocument, LudivraRuntime } from "@ludivra/runtime-web";
+import { LudivraRuntime } from "@ludivra/runtime-web";
 import { createGamePresenter } from "@game/presentation";
 import createLudivraModule from "@ludivra/runtime-module";
-import { audioSources, contentDocuments, gameplaySource, manifest } from "virtual:ludivra-game";
+import { audioSources, contentPackSource, gameplaySource, manifest } from "virtual:ludivra-game";
 import { createAudioFeedback } from "./audio-feedback";
 import { createDesktopCheckpointManager } from "./desktop-checkpoint";
 import { presentEffect } from "./effect-feedback";
@@ -56,15 +56,20 @@ for (const definition of manifest.inspection.integerStates) {
 for (const definition of manifest.timers ?? []) {
   runtime.declareSymbol("timer", definition.id, definition.key);
 }
-const boundContentDocuments = [createGameplayManifestDocument(manifest), ...contentDocuments];
-runtime.loadGameplay(composeGameplaySource(gameplaySource, boundContentDocuments));
+// Content comes from the compiled pack, never from the script chunk.
+const contentPackBytes = new TextEncoder().encode(contentPackSource);
+runtime.loadContentPack(contentPackBytes);
+runtime.loadGameplay(gameplaySource);
 const desktop = await createDesktopCheckpointManager(runtime);
 // Host diagnostics stay outside the UI contract: they describe the host, not the game.
 hostStatus.textContent = `Kernel WASM${desktop === null ? "" : " · autosave desktop"}`;
 
 const recording = createRecordingRenderer(createThreeRenderer(canvas));
 const renderer = recording.renderer;
-const contentById = new Map(boundContentDocuments.map((document) => [document.id, document.value]));
+const packDocuments = (JSON.parse(contentPackSource) as {
+  sections: { documents: { value: Record<string, unknown> } };
+}).sections.documents.value;
+const contentById = new Map(Object.entries(packDocuments));
 const presenter = createGamePresenter(renderer, {
   content<T>(id: string): T {
     if (!contentById.has(id)) throw new Error(`presentation content does not exist: ${id}`);

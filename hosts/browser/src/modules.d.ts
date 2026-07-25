@@ -40,7 +40,7 @@ declare module "virtual:ludivra-game" {
     }>;
   };
   export const gameplaySource: string;
-  export const contentDocuments: Array<{ id: string; value: unknown }>;
+  export const contentPackSource: string;
   export const audioSources: Record<number, string>;
 }
 

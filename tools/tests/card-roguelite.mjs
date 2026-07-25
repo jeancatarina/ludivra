@@ -2,7 +2,6 @@ import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { composeGameplaySource } from "../../runtime-web/dist/index.js";
 
 const root = resolve(import.meta.dirname, "../..");
 const project = resolve(root, "examples/card-roguelite");
@@ -38,17 +37,18 @@ for (const [scenario, state] of expected) {
   assert.ok(result.artifacts.some(({ kind, sha256 }) => kind === "replay" && /^[a-f0-9]{64}$/.test(sha256)));
 }
 
-const first = composeGameplaySource("return {}", [
-  { id: "z", value: { beta: 2, alpha: 1 } },
-  { id: "a", value: { label: "Brasa" } }
-]);
-const second = composeGameplaySource("return {}", [
-  { id: "a", value: { label: "Brasa" } },
-  { id: "z", value: { alpha: 1, beta: 2 } }
-]);
-assert.equal(first, second);
-assert.throws(() => composeGameplaySource("return {}", [{ id: "x", value: null }]), /does not support null/);
-assert.throws(() => composeGameplaySource("return {}", [{ id: "x", value: {} }, { id: "x", value: {} }]), /duplicate/);
+// Content reaches the game through the compiled pack, not through the script.
+const built = game(["content", "build", "--project", project]);
+assert.equal(built.status, "passed");
+const pack = JSON.parse(readFileSync(resolve(project, ".ludivra/content-pack.json"), "utf8"));
+assert.equal(pack.packFormatVersion, 1);
+const documents = pack.sections.documents.value;
+assert.ok(documents["ember-vault.run"].cards.length >= 3, "the run document travels in the pack");
+assert.ok(documents["ludivra.game"].inputs.length >= 1, "the manifest binding travels in the pack");
+assert.ok(
+  !readFileSync(resolve(project, "scripts/gameplay.lua"), "utf8").includes("CONTENT ="),
+  "the script does not carry content"
+);
 
 // The bundle consumes the cooked audio index, which is derived and not versioned.
 // Building through the CLI is what guarantees recipes are rendered first; calling

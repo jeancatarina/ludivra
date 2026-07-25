@@ -49,6 +49,10 @@ class LuaSandbox final {
   LuaSandbox& operator=(const LuaSandbox&) = delete;
 
   [[nodiscard]] bool load(std::string_view source);
+  /// Installs the compiled content pack as the read-only `CONTENT` global. It must
+  /// happen before the gameplay module loads, because a module reads content at
+  /// load time as well as during a tick.
+  [[nodiscard]] bool load_content_pack(std::string_view bytes);
   [[nodiscard]] bool on_input(
       const ScriptInput& input,
       const IntegerState& state,

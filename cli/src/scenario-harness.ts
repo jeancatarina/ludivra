@@ -4,6 +4,7 @@ import type { RenderedUiSnapshot, UiViewModel } from "@ludivra/presentation-prot
 import { parse, type ParseError } from "jsonc-parser";
 import { optionValue } from "./arguments.js";
 import { ensureFamilies, type CacheDecision } from "./artifact-cache.js";
+import { ensureContentPack } from "./content-forge.js";
 import { hashArtifactPath } from "./artifact-hash.js";
 import { LocalControlClient } from "./control-client.js";
 import { createContractValidator } from "./contract-validator.js";
@@ -169,6 +170,8 @@ export async function runScenarioCommand(context: CommandContext, arguments_: st
   const project = await resolveProjectDirectory(arguments_);
   const { scenario, path: scenarioPath, source } = await loadScenario(engineRoot, project, arguments_);
   await prepareHarness(engineRoot);
+  // The worker loads the compiled pack, so it must exist before the session starts.
+  await ensureContentPack(project);
   const runDirectory = resolve(project, "reports/runs", context.runId);
   const screenshots = resolve(runDirectory, "screenshots");
   const traces = resolve(runDirectory, "traces");
@@ -312,6 +315,7 @@ export async function runReplayCommand(context: CommandContext, arguments_: stri
   const replay = await readFile(replayPath);
   const { scenario } = await loadScenario(engineRoot, project, arguments_);
   await prepareHarness(engineRoot);
+  await ensureContentPack(project);
   const client = await LocalControlClient.start(engineRoot, project, scenario.timeoutMs);
   let response: ControlResponse;
   try {

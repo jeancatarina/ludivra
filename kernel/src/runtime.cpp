@@ -63,6 +63,13 @@ RuntimeError Runtime::load_gameplay(const std::string_view source) {
   return RuntimeError::none;
 }
 
+RuntimeError Runtime::load_content_pack(const std::string_view bytes) {
+  if (!lua_.load_content_pack(bytes)) return RuntimeError::content_pack_invalid;
+  // Kept so replay verification rebuilds a runtime that sees the same content.
+  content_pack_source_.assign(bytes);
+  return RuntimeError::none;
+}
+
 RuntimeError Runtime::declare_symbol(
     const SymbolKind kind,
     const std::string_view name,
@@ -143,6 +150,11 @@ RuntimeError Runtime::verify_replay(const std::span<const std::uint8_t> bytes) c
     return RuntimeError::archive_invalid;
   }
   Runtime verification({decoded.tick_rate_hz, decoded.max_pending_inputs, decoded.seed});
+  verification.symbols_ = symbols_;
+  if (!content_pack_source_.empty() &&
+      verification.load_content_pack(content_pack_source_) != RuntimeError::none) {
+    return RuntimeError::content_pack_invalid;
+  }
   if (!gameplay_source_.empty() && verification.load_gameplay(gameplay_source_) != RuntimeError::none) {
     return RuntimeError::script_failure;
   }
@@ -152,7 +164,6 @@ RuntimeError Runtime::verify_replay(const std::span<const std::uint8_t> bytes) c
   if (decoded.initial_state.streams.empty()) verification.random_streams_.reset(decoded.seed);
   else verification.random_streams_.restore(decoded.initial_state.streams);
   verification.timers_.restore(decoded.initial_state.timers);
-  verification.symbols_ = symbols_;
   verification.replay_initial_state_ = decoded.initial_state;
   for (const auto& frame : decoded.frames) {
     for (const auto& input : frame.inputs) {

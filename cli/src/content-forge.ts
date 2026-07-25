@@ -61,6 +61,21 @@ export async function ensureContentPack(project: string): Promise<ContentPackRes
     documents.push({ id: descriptor.id, file: descriptor.source, source, value });
   }
 
+  // The manifest binding is a document like any other: it is how gameplay reaches
+  // action ids and state keys without repeating them.
+  const binding = {
+    inputs: manifest.inputs.map(({ id, actionId }) => ({ id, actionId })),
+    inspection: {
+      integerStates: manifest.inspection.integerStates.map(({ id, key }) => ({ id, key }))
+    }
+  };
+  documents.push({
+    id: "ludivra.game",
+    file: "game.jsonc",
+    source: JSON.stringify(binding),
+    value: binding
+  });
+
   // Manifest labels are the base locale table until real translations exist.
   const entries: Record<string, string> = { "runtime.status": "Tick {tick}" };
   for (const definition of manifest.inspection.integerStates) entries[`state.${definition.id}`] = `${definition.label}: {value}`;

@@ -38,6 +38,8 @@ ludivra_result to_public_result(const ludivra::kernel::RuntimeError error) noexc
       return LUDIVRA_ERROR_PRESENTATION_LIMIT;
     case ludivra::kernel::RuntimeError::symbol_conflict:
       return LUDIVRA_ERROR_SYMBOL_CONFLICT;
+    case ludivra::kernel::RuntimeError::content_pack_invalid:
+      return LUDIVRA_ERROR_CONTENT_PACK_INVALID;
   }
   return LUDIVRA_ERROR_INTERNAL;
 }
@@ -135,6 +137,8 @@ const char* ludivra_result_message(const ludivra_result result) {
       return "presentation event limit reached; drain events before stepping again";
     case LUDIVRA_ERROR_SYMBOL_CONFLICT:
       return "state symbol already declared with a different key";
+    case LUDIVRA_ERROR_CONTENT_PACK_INVALID:
+      return "content pack is invalid or uses an unsupported format";
   }
   return "unknown result";
 }
@@ -212,6 +216,22 @@ ludivra_result ludivra_runtime_state_hash(
   }
   *out_state_hash = runtime->value.state_hash();
   return LUDIVRA_OK;
+}
+
+ludivra_result ludivra_runtime_load_content_pack(
+    ludivra_runtime* runtime,
+    const char* bytes,
+    const uint32_t size) {
+  if (runtime == nullptr || bytes == nullptr || size == 0U) {
+    return LUDIVRA_ERROR_INVALID_ARGUMENT;
+  }
+  try {
+    return to_public_result(runtime->value.load_content_pack({bytes, size}));
+  } catch (const std::bad_alloc&) {
+    return LUDIVRA_ERROR_ALLOCATION;
+  } catch (...) {
+    return LUDIVRA_ERROR_INTERNAL;
+  }
 }
 
 ludivra_result ludivra_runtime_load_gameplay(

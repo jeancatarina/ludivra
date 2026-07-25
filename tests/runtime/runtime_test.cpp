@@ -81,6 +81,10 @@ std::string timer_gameplay() {
   return fixture("timers.lua");
 }
 
+std::string content_gameplay() {
+  return fixture("content.lua");
+}
+
 std::vector<uint8_t> save_archive(TestContext& context, ludivra_runtime* runtime) {
   uint32_t size = 0;
   context.expect(ludivra_runtime_save_size(runtime, &size) == LUDIVRA_OK, "save size is available");
@@ -179,6 +183,46 @@ int main() {
         std::string(ludivra_runtime_last_error_code(named)) == "SDK_SYMBOL_UNKNOWN",
         "the script failure carries a stable code");
     ludivra_runtime_destroy(named);
+  }
+
+  {
+    // ADR 0017: content reaches gameplay from the pack, read-only, and a pack that
+    // does not parse is refused instead of partially installed.
+    const std::string pack =
+        R"({"packFormatVersion":1,"generatorVersion":1,"sections":{"documents":{"sha256":"x","value":)"
+        R"({"ember-vault.run":{"cards":[{"damage":6,"id":"card.strike"}]}}},"origin":{"sha256":"x","value":{}},)"
+        R"("strings":{"sha256":"x","value":{}},"symbols":{"sha256":"x","value":{}}}})";
+    auto* content = create_runtime(context);
+    context.expect(
+        ludivra_runtime_declare_symbol(content, LUDIVRA_SYMBOL_STATE, "score", 5U, 1U) == LUDIVRA_OK,
+        "content scenario declares its state");
+    context.expect(
+        ludivra_runtime_load_content_pack(content, pack.data(), static_cast<uint32_t>(pack.size())) == LUDIVRA_OK,
+        "content pack loads");
+    const auto content_source = content_gameplay();
+    context.expect(
+        ludivra_runtime_load_gameplay(
+            content, content_source.data(), static_cast<uint32_t>(content_source.size())) == LUDIVRA_OK,
+        "gameplay reads content at load time");
+    submit(context, content, 1U, 0, 1U);
+    context.expect(ludivra_runtime_step(content, 1U) == LUDIVRA_OK, "content value reaches the state");
+    context.expect(integer_state(context, content, 1U) == 6, "the card damage came from the pack");
+    submit(context, content, 2U, 0, 2U);
+    context.expect(
+        ludivra_runtime_step(content, 1U) == LUDIVRA_ERROR_SCRIPT,
+        "writing to content fails the tick");
+    context.expect(
+        std::string(ludivra_runtime_last_error_code(content)) == "SDK_CONTENT_READ_ONLY",
+        "the read-only failure carries its code");
+    ludivra_runtime_destroy(content);
+
+    auto* broken = create_runtime(context);
+    const std::string malformed = R"({"packFormatVersion":1,"sections":)";
+    context.expect(
+        ludivra_runtime_load_content_pack(broken, malformed.data(), static_cast<uint32_t>(malformed.size())) ==
+            LUDIVRA_ERROR_CONTENT_PACK_INVALID,
+        "a truncated pack is refused");
+    ludivra_runtime_destroy(broken);
   }
 
   {

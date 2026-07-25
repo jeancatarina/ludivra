@@ -43,6 +43,7 @@ struct PresentationEvent final {
 enum class RuntimeError : std::uint8_t {
   none,
   symbol_conflict,
+  content_pack_invalid,
   tick_overflow,
   input_limit,
   script_failure,
@@ -62,6 +63,7 @@ class Runtime final {
   [[nodiscard]] std::uint64_t tick() const noexcept;
   [[nodiscard]] std::uint64_t state_hash() const noexcept;
   [[nodiscard]] RuntimeError load_gameplay(std::string_view source);
+  [[nodiscard]] RuntimeError load_content_pack(std::string_view bytes);
   /// Declares the semantic name of an integer state, so gameplay stops repeating
   /// the numeric keys the manifest already owns. Declaring twice with different
   /// keys is a defect, not a redefinition.
@@ -97,6 +99,7 @@ class Runtime final {
   CommandBuffer commands_;
   LuaSandbox lua_;
   std::string gameplay_source_;
+  std::string content_pack_source_;
   SavedState replay_initial_state_;
   std::vector<ReplayFrame> replay_frames_;
   std::vector<PresentationEvent> presentation_events_;

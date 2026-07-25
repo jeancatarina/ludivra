@@ -26,7 +26,8 @@ typedef enum ludivra_result {
   LUDIVRA_ERROR_PENDING_INPUTS = 10,
   LUDIVRA_ERROR_BUFFER_TOO_SMALL = 11,
   LUDIVRA_ERROR_PRESENTATION_LIMIT = 12,
-  LUDIVRA_ERROR_SYMBOL_CONFLICT = 13
+  LUDIVRA_ERROR_SYMBOL_CONFLICT = 13,
+  LUDIVRA_ERROR_CONTENT_PACK_INVALID = 14
 } ludivra_result;
 
 typedef struct ludivra_runtime_config {
@@ -78,6 +79,13 @@ ludivra_result ludivra_runtime_tick(
 ludivra_result ludivra_runtime_state_hash(
     const ludivra_runtime* runtime,
     uint64_t* out_state_hash);
+
+/* Installs the compiled content pack as the read-only CONTENT global. Call before
+   loading gameplay: a module reads content at load time too. */
+ludivra_result ludivra_runtime_load_content_pack(
+    ludivra_runtime* runtime,
+    const char* bytes,
+    uint32_t size);
 
 /* Replaces the current Lua gameplay module. Source must return a table with on_input(ctx, event). */
 ludivra_result ludivra_runtime_load_gameplay(
