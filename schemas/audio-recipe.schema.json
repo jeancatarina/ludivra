@@ -1,0 +1,183 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ludivra.dev/schemas/audio-recipe/v1",
+  "title": "Ludivra audio recipe",
+  "description": "Textual source of truth for a generated sound. It describes how to synthesize, never the resulting samples.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "id", "kind", "seed", "render", "layers"],
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "id": { "$ref": "#/$defs/semanticId" },
+    "kind": { "enum": ["sfx", "ambience", "ui"] },
+    "seed": { "type": "integer", "minimum": 0, "maximum": 9007199254740991 },
+    "render": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["sampleRate", "channels", "durationMs"],
+      "properties": {
+        "sampleRate": { "enum": [22050, 32000, 44100, 48000] },
+        "channels": { "enum": [1, 2] },
+        "durationMs": { "type": "integer", "minimum": 1, "maximum": 60000 }
+      }
+    },
+    "layers": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 16,
+      "items": { "$ref": "#/$defs/layer" }
+    },
+    "effects": {
+      "type": "array",
+      "maxItems": 8,
+      "items": { "$ref": "#/$defs/effect" }
+    },
+    "master": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "fadeInMs": { "type": "integer", "minimum": 0, "maximum": 5000 },
+        "fadeOutMs": { "type": "integer", "minimum": 0, "maximum": 5000 },
+        "peakDb": { "type": "number", "minimum": -60, "maximum": 0 }
+      }
+    },
+    "loop": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["enabled"],
+      "properties": {
+        "enabled": { "type": "boolean" },
+        "crossfadeMs": { "type": "integer", "minimum": 0, "maximum": 2000 }
+      }
+    }
+  },
+  "$defs": {
+    "semanticId": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "^[a-z][a-z0-9]*([._-][a-z0-9]+)*$"
+    },
+    "unit": { "type": "number", "minimum": 0, "maximum": 1 },
+    "frequency": {
+      "oneOf": [
+        { "type": "number", "exclusiveMinimum": 0, "maximum": 20000 },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["from", "to"],
+          "properties": {
+            "from": { "type": "number", "exclusiveMinimum": 0, "maximum": 20000 },
+            "to": { "type": "number", "exclusiveMinimum": 0, "maximum": 20000 },
+            "curve": { "enum": ["linear", "exponential"] }
+          }
+        }
+      ]
+    },
+    "envelope": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["attackMs", "decayMs", "sustain", "releaseMs"],
+      "properties": {
+        "attackMs": { "type": "integer", "minimum": 0, "maximum": 20000 },
+        "decayMs": { "type": "integer", "minimum": 0, "maximum": 20000 },
+        "sustain": { "$ref": "#/$defs/unit" },
+        "releaseMs": { "type": "integer", "minimum": 0, "maximum": 20000 },
+        "curve": { "enum": ["linear", "exponential"] }
+      }
+    },
+    "filter": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "frequency"],
+      "properties": {
+        "type": { "enum": ["lowpass", "highpass", "bandpass"] },
+        "frequency": { "type": "number", "exclusiveMinimum": 0, "maximum": 20000 },
+        "resonance": { "type": "number", "minimum": 0.05, "maximum": 8 }
+      }
+    },
+    "layer": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["type", "waveform", "frequency", "gain", "envelope"],
+          "properties": {
+            "type": { "const": "oscillator" },
+            "waveform": { "enum": ["sine", "triangle", "square", "pulse", "sawtooth"] },
+            "pulseWidth": { "type": "number", "exclusiveMinimum": 0, "exclusiveMaximum": 1 },
+            "frequency": { "$ref": "#/$defs/frequency" },
+            "gain": { "$ref": "#/$defs/unit" },
+            "envelope": { "$ref": "#/$defs/envelope" },
+            "filter": { "$ref": "#/$defs/filter" },
+            "startMs": { "type": "integer", "minimum": 0, "maximum": 60000 }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["type", "noise", "gain", "envelope"],
+          "properties": {
+            "type": { "const": "noise" },
+            "noise": { "enum": ["white", "pink", "brown", "metallic", "sample-and-hold"] },
+            "holdSamples": { "type": "integer", "minimum": 1, "maximum": 4096 },
+            "gain": { "$ref": "#/$defs/unit" },
+            "envelope": { "$ref": "#/$defs/envelope" },
+            "filter": { "$ref": "#/$defs/filter" },
+            "startMs": { "type": "integer", "minimum": 0, "maximum": 60000 }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["type", "frequencies", "decayMs", "gain"],
+          "properties": {
+            "type": { "const": "resonator" },
+            "frequencies": {
+              "type": "array",
+              "minItems": 1,
+              "maxItems": 8,
+              "items": { "type": "number", "exclusiveMinimum": 0, "maximum": 20000 }
+            },
+            "decayMs": { "type": "integer", "minimum": 1, "maximum": 20000 },
+            "gain": { "$ref": "#/$defs/unit" },
+            "startMs": { "type": "integer", "minimum": 0, "maximum": 60000 }
+          }
+        }
+      ]
+    },
+    "effect": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["type", "amount"],
+          "properties": {
+            "type": { "const": "distortion" },
+            "amount": { "$ref": "#/$defs/unit" }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["type", "delayMs", "feedback", "mix"],
+          "properties": {
+            "type": { "const": "delay" },
+            "delayMs": { "type": "integer", "minimum": 1, "maximum": 2000 },
+            "feedback": { "type": "number", "minimum": 0, "maximum": 0.95 },
+            "mix": { "$ref": "#/$defs/unit" }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["type", "frequency"],
+          "properties": {
+            "type": { "const": "ring-modulator" },
+            "frequency": { "type": "number", "exclusiveMinimum": 0, "maximum": 20000 },
+            "mix": { "$ref": "#/$defs/unit" }
+          }
+        }
+      ]
+    }
+  }
+}

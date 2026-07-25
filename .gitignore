@@ -2,6 +2,7 @@
 /.toolchains/
 /cli/dist/
 /runtime-web/dist/
+/audio-authoring/dist/
 /presentation-protocol/dist/
 /platform-contracts/dist/
 /renderer-three/dist/

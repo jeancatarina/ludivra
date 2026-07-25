@@ -66,6 +66,7 @@ const families: FamilyDefinition[] = [
     inputs: [
       "presentation-protocol/src",
       "platform-contracts/src",
+      "audio-authoring/src",
       "runtime-web/src",
       "renderer-three/src",
       "pnpm-lock.yaml"
@@ -73,6 +74,7 @@ const families: FamilyDefinition[] = [
     outputs: [
       "presentation-protocol/dist",
       "platform-contracts/dist",
+      "audio-authoring/dist",
       "runtime-web/dist",
       "renderer-three/dist"
     ],
