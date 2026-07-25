@@ -66,7 +66,7 @@ Os estados são baseados em evidência. Código compilando, protótipo visual ou
 | 2 | Context Engine, CLI e Development Runner | `CONCLUÍDA` | cache por família com causa, watch afetado e lifecycle com dono único | nenhuma no gate atual |
 | 3 | Control Plane e observabilidade causal | `EM ANDAMENTO` | harness, replay, contratos de UI e captura raster com baseline | correlação completa e captura de erros de renderer |
 | 4 | Autoria text-first | `PARCIAL` | Lua, JSONC, schemas e content binding | UI declarativa e content pack |
-| 5 | Runtime espacial e mundo procedural | `PARCIAL` | posição, chunk, commit determinístico de jobs e geração pura sem seam | streaming, LOD e persistência de região |
+| 5 | Runtime espacial e mundo procedural | `PARCIAL` | posição, chunk, jobs, geração pura sem seam e janela de streaming estável | LOD de simulação, jobs assíncronos reais e persistência de região |
 | 6 | Motion, física e Mass Simulation | `PLANEJADA` | primitivas visuais não autoritativas | motion formal, adapters físicos e Mass Runtime |
 | 7 | Persistência, replay e multiplayer | `PARCIAL` | saves e replays lógicos | persistência mundial e rede player-hosted |
 | 8 | Renderer, UI e áudio escaláveis | `PARCIAL` | Three.js, Web Audio e partículas simples | buffers, instancing, LOD, UI real e budgets |
@@ -295,7 +295,8 @@ Criar uma fundação opt-in comum para mapas pequenos, mundos extensos e sandbox
 - fila de jobs cujo commit é ordenado por chave declarada, provado por permutação da ordem de conclusão;
 - geração de chunk como função pura da identidade, sem acesso a relógio, registro ou vizinho residente;
 - campo de altura amostrado por coordenada global, o que faz a borda compartilhada entre vizinhos bater por construção;
-- verificações de determinismo e de seam que sustentam `WORLD_GENERATOR_NON_DETERMINISTIC` e `WORLD_SEAM_DETECTED`.
+- verificações de determinismo e de seam que sustentam `WORLD_GENERATOR_NON_DETERMINISTIC` e `WORLD_SEAM_DETECTED`;
+- janela de streaming como função pura do observador, com residência estável em viagem longa e regeneração idêntica ao revisitar.
 
 ### Entregas técnicas restantes
 

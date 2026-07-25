@@ -4,6 +4,7 @@
 #include "world_generator.hpp"
 #include "world_jobs.hpp"
 #include "world_position.hpp"
+#include "world_streaming.hpp"
 
 #include <cstdint>
 #include <cstdio>
@@ -32,6 +33,8 @@ using ludivra::kernel::difference;
 using ludivra::kernel::generate_chunk;
 using ludivra::kernel::GeneratorCheck;
 using ludivra::kernel::verify_chunk_seam;
+using ludivra::kernel::plan_streaming;
+using ludivra::kernel::StreamingWindow;
 using ludivra::kernel::verify_generator_determinism;
 using ludivra::kernel::JobKind;
 using ludivra::kernel::JobQueue;
@@ -365,6 +368,71 @@ void check_generation(TestContext& context) {
   context.expect(largest_step < 4'000, "adjacent samples are continuous, not white noise");
 }
 
+/// Applies a plan the way a world tick would: request, generate, mesh, evict.
+void advance_streaming(ChunkRegistry& registry, const WorldPosition viewer, const StreamingWindow& window) {
+  const auto plan = plan_streaming(registry, viewer, window);
+  for (const auto& identity : plan.to_request) {
+    static_cast<void>(registry.request(identity));
+    static_cast<void>(registry.transition(identity, ChunkState::generating));
+    static_cast<void>(registry.set_content_hash(identity, chunk_content_hash(generate_chunk(42U, identity))));
+    static_cast<void>(registry.transition(identity, ChunkState::ready_for_mesh));
+    static_cast<void>(registry.transition(identity, ChunkState::meshing));
+    static_cast<void>(registry.transition(identity, ChunkState::resident));
+  }
+  for (const auto& identity : plan.to_evict) {
+    static_cast<void>(registry.transition(identity, ChunkState::evictable));
+    static_cast<void>(registry.set_resident_resources(identity, 0U));
+    static_cast<void>(registry.discard(identity));
+  }
+}
+
+void check_streaming(TestContext& context) {
+  const StreamingWindow window{2, 1U, 1U};
+  const std::int32_t expected_resident = (2 * window.radius + 1) * (2 * window.radius + 1);
+
+  ChunkRegistry registry;
+  WorldPosition viewer{0U, 0, 0, 0, 0, 0, 0};
+  advance_streaming(registry, viewer, window);
+  context.expect(
+      static_cast<std::int32_t>(registry.snapshot().size()) == expected_resident,
+      "the first plan fills the window");
+
+  // A long walk: residency must stabilise instead of growing with distance.
+  for (std::int32_t step = 0; step < 200; ++step) {
+    const auto moved = translate(viewer, WorldOffset{chunk_extent_scaled, 0, 0});
+    context.expect(moved.error == WorldPositionError::none, "the viewer keeps moving east");
+    viewer = moved.value;
+    advance_streaming(registry, viewer, window);
+    if (static_cast<std::int32_t>(registry.snapshot().size()) != expected_resident) {
+      context.expect(false, "residency stays bounded during a long trip");
+      break;
+    }
+  }
+  context.expect(registry.snapshot().front().identity.x >= 198, "the window followed the viewer");
+
+  // Standing still asks for nothing and releases nothing.
+  const auto idle = plan_streaming(registry, viewer, window);
+  context.expect(idle.to_request.empty() && idle.to_evict.empty(), "a still viewer plans no work");
+
+  // The same walk from a fresh registry reaches the same world, chunk for chunk.
+  ChunkRegistry replayed;
+  WorldPosition replay_viewer{0U, 0, 0, 0, 0, 0, 0};
+  advance_streaming(replayed, replay_viewer, window);
+  for (std::int32_t step = 0; step < 200; ++step) {
+    replay_viewer = translate(replay_viewer, WorldOffset{chunk_extent_scaled, 0, 0}).value;
+    advance_streaming(replayed, replay_viewer, window);
+  }
+  context.expect(replayed.world_hash() == registry.world_hash(), "the same walk reproduces the same world");
+
+  // Returning to a chunk that was evicted regenerates it identically.
+  ChunkRegistry revisited;
+  advance_streaming(revisited, WorldPosition{0U, 0, 0, 0, 0, 0, 0}, window);
+  const auto before = revisited.world_hash();
+  advance_streaming(revisited, WorldPosition{0U, 50, 0, 0, 0, 0, 0}, window);
+  advance_streaming(revisited, WorldPosition{0U, 0, 0, 0, 0, 0, 0}, window);
+  context.expect(revisited.world_hash() == before, "coming back regenerates the same chunks");
+}
+
 }  // namespace
 
 int main() {
@@ -376,6 +444,7 @@ int main() {
   check_chunk_seed(context);
   check_job_commit_order(context);
   check_generation(context);
+  check_streaming(context);
   if (context.failures > 0) {
     std::fprintf(stderr, "%d kernel determinism checks failed\n", context.failures);
     return 1;

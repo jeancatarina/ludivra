@@ -299,8 +299,8 @@
       ],
       "limitations": [
         {
-          "code": "SPATIAL_GENERATION_NOT_AVAILABLE",
-          "message": "Chunk identity, lifecycle and deterministic job commit exist; terrain generation, streaming, LOD and region persistence do not."
+          "code": "SPATIAL_GENERATION_SYNCHRONOUS",
+          "message": "Chunk identity, lifecycle, pure generation and the streaming window exist; jobs commit deterministically but still run synchronously, and simulation LOD and region persistence do not exist."
         },
         {
           "code": "SPATIAL_NOT_EXPOSED_TO_LUA",
