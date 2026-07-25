@@ -143,6 +143,35 @@ async function collectPackageFiles(directory: string): Promise<string[]> {
   return files;
 }
 
+/**
+ * Every workspace dependency of the CLI must be built by the script that builds the
+ * CLI. A missing link compiles locally, where a stale `dist` still exists, and
+ * fails on a clean checkout — which is exactly how it reached CI once.
+ */
+export async function validateBuildScriptCoverage(root: string, diagnostics: Diagnostic[]): Promise<number> {
+  const rootManifest = JSON.parse(await readFile(resolve(root, "package.json"), "utf8")) as {
+    scripts?: Record<string, string>;
+  };
+  const cliManifest = JSON.parse(await readFile(resolve(root, "cli/package.json"), "utf8")) as {
+    dependencies?: Record<string, string>;
+  };
+  const script = rootManifest.scripts?.["build:cli"] ?? "";
+  const dependencies = Object.entries(cliManifest.dependencies ?? {})
+    .filter(([, version]) => version.startsWith("workspace:"))
+    .map(([name]) => name);
+  for (const dependency of dependencies) {
+    if (!script.includes(dependency)) {
+      diagnostics.push({
+        code: "BUILD_SCRIPT_DEPENDENCY_MISSING",
+        severity: "error",
+        message: `build:cli does not build ${dependency}, which the CLI imports`,
+        file: "package.json"
+      });
+    }
+  }
+  return dependencies.length;
+}
+
 export async function validateWorkspaceGraph(root: string, boundaryFiles: string[], diagnostics: Diagnostic[]): Promise<number> {
   const packages = new Map<string, WorkspacePackage>();
   for (const path of await collectPackageFiles(root)) {
@@ -431,6 +460,7 @@ export async function runValidate(arguments_: string[] = []): Promise<CommandOut
     }
   }
   const workspacePackagesChecked = await validateWorkspaceGraph(root, boundaryFiles, diagnostics);
+  const buildDependenciesChecked = await validateBuildScriptCoverage(root, diagnostics);
   const cmakeTargetsChecked = await validateCmakeGraph(root, diagnostics);
 
   const projectArgument = optionValue(arguments_, "--project");
@@ -696,6 +726,7 @@ export async function runValidate(arguments_: string[] = []): Promise<CommandOut
       contentFilesChecked,
       generationChecks: generationChecks.length,
       workspacePackagesChecked,
+      buildDependenciesChecked,
       cmakeTargetsChecked,
       gameProjectChecked: projectArgument !== undefined
     },
