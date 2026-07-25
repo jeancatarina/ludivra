@@ -1,6 +1,7 @@
 #include "fixed_point.hpp"
 #include "random_streams.hpp"
 #include "world_chunks.hpp"
+#include "world_generator.hpp"
 #include "world_jobs.hpp"
 #include "world_position.hpp"
 
@@ -25,7 +26,13 @@ using ludivra::kernel::ChunkError;
 using ludivra::kernel::ChunkIdentity;
 using ludivra::kernel::ChunkRegistry;
 using ludivra::kernel::ChunkState;
+using ludivra::kernel::chunk_content_hash;
+using ludivra::kernel::chunk_sample_edge;
 using ludivra::kernel::difference;
+using ludivra::kernel::generate_chunk;
+using ludivra::kernel::GeneratorCheck;
+using ludivra::kernel::verify_chunk_seam;
+using ludivra::kernel::verify_generator_determinism;
 using ludivra::kernel::JobKind;
 using ludivra::kernel::JobQueue;
 using ludivra::kernel::JobResult;
@@ -307,6 +314,57 @@ void check_job_commit_order(TestContext& context) {
   context.expect(ordering.pending() == 0U, "committing drains the queue");
 }
 
+void check_generation(TestContext& context) {
+  const auto origin = chunk_at(0, 0);
+  context.expect(
+      verify_generator_determinism(42U, origin) == GeneratorCheck::none,
+      "generating the same identity twice produces the same chunk");
+
+  // Generation is a pure function of identity, so load order cannot matter.
+  const auto east = chunk_at(1, 0);
+  const auto forward_origin = generate_chunk(42U, origin);
+  const auto forward_east = generate_chunk(42U, east);
+  const auto reverse_east = generate_chunk(42U, east);
+  const auto reverse_origin = generate_chunk(42U, origin);
+  context.expect(
+      chunk_content_hash(forward_origin) == chunk_content_hash(reverse_origin) &&
+          chunk_content_hash(forward_east) == chunk_content_hash(reverse_east),
+      "generating neighbours in either order gives the same chunks");
+
+  // The shared edge must agree, which is why terrain samples global coordinates
+  // instead of a per-chunk stream.
+  context.expect(verify_chunk_seam(forward_origin, forward_east) == GeneratorCheck::none, "east seam matches");
+  const auto south = generate_chunk(42U, chunk_at(0, 1));
+  context.expect(verify_chunk_seam(forward_origin, south) == GeneratorCheck::none, "south seam matches");
+  context.expect(
+      verify_chunk_seam(forward_origin, generate_chunk(42U, chunk_at(5, 5))) == GeneratorCheck::seam_detected,
+      "chunks that do not touch are not a seam");
+
+  // A different world is a different chunk: seed, coordinate and generator version.
+  context.expect(
+      chunk_content_hash(generate_chunk(43U, origin)) != chunk_content_hash(forward_origin),
+      "another root seed produces another world");
+  ChunkIdentity newer = origin;
+  newer.generator_version = 2U;
+  context.expect(
+      chunk_content_hash(generate_chunk(42U, newer)) != chunk_content_hash(forward_origin),
+      "a new generator version produces another world");
+  context.expect(
+      chunk_content_hash(forward_east) != chunk_content_hash(forward_origin),
+      "neighbouring chunks are not copies of each other");
+
+  // The field is terrain, not noise: neighbouring samples stay close together.
+  std::int64_t largest_step = 0;
+  for (std::int32_t index = 1; index < chunk_sample_edge; ++index) {
+    const auto previous = forward_origin.height[static_cast<std::size_t>(index) - 1];
+    const auto current = forward_origin.height[static_cast<std::size_t>(index)];
+    const auto step = previous > current ? previous - current : current - previous;
+    if (step > largest_step) largest_step = step;
+  }
+  context.expect(largest_step > 0, "the height field is not flat");
+  context.expect(largest_step < 4'000, "adjacent samples are continuous, not white noise");
+}
+
 }  // namespace
 
 int main() {
@@ -317,6 +375,7 @@ int main() {
   check_chunk_lifecycle(context);
   check_chunk_seed(context);
   check_job_commit_order(context);
+  check_generation(context);
   if (context.failures > 0) {
     std::fprintf(stderr, "%d kernel determinism checks failed\n", context.failures);
     return 1;

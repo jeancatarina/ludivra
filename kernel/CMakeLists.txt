@@ -8,6 +8,7 @@ add_library(ludivra_kernel STATIC
   src/runtime.cpp
   src/state_archive.cpp
   src/world_chunks.cpp
+  src/world_generator.cpp
   src/world_jobs.cpp
   src/world_position.cpp
 )
