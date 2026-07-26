@@ -30,7 +30,7 @@
           "generator": {
             "name": "OpenAI image generation",
             "mode": "built-in",
-            "prompt": "Production-quality full-body goblin shaman cutout for a premium stylized fantasy action RPG; teal and ochre robes, ritual mask, bone charms and emerald crystal staff; three-quarter isometric idle pose; pure magenta background; no shadow, text, UI or watermark."
+            "prompt": "Create a production-quality final game character asset, not concept art and not a rough prototype. Full-body goblin shaman for a premium stylized fantasy action RPG, painterly 2D character cutout with crisp hand-painted materials and highly resolved details. Distinct readable silhouette at gameplay scale: short hunched goblin, expressive angular face, carved wooden ritual mask raised above the forehead, layered weathered teal and ochre robes, leather belts and pouches, bone charms, crooked wooden staff topped with a luminous emerald crystal, subtle green magical glow confined close to the crystal. Three-quarter isometric view, facing down-right, neutral ready/idle pose, every limb and the entire staff fully visible, anatomically coherent hands and feet, consistent perspective, professional game-production polish comparable to a finished premium indie character sprite. Strong shape language, controlled value grouping, clean edges, no excessive micro-noise. Place the isolated character on a perfectly flat solid pure magenta (#FF00FF) background for deterministic chroma-key removal. No ground plane, no cast shadow, no vignette, no environment, no border, no UI, no labels, no typography, no watermark, no extra objects, no cropped extremities. Square image with generous even padding around the full silhouette."
           }
         }
       },
@@ -74,7 +74,7 @@
           "generator": {
             "name": "OpenAI image generation",
             "mode": "built-in",
-            "prompt": "Production-quality eight-direction 2.5D sprite sheet of one consistent goblin shaman; identical proportions, teal and ochre costume, ritual mask, bone charms and emerald staff in all views; pure magenta background; no labels, grid, shadows, UI or watermark."
+            "prompt": "Create a production-quality 2.5D directional character sprite sheet for a premium stylized fantasy action RPG. ONE exact same goblin shaman shown in eight consistent orthographic/isometric turntable directions: south, south-west, west, north-west, north, north-east, east, south-east. Arrange exactly 8 equal square cells in one horizontal row, with clear even gutters and no grid lines. In every cell preserve identical body proportions, costume, colors and equipment: short hunched green goblin, angular face, carved wooden ritual mask above forehead, layered weathered teal and ochre robes, leather belts and pouches, bone charms, crooked wooden staff with emerald crystal. Neutral idle pose, full body and full staff visible in every view, feet on the same baseline, same character scale and lighting, staff consistently in the right hand, no missing or duplicated limbs, no costume changes. Premium finished game sprite rendering with crisp hand-painted materials, strong readable silhouette, controlled details, transparent-ready clean contours. Flat pure magenta (#FF00FF) background across the entire sheet. No shadows, no environment, no perspective scene, no labels, no text, no direction names, no UI, no borders, no watermark. Wide 4:1 image suitable for deterministic slicing into eight equal cells."
           }
         }
       },
