@@ -14,6 +14,30 @@ export interface HostDiagnosticsCollector {
 
 const maximumRecorded = 200;
 
+interface StructuredHostError {
+  code?: unknown;
+  source?: unknown;
+  message?: unknown;
+}
+
+function structuredError(value: unknown): StructuredHostError | null {
+  return typeof value === "object" && value !== null ? value as StructuredHostError : null;
+}
+
+function diagnosticForError(
+  error: unknown,
+  fallbackCode: string,
+  fallbackMessage: string,
+  fallbackSource: string
+): { code: string; message: string; source: string } {
+  const structured = structuredError(error);
+  return {
+    code: typeof structured?.code === "string" ? structured.code : fallbackCode,
+    message: typeof structured?.message === "string" ? structured.message : fallbackMessage,
+    source: typeof structured?.source === "string" ? structured.source : fallbackSource
+  };
+}
+
 /**
  * Collects host-level failures — script errors, rejected promises, missing assets,
  * shader and audio problems — so a defect visible in the pixels has a recorded
@@ -28,15 +52,14 @@ export function createHostDiagnostics(tick: () => string | null): HostDiagnostic
   };
 
   const onError = (event: ErrorEvent): void => {
-    record("HOST_SCRIPT_ERROR", event.message, event.filename || "window");
+    const diagnostic = diagnosticForError(event.error, "HOST_SCRIPT_ERROR", event.message, event.filename || "window");
+    record(diagnostic.code, diagnostic.message, diagnostic.source);
   };
   const onRejection = (event: PromiseRejectionEvent): void => {
     const reason = event.reason;
-    record(
-      "HOST_PROMISE_REJECTED",
-      reason instanceof Error ? reason.message : String(reason),
-      "unhandledrejection"
-    );
+    const fallbackMessage = reason instanceof Error ? reason.message : String(reason);
+    const diagnostic = diagnosticForError(reason, "HOST_PROMISE_REJECTED", fallbackMessage, "unhandledrejection");
+    record(diagnostic.code, diagnostic.message, diagnostic.source);
   };
   const onResourceError = (event: Event): void => {
     const target = event.target;
@@ -45,7 +68,7 @@ export function createHostDiagnostics(tick: () => string | null): HostDiagnostic
     else if (target instanceof HTMLLinkElement) record("HOST_ASSET_MISSING", target.href, "link");
   };
   const onContextLost = (event: Event): void => {
-    record("HOST_WEBGL_CONTEXT_LOST", event.type, "canvas");
+    record("RENDER_CONTEXT_LOST", event.type, "canvas");
   };
 
   window.addEventListener("error", onError);

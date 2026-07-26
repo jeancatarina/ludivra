@@ -64,7 +64,9 @@ const desktop = await createDesktopCheckpointManager(runtime);
 // Host diagnostics stay outside the UI contract: they describe the host, not the game.
 hostStatus.textContent = `Kernel WASM${desktop === null ? "" : " · autosave desktop"}`;
 
-const recording = createRecordingRenderer(createThreeRenderer(canvas));
+const recording = createRecordingRenderer(createThreeRenderer(canvas, {
+  reportDiagnostic: hostDiagnostics.report
+}));
 const renderer = recording.renderer;
 const packDocuments = (JSON.parse(contentPackSource) as {
   sections: { documents: { value: Record<string, unknown> } };

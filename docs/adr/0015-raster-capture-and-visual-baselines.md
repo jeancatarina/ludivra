@@ -42,6 +42,10 @@ Quiescência não atingida é `CAPTURE_NOT_QUIESCENT` ou `CAPTURE_FRAME_NOT_STAB
 
 O bundle do run recebe a imagem, o `RenderedUiSnapshot` correspondente e o `capture-diff.json` quando houver baseline.
 
+### Classificação de falhas do renderer
+
+O artifact bundle inclui os diagnósticos do host. Falha não classificada continua como `HOST_SCRIPT_ERROR`, mas o adaptador de renderização deve propagar falhas estruturadas: inicialização, operação, frame, resize, descarte e contexto usam códigos `RENDER_*`; compilação ou link de shader usa `SHADER_COMPILE_FAILED`. O callback de compilação do backend é a fonte do log de shader, portanto uma falha de GPU não pode ser reduzida a erro genérico de script.
+
 ### Formato e comparação
 
 O formato é PNG sem perda. A comparação **não** exige igualdade byte a byte. Cada perfil declara tolerância: fração máxima de pixels alterados, delta máximo por canal e regiões ignoradas quando houver conteúdo legitimamente variável.
@@ -66,7 +70,7 @@ Animação, blend, trails, subemitters, transições e frame pacing exigem sequ�
 
 A captura SVG headless permanece válida como evidência de composição e semântica e continua proibida como evidência de pixels. Este ADR não promete comparação de pixels entre métodos gráficos diferentes, profiling de GPU completo nem baseline por máquina de desenvolvedor. Vídeo é evidência dinâmica correlacionada, não baseline byte a byte.
 
-Códigos: `CAPTURE_RASTER_UNAVAILABLE`, `CAPTURE_NOT_QUIESCENT`, `CAPTURE_FRAME_NOT_STABLE`, `CAPTURE_BUNDLE_LOAD_FAILED`, `CAPTURE_BUNDLE_LOAD_TIMEOUT`, `CAPTURE_BASELINE_MISSING`, `CAPTURE_BASELINE_MISMATCH`, `CAPTURE_IMAGE_SIZE_MISMATCH`, `CAPTURE_PROFILE_UNDECLARED`, `CAPTURE_RENDERER_UNEXPECTED`.
+Códigos: `CAPTURE_RASTER_UNAVAILABLE`, `CAPTURE_NOT_QUIESCENT`, `CAPTURE_FRAME_NOT_STABLE`, `CAPTURE_BUNDLE_LOAD_FAILED`, `CAPTURE_BUNDLE_LOAD_TIMEOUT`, `CAPTURE_BASELINE_MISSING`, `CAPTURE_BASELINE_MISMATCH`, `CAPTURE_IMAGE_SIZE_MISMATCH`, `CAPTURE_PROFILE_UNDECLARED`, `CAPTURE_RENDERER_UNEXPECTED`, `RENDER_INITIALIZATION_FAILED`, `RENDER_OPERATION_FAILED`, `RENDER_PARTICLE_CREATE_FAILED`, `RENDER_FRAME_FAILED`, `RENDER_RESIZE_FAILED`, `RENDER_DISPOSAL_FAILED`, `RENDER_VISUAL_DUPLICATE`, `RENDER_VISUAL_NOT_FOUND`, `RENDER_VISUAL_MATERIAL_UNSUPPORTED`, `RENDER_CONTEXT_LOST`, `SHADER_COMPILE_FAILED`.
 
 ## Consequências
 

@@ -25,7 +25,9 @@ test("program source validates and renders every public index", async () => {
   await validateProgram(program, adrs, capabilities, repositoryRoot);
   assert.match(renderRoadmap(program, adrs), /\| 10 \| Procedural Forges \| `PARCIAL` \|/);
   assert.match(renderRoadmap(program, adrs), /Capabilities: `authoring\.audio-forge`/);
-  assert.match(renderBacklog(program, adrs), /OBS-001.+em andamento/);
+  const backlog = renderBacklog(program, adrs);
+  assert.doesNotMatch(backlog, /OBS-001/);
+  assert.match(backlog, /OBS-002.+planejado/);
 });
 
 test("completed phases cannot retain work and task IDs cannot collide", async () => {

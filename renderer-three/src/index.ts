@@ -34,6 +34,19 @@ import {
   SRGBColorSpace
 } from "three";
 import { createCinematicPipeline } from "./cinematic-pipeline.js";
+import {
+  RendererFailure,
+  rendererFailure,
+  reportShaderFailure,
+  type RendererDiagnosticCode,
+  type RendererDiagnosticReporter
+} from "./diagnostics.js";
+
+export { RendererFailure, type RendererDiagnosticCode, type RendererDiagnosticReporter } from "./diagnostics.js";
+
+export interface ThreeRendererOptions {
+  reportDiagnostic?: RendererDiagnosticReporter;
+}
 
 interface ActiveBurst {
   points: Points<BufferGeometry, PointsMaterial>;
@@ -134,13 +147,29 @@ function material(definition: VisualDefinition): MeshStandardMaterial {
   });
 }
 
-export function createThreeRenderer(canvas: HTMLCanvasElement): PresentationRenderer {
-  const renderer = new WebGLRenderer({
+function rendererOperation<T>(code: RendererDiagnosticCode, source: string, operation: () => T): T {
+  try {
+    return operation();
+  } catch (error) {
+    throw rendererFailure(code, source, error);
+  }
+}
+
+export function createThreeRenderer(
+  canvas: HTMLCanvasElement,
+  options: ThreeRendererOptions = {}
+): PresentationRenderer {
+  const renderer = rendererOperation("RENDER_INITIALIZATION_FAILED", "renderer-three:initialization", () => new WebGLRenderer({
     canvas,
     antialias: true,
     alpha: true,
     powerPreference: "high-performance"
-  });
+  }));
+  const defaultShaderError = renderer.debug.onShaderError;
+  renderer.debug.onShaderError = (gl, program, vertexShader, fragmentShader) => {
+    reportShaderFailure(options.reportDiagnostic, gl, program, vertexShader, fragmentShader);
+    defaultShaderError?.(gl, program, vertexShader, fragmentShader);
+  };
   renderer.outputColorSpace = SRGBColorSpace;
   renderer.toneMapping = ACESFilmicToneMapping;
   renderer.toneMappingExposure = 1.12;
@@ -172,7 +201,11 @@ export function createThreeRenderer(canvas: HTMLCanvasElement): PresentationRend
   scene.add(rimLight);
   const visuals = new Map<string, Mesh>();
   const bursts: ActiveBurst[] = [];
-  const cinematicPipeline = createCinematicPipeline(renderer, scene, camera);
+  const cinematicPipeline = rendererOperation(
+    "RENDER_INITIALIZATION_FAILED",
+    "renderer-three:cinematic-pipeline",
+    () => createCinematicPipeline(renderer, scene, camera)
+  );
   let previousRenderTime = performance.now();
 
   function updateParticles(): void {
@@ -208,101 +241,132 @@ export function createThreeRenderer(canvas: HTMLCanvasElement): PresentationRend
 
   return {
     createVisual(definition) {
-      if (visuals.has(definition.id)) {
-        throw new Error(`visual already exists: ${definition.id}`);
-      }
-      const mesh = new Mesh(geometry(definition), material(definition));
-      mesh.userData.surface = definition.surface ?? "metal";
-      mesh.castShadow = definition.surface !== "glass";
-      mesh.receiveShadow = definition.surface !== "emissive";
-      if (definition.scale !== undefined) {
-        mesh.scale.set(...definition.scale);
-      }
-      visuals.set(definition.id, mesh);
-      scene.add(mesh);
+      rendererOperation("RENDER_OPERATION_FAILED", "renderer-three:create-visual", () => {
+        if (visuals.has(definition.id)) {
+          throw new RendererFailure(
+            "RENDER_VISUAL_DUPLICATE",
+            `visual already exists: ${definition.id}`,
+            "renderer-three:create-visual"
+          );
+        }
+        const mesh = new Mesh(geometry(definition), material(definition));
+        mesh.userData.surface = definition.surface ?? "metal";
+        mesh.castShadow = definition.surface !== "glass";
+        mesh.receiveShadow = definition.surface !== "emissive";
+        if (definition.scale !== undefined) {
+          mesh.scale.set(...definition.scale);
+        }
+        visuals.set(definition.id, mesh);
+        scene.add(mesh);
+      });
     },
     setTransform(id: string, transform: VisualTransform) {
-      const visual = visuals.get(id);
-      if (visual === undefined) {
-        throw new Error(`visual does not exist: ${id}`);
-      }
-      visual.position.set(...transform.position);
-      visual.rotation.set(...transform.rotation);
-      if (transform.scale !== undefined) {
-        visual.scale.set(...transform.scale);
-      }
+      rendererOperation("RENDER_OPERATION_FAILED", "renderer-three:set-transform", () => {
+        const visual = visuals.get(id);
+        if (visual === undefined) {
+          throw new RendererFailure("RENDER_VISUAL_NOT_FOUND", `visual does not exist: ${id}`, "renderer-three:set-transform");
+        }
+        visual.position.set(...transform.position);
+        visual.rotation.set(...transform.rotation);
+        if (transform.scale !== undefined) {
+          visual.scale.set(...transform.scale);
+        }
+      });
     },
     setColor(id, color) {
-      const visual = visuals.get(id);
-      if (visual === undefined || !(visual.material instanceof MeshStandardMaterial)) {
-        throw new Error(`visual does not exist: ${id}`);
-      }
-      visual.material.color.setHex(color);
-      const emissiveScale = visual.userData.surface === "emissive" ? 0.85 : 0.12;
-      visual.material.emissive.setHex(color).multiplyScalar(emissiveScale);
+      rendererOperation("RENDER_OPERATION_FAILED", "renderer-three:set-color", () => {
+        const visual = visuals.get(id);
+        if (visual === undefined) {
+          throw new RendererFailure("RENDER_VISUAL_NOT_FOUND", `visual does not exist: ${id}`, "renderer-three:set-color");
+        }
+        if (!(visual.material instanceof MeshStandardMaterial)) {
+          throw new RendererFailure(
+            "RENDER_VISUAL_MATERIAL_UNSUPPORTED",
+            `visual material is not supported: ${id}`,
+            "renderer-three:set-color"
+          );
+        }
+        visual.material.color.setHex(color);
+        const emissiveScale = visual.userData.surface === "emissive" ? 0.85 : 0.12;
+        visual.material.emissive.setHex(color).multiplyScalar(emissiveScale);
+      });
     },
     setVisible(id, visible) {
-      const visual = visuals.get(id);
-      if (visual === undefined) {
-        throw new Error(`visual does not exist: ${id}`);
-      }
-      visual.visible = visible;
+      rendererOperation("RENDER_OPERATION_FAILED", "renderer-three:set-visible", () => {
+        const visual = visuals.get(id);
+        if (visual === undefined) {
+          throw new RendererFailure("RENDER_VISUAL_NOT_FOUND", `visual does not exist: ${id}`, "renderer-three:set-visible");
+        }
+        visual.visible = visible;
+      });
     },
     setCamera(view: CameraView) {
-      camera.position.set(...view.position);
-      camera.lookAt(...view.target);
-      if (view.fieldOfView !== undefined) {
-        camera.fov = Math.max(20, Math.min(90, view.fieldOfView));
-        camera.updateProjectionMatrix();
-      }
+      rendererOperation("RENDER_OPERATION_FAILED", "renderer-three:set-camera", () => {
+        camera.position.set(...view.position);
+        camera.lookAt(...view.target);
+        if (view.fieldOfView !== undefined) {
+          camera.fov = Math.max(20, Math.min(90, view.fieldOfView));
+          camera.updateProjectionMatrix();
+        }
+      });
     },
     setAtmosphere(atmosphere: SceneAtmosphere) {
-      scene.fog = new FogExp2(
-        atmosphere.fogColor,
-        Math.max(0, Math.min(0.25, atmosphere.fogDensity))
-      );
-      ambientLight.color.setHex(atmosphere.ambientColor);
-      ambientLight.intensity = Math.max(0, atmosphere.ambientIntensity);
-      keyLight.color.setHex(atmosphere.keyColor);
-      keyLight.intensity = Math.max(0, atmosphere.keyIntensity);
-      reactorLight.color.setHex(atmosphere.fillColor);
-      reactorLight.intensity = Math.max(0, atmosphere.fillIntensity);
-      rimLight.color.setHex(atmosphere.fillColor);
-      rimLight.intensity = Math.max(0, atmosphere.fillIntensity * 0.55);
+      rendererOperation("RENDER_OPERATION_FAILED", "renderer-three:set-atmosphere", () => {
+        scene.fog = new FogExp2(
+          atmosphere.fogColor,
+          Math.max(0, Math.min(0.25, atmosphere.fogDensity))
+        );
+        ambientLight.color.setHex(atmosphere.ambientColor);
+        ambientLight.intensity = Math.max(0, atmosphere.ambientIntensity);
+        keyLight.color.setHex(atmosphere.keyColor);
+        keyLight.intensity = Math.max(0, atmosphere.keyIntensity);
+        reactorLight.color.setHex(atmosphere.fillColor);
+        reactorLight.intensity = Math.max(0, atmosphere.fillIntensity);
+        rimLight.color.setHex(atmosphere.fillColor);
+        rimLight.intensity = Math.max(0, atmosphere.fillIntensity * 0.55);
+      });
     },
     spawnParticles(definition) {
-      const burst = createParticleBurst(definition);
-      bursts.push(burst);
-      scene.add(burst.points);
+      rendererOperation("RENDER_PARTICLE_CREATE_FAILED", "renderer-three:spawn-particles", () => {
+        const burst = createParticleBurst(definition);
+        bursts.push(burst);
+        scene.add(burst.points);
+      });
     },
     render() {
-      updateParticles();
-      cinematicPipeline.render();
+      rendererOperation("RENDER_FRAME_FAILED", "renderer-three:frame", () => {
+        updateParticles();
+        cinematicPipeline.render();
+      });
     },
     resize(width, height, pixelRatio) {
-      const cappedPixelRatio = Math.min(pixelRatio, 2);
-      renderer.setPixelRatio(cappedPixelRatio);
-      renderer.setSize(width, height, false);
-      cinematicPipeline.resize(width, height, cappedPixelRatio);
-      camera.aspect = width / Math.max(height, 1);
-      camera.updateProjectionMatrix();
+      rendererOperation("RENDER_RESIZE_FAILED", "renderer-three:resize", () => {
+        const cappedPixelRatio = Math.min(pixelRatio, 2);
+        renderer.setPixelRatio(cappedPixelRatio);
+        renderer.setSize(width, height, false);
+        cinematicPipeline.resize(width, height, cappedPixelRatio);
+        camera.aspect = width / Math.max(height, 1);
+        camera.updateProjectionMatrix();
+      });
     },
     destroy() {
-      for (const visual of visuals.values()) {
-        visual.geometry.dispose();
-        if (visual.material instanceof MeshStandardMaterial) {
-          visual.material.dispose();
+      rendererOperation("RENDER_DISPOSAL_FAILED", "renderer-three:destroy", () => {
+        for (const visual of visuals.values()) {
+          visual.geometry.dispose();
+          if (visual.material instanceof MeshStandardMaterial) {
+            visual.material.dispose();
+          }
         }
-      }
-      visuals.clear();
-      for (const burst of bursts) {
-        scene.remove(burst.points);
-        burst.points.geometry.dispose();
-        burst.points.material.dispose();
-      }
-      bursts.length = 0;
-      cinematicPipeline.destroy();
-      renderer.dispose();
+        visuals.clear();
+        for (const burst of bursts) {
+          scene.remove(burst.points);
+          burst.points.geometry.dispose();
+          burst.points.material.dispose();
+        }
+        bursts.length = 0;
+        cinematicPipeline.destroy();
+        renderer.dispose();
+      });
     }
   };
 }

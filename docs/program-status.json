@@ -3,7 +3,7 @@
   "release": "0.7.0",
   "currentFocus": {
     "phase": 3,
-    "summary": "Fechar os códigos específicos de renderer e shader e ampliar a matriz mínima de baselines.",
+    "summary": "Aprovar a matriz mínima adicional de baselines raster.",
     "next": "Concluir o gate da Fase 4 antes de ampliar novamente a fundação espacial."
   },
   "phases": [
@@ -61,7 +61,6 @@
         }
       ],
       "remaining": [
-        "Códigos próprios para falhas de renderer e shader em vez de erro de script genérico.",
         "Baselines aprovadas para a matriz mínima de viewport, escala de texto e device scale factor."
       ],
       "gate": "Um defeito nos pixels é correlacionado a estado, ação, evento, projector e origem, reproduzido por cenário e anexado ao artifact bundle."
@@ -272,14 +271,6 @@
     }
   ],
   "tasks": [
-    {
-      "id": "OBS-001",
-      "priority": "high",
-      "status": "in_progress",
-      "phase": 3,
-      "work": "Separar falhas de renderer e shader de erros genéricos de script.",
-      "adrs": ["0010", "0015"]
-    },
     {
       "id": "OBS-002",
       "priority": "high",

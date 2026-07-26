@@ -2,11 +2,10 @@
 
 > Gerado de `docs/program-status.json` por `tools/program-status/generate.mjs`. Não edite manualmente.
 
-Foco atual: **Fase 3 — Fechar os códigos específicos de renderer e shader e ampliar a matriz mínima de baselines.**
+Foco atual: **Fase 3 — Aprovar a matriz mínima adicional de baselines raster.**
 
 | ID | Prioridade | Estado | Fase | Trabalho | ADRs |
 |---|---|---|---:|---|---|
-| OBS-001 | alta | em andamento | 3 | Separar falhas de renderer e shader de erros genéricos de script. | [ADR 0010](docs/adr/0010-local-control-protocol-and-scenario-harness.md), [ADR 0015](docs/adr/0015-raster-capture-and-visual-baselines.md) |
 | OBS-002 | alta | planejado | 3 | Aprovar a matriz mínima adicional de baselines raster. | [ADR 0015](docs/adr/0015-raster-capture-and-visual-baselines.md) |
 | CNT-001 | alta | planejado | 4 | Implementar migrations explícitas do content pack e suas fixtures. | [ADR 0017](docs/adr/0017-content-pack-compilation-and-migrations.md) |
 | FSM-001 | alta | planejado | 4 | Implementar statecharts determinísticas de gameplay com save, hash, replay e diagnóstico. | [ADR 0053](docs/adr/0053-deterministic-gameplay-statecharts.md) |

@@ -5,7 +5,7 @@
 | Campo | Valor |
 |---|---|
 | Release atual | 0.7.0 |
-| Foco atual | Fase 3 — Fechar os códigos específicos de renderer e shader e ampliar a matriz mínima de baselines. |
+| Foco atual | Fase 3 — Aprovar a matriz mínima adicional de baselines raster. |
 | Próxima entrega | Concluir o gate da Fase 4 antes de ampliar novamente a fundação espacial. |
 | Fonte editável de progresso | [docs/program-status.json](docs/program-status.json) |
 | Decisão do modelo documental | [ADR 0046](docs/adr/0046-generated-program-documentation.md) |
@@ -25,7 +25,7 @@
 |---:|---|---|---|
 | 1 | Estado canônico e catálogo de capacidades | `CONCLUÍDA` | nenhuma no gate atual |
 | 2 | Context Engine, CLI e Development Runner | `CONCLUÍDA` | nenhuma no gate atual |
-| 3 | AI Control Plane e observabilidade causal | `EM ANDAMENTO` | Códigos próprios para falhas de renderer e shader em vez de erro de script genérico. |
+| 3 | AI Control Plane e observabilidade causal | `EM ANDAMENTO` | Baselines aprovadas para a matriz mínima de viewport, escala de texto e device scale factor. |
 | 4 | Autoria text-first de gameplay, UI e conteúdo | `PARCIAL` | Contrato público e versionado da camada 1 do SDK, incluindo queries declarativas e maturidade por símbolo. |
 | 5 | Runtime espacial e mundo procedural | `PARCIAL` | Jobs assíncronos reais sem alterar a ordem de commit. |
 | 6 | Motion, física e Mass Simulation | `PLANEJADA` | Motion por tempo declarado e comandos semânticos. |
@@ -104,7 +104,6 @@ Permitir que a IA controle uma execução real e rastreie um defeito do input at
 
 ### Falta
 
-- Códigos próprios para falhas de renderer e shader em vez de erro de script genérico.
 - Baselines aprovadas para a matriz mínima de viewport, escala de texto e device scale factor.
 
 ### Gate de saída
