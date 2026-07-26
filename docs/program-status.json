@@ -72,7 +72,7 @@
       "status": "partial",
       "owners": ["kernel", "Lua SDK", "content compiler", "presentation protocol"],
       "dependencies": [3],
-      "adrs": ["0004", "0016", "0017", "0018", "0044"],
+      "adrs": ["0004", "0016", "0017", "0018", "0044", "0048", "0053"],
       "objective": "Permitir que jogos sejam criados por APIs públicas textuais sem alterar internals da engine.",
       "delivered": [
         {
@@ -90,6 +90,8 @@
         "Contrato público e versionado da camada 1 do SDK, incluindo queries declarativas e maturidade por símbolo.",
         "Projectors read-only declarados e medidos separadamente.",
         "Migrations explícitas de schema e conteúdo com fixtures.",
+        "Grafo textual compilado de cenas, prefabs e recursos com IDs estáveis.",
+        "Statecharts determinísticas com guards/actions registrados, save, hash e replay.",
         "Gate integrado de UI, localização, navegação, foco, touch targets e breakpoints."
       ],
       "gate": "Uma sessão nova cria regra, conteúdo, tela, apresentação e cenário usando apenas APIs públicas."
@@ -100,7 +102,7 @@
       "status": "partial",
       "owners": ["kernel spatial runtime", "world runtime", "job system"],
       "dependencies": [4],
-      "adrs": ["0018", "0019", "0039", "0045"],
+      "adrs": ["0018", "0019", "0039", "0045", "0054"],
       "objective": "Criar uma fundação opt-in para mapas pequenos, mundos extensos e sandboxes virtualmente infinitos.",
       "delivered": [
         {
@@ -117,6 +119,7 @@
         "Jobs assíncronos reais sem alterar a ordem de commit.",
         "Simulation LOD, catch-up lógico e inspeção de regiões, chunks, jobs e caches.",
         "Posição com região e partitioning interno comprovado pelo consumidor.",
+        "Regiões de navegação, pathfinding, links, obstacles, agents e avoidance por adapter.",
         "Superfície pública apenas quando um jogo declarar a capability."
       ],
       "gate": "O runtime gera, carrega, descarta e regenera chunks determinísticos com memória estabilizada em viagens longas."
@@ -165,7 +168,7 @@
       "status": "partial",
       "owners": ["presentation protocol", "renderer-three", "UI renderer", "hosts"],
       "dependencies": [3, 4, 5, 6, 7],
-      "adrs": ["0014", "0015", "0020", "0025", "0040"],
+      "adrs": ["0014", "0015", "0020", "0025", "0040", "0047", "0049", "0050", "0051", "0052"],
       "objective": "Apresentar jogos pequenos e massivos com observabilidade e degradação sem alterar gameplay.",
       "delivered": [
         {
@@ -175,6 +178,11 @@
         }
       ],
       "remaining": [
+        "Perfis web-compatible, desktop-compatible e desktop-high com fallback gráfico observado.",
+        "Ingestão glTF/GLB, cooking, LOD, compressão, residência e streaming por target.",
+        "Materiais e ambientes por tiers, shader warmup, cache e fallback verificável.",
+        "Grafos de animação com blend, layers, masks, retarget, IK e root motion controlado.",
+        "VFX GPU/CPU com trails, subemitters, colisão, pooling e budgets.",
         "Buffers contíguos, instancing, LOD, culling, pooling e terrain streaming.",
         "UI completa por teclado, controle e touch com baselines por perfil.",
         "Budgets de voz e memória, prioridade, deduplicação, música adaptativa e fallback observável."
@@ -203,7 +211,7 @@
       "status": "partial",
       "owners": ["authoring toolchains"],
       "dependencies": [4, 5, 6, 7, 8, 9],
-      "adrs": ["0027", "0032", "0033", "0034", "0035", "0036"],
+      "adrs": ["0027", "0032", "0033", "0034", "0035", "0036", "0049"],
       "objective": "Produzir assets e receitas convencionais, rastreáveis e regeneráveis em cinco famílias.",
       "delivered": [
         {
@@ -230,7 +238,7 @@
       "status": "partial",
       "owners": ["CLI", "diagnostics", "benchmark registry", "target hardening"],
       "dependencies": [3, 4, 5, 6, 7, 8, 9, 10],
-      "adrs": ["0028", "0029", "0030", "0031", "0043"],
+      "adrs": ["0028", "0029", "0030", "0031", "0043", "0047"],
       "objective": "Transformar falhas e regressões em diagnóstico causal, reparo controlado e comparação verificável.",
       "delivered": [
         {
@@ -296,12 +304,76 @@
       "adrs": ["0017"]
     },
     {
+      "id": "SCN-001",
+      "priority": "high",
+      "status": "planned",
+      "phase": 4,
+      "work": "Implementar schemas, compilação e inspeção do grafo textual de cenas e prefabs.",
+      "adrs": ["0048"]
+    },
+    {
+      "id": "FSM-001",
+      "priority": "high",
+      "status": "planned",
+      "phase": 4,
+      "work": "Implementar statecharts determinísticas de gameplay com save, hash, replay e diagnóstico.",
+      "adrs": ["0053"]
+    },
+    {
       "id": "WORLD-001",
       "priority": "high",
       "status": "planned",
       "phase": 5,
       "work": "Adicionar jobs assíncronos, Simulation LOD e inspeção espacial após o gate da Fase 4.",
       "adrs": ["0019", "0045"]
+    },
+    {
+      "id": "NAV-001",
+      "priority": "high",
+      "status": "planned",
+      "phase": 5,
+      "work": "Implementar contratos de regiões, pathfinding, links, obstacles, agents e avoidance com fixture de benchmark.",
+      "adrs": ["0054"]
+    },
+    {
+      "id": "DESK-001",
+      "priority": "high",
+      "status": "planned",
+      "phase": 8,
+      "work": "Implementar perfis gráficos desktop-compatible e desktop-high, seleção de backend e fallback observável.",
+      "adrs": ["0047"]
+    },
+    {
+      "id": "AST-001",
+      "priority": "high",
+      "status": "planned",
+      "phase": 8,
+      "work": "Implementar ingestão, cooking, variantes, residência e streaming de assets por target.",
+      "adrs": ["0049"]
+    },
+    {
+      "id": "RND-001",
+      "priority": "high",
+      "status": "planned",
+      "phase": 8,
+      "work": "Implementar materiais, shaders, ambiente e feature tiers com warmup e fallback.",
+      "adrs": ["0050"]
+    },
+    {
+      "id": "ANM-001",
+      "priority": "high",
+      "status": "planned",
+      "phase": 8,
+      "work": "Implementar grafo de animação, retarget, IK, layers, masks e root motion controlado.",
+      "adrs": ["0051"]
+    },
+    {
+      "id": "VFX-001",
+      "priority": "high",
+      "status": "planned",
+      "phase": 8,
+      "work": "Implementar VFX e partículas GPU/CPU com pooling, colisão, trails e budgets.",
+      "adrs": ["0052"]
     },
     {
       "id": "AUD-001",
@@ -341,28 +413,35 @@
       "label": "Browser",
       "status": "experimental",
       "current": "Host WASM, Three.js, UI DOM e controle local existem.",
-      "required": "Fechar Control Plane, budgets e fallbacks gráficos."
+      "required": "Fechar Control Plane, budgets e o perfil web-compatible com fallback gráfico observado."
     },
     {
       "id": "electron-macos",
       "label": "Electron/macOS",
       "status": "experimental",
       "current": "Pacote local, lifecycle, storage e Steam opcional existem.",
-      "required": "Smoke instalado e política de assinatura."
+      "required": "Smoke instalado, política de assinatura e baseline desktop-compatible/high com método e driver registrados."
     },
     {
       "id": "electron-windows",
       "label": "Electron/Windows",
       "status": "not_run",
       "current": "Empacotamento existe sem smoke no target.",
-      "required": "Build e smoke em runner Windows."
+      "required": "Build e smoke em runner Windows com desktop-compatible/high, shader warmup e driver registrados."
     },
     {
       "id": "electron-linux",
       "label": "Electron/Linux",
       "status": "not_run",
       "current": "Empacotamento existe sem smoke no target.",
-      "required": "Build e smoke em runner Linux."
+      "required": "Build e smoke em runner Linux com desktop-compatible/high, shader warmup e driver registrados."
+    },
+    {
+      "id": "electron-steam-deck",
+      "label": "Steam Deck",
+      "status": "not_run",
+      "current": "O pacote Electron/Linux existe, mas não há smoke no SteamOS nem baseline de perfil gráfico.",
+      "required": "Build instalado, desktop-compatible/high, gamepad, resolução, suspensão/retomada e budget térmico em Steam Deck."
     },
     {
       "id": "android",
@@ -397,19 +476,19 @@
       "id": "survivor-like",
       "label": "Survivor-like",
       "status": "planned",
-      "proves": "Spatial grid, Mass Runtime, instancing, partículas e performance."
+      "proves": "Spatial grid, Mass Runtime, instancing, animação, VFX/partículas, fog e performance desktop."
     },
     {
       "id": "physics-party-brawler",
       "label": "Physics party brawler",
       "status": "planned",
-      "proves": "Física 3D, ragdolls, multiplayer, reconexão e host migration."
+      "proves": "Física 3D, character controllers, ragdolls, statecharts, animação, multiplayer, reconexão e host migration."
     },
     {
       "id": "procedural-sandbox",
       "label": "Procedural indie sandbox",
       "status": "planned",
-      "proves": "Chunks, streaming, geração, persistência por deltas e Simulation LOD."
+      "proves": "Chunks, streaming, navegação por regiões, geração, persistência por deltas e Simulation LOD."
     },
     {
       "id": "procedural-diorama-builder",

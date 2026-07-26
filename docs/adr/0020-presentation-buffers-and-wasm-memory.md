@@ -2,8 +2,10 @@
 
 - Status: provisório
 - Data: 2026-07-24
+- Revisado: 2026-07-26 para scene, animação e VFX escaláveis
 - Revisão: antes de adicionar um segundo mecanismo de transporte de frame; threads e memória compartilhada são decididas pelo [ADR 0045](0045-wasm-threads-and-shared-memory.md)
 - Complementa: [ADR 0002](0002-runtime-c-abi.md) e [ADR 0007](0007-semantic-audio-and-effects.md)
+- Complementa: [ADR 0048](0048-textual-scene-prefab-and-resource-graph.md), [ADR 0051](0051-animation-graph-and-skeletal-runtime.md) e [ADR 0052](0052-textual-vfx-and-particle-runtime.md)
 - Depende de: [ADR 0018](0018-numeric-determinism-and-rng-streams.md)
 - Fecha: itens "presentation buffers" e "estratégia de memória compartilhada/cópia no WASM" da seção 36 de [architecture.md](../../architecture.md)
 - Fases: 6 e 8
@@ -24,7 +26,9 @@ O que não escala é o boundary atual do WebAssembly. Cada chamada de `runtime-w
 
 Buffers de apresentação são declarados em contrato próprio, seguindo o padrão de `presentation-events`: `protocolVersion`, `recordSize` por tipo de buffer, capacidade máxima e enumerações como constantes, com header C, tipo TypeScript e header de kernel gerados pelo mesmo mecanismo. Definição manual paralela em qualquer consumidor é proibida.
 
-Os tipos iniciais cobrem transform de visual, estado de visual, animação e instância. Cada tipo declara seu registro completo; campo opcional dentro do registro é proibido, porque destruiria o tamanho fixo.
+Os tipos iniciais cobrem transform de visual, estado de visual, animação e instância. A evolução para desktop acrescenta, em buffers separados e somente quando houver consumidor, parâmetros de material, luzes, emitters, estado de Animation Graph e palettes esqueléticas quando o benchmark justificar produzi-las fora do renderer. Cada tipo declara seu registro completo; campo opcional dentro do registro é proibido, porque destruiria o tamanho fixo.
+
+Scene, asset e graph ID são referências numéricas internadas, nunca caminhos ou objetos do vendor. Buffers diferentes podem evoluir em versões próprias sob um envelope compatível; não se adiciona um registro universal com união de todos os componentes.
 
 ### Direção e autoridade
 
@@ -49,6 +53,7 @@ Códigos: `PRESENTATION_BUFFER_VERSION_MISMATCH`, `PRESENTATION_BUFFER_RECORD_SI
 - a promessa aberta do ADR 0002 é cumprida com schema, versão e bindings gerados;
 - apresentação massiva deixa de pagar `_malloc` e cópia por objeto por frame;
 - o renderer passa a poder alimentar instancing diretamente a partir de memória contígua;
+- animação, luzes e VFX podem escalar sem chamadas ou objetos por entidade;
 - a janela de empréstimo entra no contrato do renderer e vira teste de boundary;
 - hosts continuam publicáveis sem COOP e COEP;
 - threads e `SharedArrayBuffer` permanecem disponíveis como decisão futura com benchmark;

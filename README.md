@@ -65,6 +65,8 @@ For now, the engine is consumed directly from a cloned repository. There is no s
 | Native and WebAssembly kernel | Experimental, with equivalence tests |
 | Electron package for macOS | Validated locally |
 | Windows and Linux packages | Can be generated; still require validation on their target systems |
+| Steam Deck | Package path exists through Linux; device smoke has not been run |
+| Desktop graphics profiles | Planned; current renderer does not yet prove `desktop-high` |
 | Steam integration | Implemented; requires an App ID, Depot ID, and Steamworks account |
 | Signing and notarization | Responsibility of the game owner |
 | Semantic audio, music, and particle effects | Experimental, functional in Browser and Electron |
@@ -359,7 +361,7 @@ Implement a small vertical slice. Before finishing, validate, test, run, and ins
 Use the compatible run manifest for evidence and update only the canonical source of any changed limitation.
 ```
 
-Agents modifying the engine itself must start with [AGENTS.md](AGENTS.md). Technical boundaries are defined in [architecture.md](architecture.md), the evolution sequence lives in [ROADMAP.md](ROADMAP.md), and mandatory gates live in [docs/guardrails/](docs/guardrails/).
+Agents modifying the engine itself must start with [AGENTS.md](AGENTS.md). Technical boundaries are defined in [architecture.md](architecture.md), the evolution sequence lives in [ROADMAP.md](ROADMAP.md), and mandatory gates live in [docs/guardrails/](docs/guardrails/). The desktop capability comparison that motivated ADRs 0047–0054 is recorded in the [Godot gap analysis](docs/research/godot-desktop-gap-analysis.md).
 
 ## CLI reference
 
@@ -426,6 +428,7 @@ ludivra/
 - APIs and formats remain experimental until 1.0;
 - audio currently uses Web Audio in Browser/Electron; native audio adapters are not implemented;
 - visual feedback provides deterministic particle bursts and a built-in cinematic post-processing pipeline; configurable presets, trails, decals, and custom effect graphs remain future capabilities;
+- scenes/prefabs, general asset cooking, animation graphs, GPU VFX, navigation, and the `desktop-high` WebGPU profile are planned contracts, not implemented capabilities;
 - Windows and Linux still require tests on native runners;
 - the engine does not sign or notarize packages;
 - updates require a signed package and a controlled HTTPS feed;

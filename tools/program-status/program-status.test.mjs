@@ -13,9 +13,11 @@ import {
 
 test("ADRs are continuous and drive the decision index", async () => {
   const adrs = await readAdrs();
-  assert.equal(adrs.size, 46);
+  assert.equal(adrs.size, 54);
   assert.equal(adrs.get("0046").status, "aceito");
+  assert.equal(adrs.get("0054").status, "provisório");
   assert.match(renderDecisions(adrs), /\[0046\].+Estado do programa estruturado/);
+  assert.match(renderDecisions(adrs), /\[0054\].+Regiões de navegação/);
 });
 
 test("program source validates and renders every public index", async () => {

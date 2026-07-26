@@ -2,6 +2,7 @@
 
 - Status: provisório
 - Data: 2026-07-24
+- Revisado: 2026-07-26 para métricas de GPU, assets e frame pacing desktop
 - Revisão: antes de alegar qualquer budget de performance na target matrix
 - Complementa: [ADR 0009](0009-canonical-state-and-run-evidence.md) e [ADR 0028](0028-diagnose-repair-verify-and-repair-classes.md)
 - Fase: 11
@@ -28,6 +29,23 @@ Um resultado só é válido acompanhado do seu profile: hardware, sistema, targe
 
 Resultado sem profile é `BENCHMARK_PROFILE_UNDECLARED`. Comparação entre profiles diferentes é recusada, seguindo a regra de evidência comparável do ADR 0028.
 
+Para apresentação, o profile inclui renderer, método gráfico, adapter, GPU, driver, resolução interna e externa, vsync/frame cap e feature tier. “Mesma máquina” com método ou tier diferente continua incomparável.
+
+### Métricas mínimas do perfil desktop
+
+O registry deve conseguir atribuir:
+
+- frame CPU e GPU P50/P95/P99 e frame pacing;
+- tempo por pass registrado;
+- draw calls, instâncias, triângulos e objetos culled;
+- memória CPU/GPU por classe de asset, uploads, evictions e decode;
+- partículas vivas, overdraw class e tempo de VFX;
+- poses, skeletons e custo de Animation Graph;
+- shader variants, tempo de compilação, warmup misses e pipeline cache hits;
+- step de física, corpos ativos, pares, contatos e queries.
+
+Tempo de GPU indisponível é `NOT_AVAILABLE` para aquele backend; estimativa de CPU não o substitui.
+
 ### Inconclusivo é resultado de primeira classe
 
 Quando a variância das amostras excede o limite declarado, o resultado é **inconclusivo** — `BENCHMARK_VARIANCE_ABOVE_LIMIT` — e não passa nem falha. Ele não bloqueia o change set e também não pode ser reportado como aprovado.
@@ -42,7 +60,7 @@ Baseline ausente é `BENCHMARK_BASELINE_MISSING`, classificado como `NOT_AVAILAB
 
 Baselines de imagem seguem o ADR 0015; este ADR trata de baselines numéricas. Os dois compartilham a mesma regra de aprovação intencional.
 
-Códigos: `BENCHMARK_PROFILE_UNDECLARED`, `BENCHMARK_BASELINE_MISSING`, `BENCHMARK_VARIANCE_ABOVE_LIMIT`, `BENCHMARK_BUDGET_EXCEEDED`, `BENCHMARK_METRIC_UNREGISTERED`, `BENCHMARK_RESULT_INCONCLUSIVE`.
+Códigos: `BENCHMARK_PROFILE_UNDECLARED`, `BENCHMARK_BASELINE_MISSING`, `BENCHMARK_VARIANCE_ABOVE_LIMIT`, `BENCHMARK_BUDGET_EXCEEDED`, `BENCHMARK_METRIC_UNREGISTERED`, `BENCHMARK_RESULT_INCONCLUSIVE`, `BENCHMARK_GPU_TIMING_UNAVAILABLE`, `BENCHMARK_FRAME_PACING_EXCEEDED`.
 
 ## Consequências
 

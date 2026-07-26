@@ -2,6 +2,7 @@
 
 - Status: provisório
 - Data: 2026-07-24
+- Revisado: 2026-07-26 para vincular promoção dos solvers à cobertura desktop completa
 - Revisão: ao registrar o primeiro benchmark oficial de física, ou se um target suportado deixar de compilar o solver
 - Fecha a pendência de: [ADR 0021](0021-motion-and-physics-adapter-authority.md)
 - Fase: 6
@@ -26,7 +27,7 @@ Box2D v3 é MIT, escrito em C, compila com CMake e Emscripten, e cobre corpos, f
 
 ### Como as duas entram
 
-Ambos entram como **vendor em adapter de borda**, com versão fixada em `toolchain.lock` e no grafo CMake no momento da adoção, e nunca são importados por kernel, gameplay, Lua ou renderer. O contrato consumido é o do ADR 0021; trocar de solver não muda contrato, save nem replay.
+Ambos entram como **vendor em adapter de borda**, com versão fixada em `toolchain.lock` e no grafo CMake no momento da adoção, e nunca são importados por kernel, gameplay, Lua ou renderer. O contrato consumido é o do ADR 0021, inclusive layers e masks, materiais, sleep, CCD, queries, joints, triggers, character controller, ragdoll, interpolação e debug; trocar de solver não muda contrato, save nem replay.
 
 Autoridade `gameplay` só é liberada para um solver após golden vector de contatos e posições quantizadas, conforme o ADR 0021, e após os cenários de estabilidade do ADR 0036. Até lá, o adapter só serve autoridade `presentation`.
 

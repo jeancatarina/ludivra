@@ -4,7 +4,7 @@
 
 | Campo | Valor |
 |---|---|
-| Versão do documento | 3.4 |
+| Versão do documento | 3.5 |
 | Status | Arquitetura proposta |
 | Escopo inicial | Web, Steam/desktop, Android e iOS |
 | Rota futura | Hosts e renderers nativos para consoles |
@@ -33,7 +33,7 @@ Lua embutida          gameplay e regras específicas
 JSONC                 conteúdo, configuração, cenários e manifests
 TypeScript            hosts, ferramentas e bridge WebAssembly
 Three.js              primeiro renderer gráfico
-HTML/CSS/React        primeiro renderer de UI, sem autoridade lógica
+HTML/CSS              primeiro renderer de UI, sem framework e sem autoridade lógica
 Electron              host desktop e integração Steam
 Capacitor             hosts Android e iOS
 CLI `game`            interface operacional para pessoas e agentes
@@ -70,7 +70,7 @@ Todo estado autorável deve possuir uma representação textual, revisável em d
 
 ### 3.2 A simulação é independente da apresentação
 
-Gameplay não conhece Three.js, DOM, React, Electron, Capacitor, Steamworks nem APIs de console. Renderers consomem projeções da simulação; não armazenam estado autoritativo.
+Gameplay não conhece Three.js, DOM, Electron, Capacitor, Steamworks nem APIs de console. Renderers consomem projeções da simulação; não armazenam estado autoritativo.
 
 ### 3.3 Toda mudança produz evidência
 
@@ -101,6 +101,7 @@ Criar, testar e empacotar são operações normais. Publicar, comprar, assinar, 
 - concentrar gameplay em Lua, conteúdo em JSONC e apresentação em TypeScript;
 - manter o kernel C++ pequeno, determinístico e portável;
 - gerar builds para browser, desktop/Steam, Android e iOS;
+- entregar no desktop perfis gráficos declarados e verificáveis, com WebGPU no perfil alto e fallback WebGL2 observável;
 - fornecer inspeção textual e visual suficiente para o agente avaliar o jogo;
 - provar reuso com dois jogos materialmente diferentes;
 - entregar, de forma modular, runtime espacial e mundo procedural virtualmente extensível dentro de budgets declarados;
@@ -207,7 +208,8 @@ Projectors read-only em Lua/C++
                                       │
                         ┌─────────────┴─────────────┐
                         ▼                           ▼
-                 Three.js renderer          UI renderer web
+                 Three.js renderer          UI renderer DOM
+                  WebGPU/WebGL2
                         │                           │
                         └─────────────┬─────────────┘
                                       ▼
@@ -234,8 +236,10 @@ Dependências nunca apontam do kernel para hosts, renderers, jogos ou SDKs de lo
 |---|---|---|
 | Visão do jogo | `GAME_DESIGN.md` e `game.jsonc` | resumo de inspeção |
 | Conteúdo | `content/**/*.jsonc` | content pack binário |
+| Cenas e prefabs | `scenes/**/*.scene.jsonc` e `prefabs/**/*.prefab.jsonc` | grafo de cena compilado |
 | Gameplay | `scripts/**/*.lua` | bytecode opcional e índice |
 | Apresentação | `presentation/**` e manifests | bundles e asset packs |
+| Animação, VFX e statecharts | `animations/**`, `effects/**` e `statecharts/**` | grafos e tabelas compilados |
 | Contratos | schemas e definições de protocolo | bindings C++/TS/Lua |
 | Estado verificável | commit + fontes + manifests de runs | `.ludivra/project-state.json` e relatório da sessão |
 | Evidência | cenários e configuração | `reports/runs/<run-id>/` |
@@ -395,6 +399,12 @@ Handlers preferidos incluem `on_spawn`, `on_play`, `on_damage`, `on_death`, `on_
 
 Uma implementação pode migrar de Lua para C++ sem mudar a API pública quando benchmarks comprovarem necessidade. A promoção exige golden tests, replay de compatibilidade e implementação equivalente em native e WASM.
 
+### 9.5 Statecharts de gameplay
+
+Fluxos com estados duráveis — partida, missão, comportamento de ator e interação — podem usar `statecharts/*.statechart.jsonc` conforme o [ADR 0053](docs/adr/0053-deterministic-gameplay-statecharts.md). O formato declara estados, eventos, transições, timers lógicos e nomes de guards/actions registrados; não aceita expressões ou scripts embutidos.
+
+A statechart participa do tick autoritativo, save, hash e replay. Ela não se confunde com a state machine de animação: gameplay decide intenção e estado lógico; o grafo de animação decide pose e transição visual.
+
 ## 10. Conteúdo declarativo e compilador
 
 JSONC é o formato único de autoria declarativa. JSON Schema valida estrutura; validadores semânticos verificam IDs, referências, ciclos, compatibilidade de versão, licenças e budgets.
@@ -442,6 +452,12 @@ Mudanças de schema são classificadas como aditivas, migráveis ou incompatíve
 
 Enquanto o content pack binário ainda não existe, documentos registrados em `game.jsonc` podem ser validados e compostos em uma tabela Lua local pelo binding definido no [ADR 0011](docs/adr/0011-card-roguelite-content-and-authority.md). Essa ponte é permitida apenas como implementação experimental text-first: o JSONC continua canônico, hosts usam o mesmo compositor determinístico e valores do documento nunca são interpretados como código. Ela não substitui o pipeline de content pack nem autoriza formatos sem schema.
 
+### 10.4 Cenas, prefabs e recursos
+
+Cenas e prefabs são grafos textuais com IDs estáveis, composição explícita e referências semânticas, conforme o [ADR 0048](docs/adr/0048-textual-scene-prefab-and-resource-graph.md). Eles descrevem transform, visual, luz, câmera, áudio, VFX, animação, física, navegação e pontos de spawn, mas não carregam scripts ou expressões executáveis.
+
+O compilador resolve herança e instâncias, valida ciclos e referências e emite uma representação compacta. O grafo de cena organiza recursos e apresentação; não se torna autoridade paralela para gameplay.
+
 ## 11. Bridge native/WebAssembly
 
 A fronteira do kernel é uma C ABI pequena e versionada. Bindings TypeScript são gerados a partir das definições de protocolo; bindings escritos manualmente são proibidos para mensagens públicas.
@@ -481,8 +497,12 @@ interface FrameSnapshot {
   protocolVersion: number;
   tick: bigint;
   transforms: TransformBuffer;
+  instances: InstanceBuffer;
   visuals: VisualStateBuffer;
+  materials: MaterialParameterBuffer;
+  lights: LightBuffer;
   animations: AnimationStateBuffer;
+  effects: EffectStateBuffer;
   camera: CameraIntent;
   ui: UiViewModel;
 }
@@ -499,7 +519,7 @@ interface PresentationEventBatch {
 
 Operações semânticas incluem criar/remover visual, escolher visual state, atualizar transform, solicitar animação, efeito, áudio, câmera, texto e tela. Materiais e efeitos usam IDs e parâmetros compatíveis com perfis, não instâncias de Three.js.
 
-Primitivas 3D portáteis podem declarar forma, superfície, opacidade, visibilidade e transform, enquanto câmera e atmosfera usam intenções agnósticas para enquadramento, névoa e luzes. Esses termos pertencem ao protocolo e devem continuar implementáveis por um renderer nativo; propriedades, shaders ou classes exclusivas do Three.js permanecem proibidos fora de `renderer-three`.
+Primitivas e instâncias 3D portáteis podem declarar geometria, material semântico, opacidade, visibilidade e transform, enquanto câmera e ambiente usam intenções agnósticas para enquadramento, névoa, céu, exposição e luzes. Animação e VFX possuem buffers próprios, sem criar um union universal por entidade. Esses termos pertencem ao protocolo e devem continuar implementáveis por um renderer nativo; propriedades, shaders ou classes exclusivas do Three.js permanecem proibidos fora de `renderer-three`.
 
 Projectors de jogo podem ser escritos em Lua ou C++, mas rodam depois do commit do tick em contexto read-only. Eles não consomem RNG, não emitem comandos e não fazem parte de save nem do hash autoritativo. O custo de projeção é medido separadamente e sua saída usa IDs e strings internadas para não transformar a bridge em gargalo.
 
@@ -517,13 +537,21 @@ Responsabilidades:
 - adaptação aos perfis de hardware;
 - pontos explícitos de sincronização para captura e inspeção visual.
 
-O renderer pode escolher WebGPU ou WebGL conforme suporte e perfil. Nenhuma regra de gameplay depende dessa escolha. Funcionalidades sem fallback devem declarar restrição de plataforma no manifest e falhar na validação de targets incompatíveis.
+O renderer segue os perfis do [ADR 0047](docs/adr/0047-desktop-rendering-profiles-and-backend-policy.md):
+
+| Perfil | Host | Método esperado |
+|---|---|---|
+| `web-compatible` | Browser | WebGL2 |
+| `desktop-compatible` | Electron | WebGL2 |
+| `desktop-high` | Electron | WebGPU |
+
+Fallback é explícito e observável: perfil solicitado, perfil efetivo, backend, adapter, driver e motivo entram em diagnóstico e evidência. Nenhuma regra de gameplay depende dessa escolha. Funcionalidades sem fallback devem declarar restrição de target no manifest e falhar antes do build incompatível. Renderer nativo de produção só entra em avaliação após benchmark reproduzível demonstrar que um jogo de prova otimizado não cabe no envelope `desktop-high`.
 
 Captura visual não promete pixels idênticos entre GPUs. Um cenário espera tick, carregamento de assets, fontes e animações relevantes estabilizarem; então compara contra baseline do mesmo backend e perfil. O estado lógico associado à captura permanece determinístico.
 
 ## 14. UI text-first e substituível
 
-React/HTML/CSS será o renderer inicial para telas e acessibilidade; Three.js poderá renderizar HUD ou elementos ancorados no mundo. Canvas arbitrário não é o caminho padrão para UI interativa porque enfraquece semântica e acessibilidade. Nenhum renderer controla estado lógico.
+HTML/CSS sem framework será o renderer inicial para telas e acessibilidade; Three.js poderá renderizar HUD ou elementos ancorados no mundo. Canvas arbitrário não é o caminho padrão para UI interativa porque enfraquece semântica e acessibilidade. Nenhum renderer controla estado lógico.
 
 ```text
 Kernel/Lua
@@ -582,11 +610,17 @@ Bindings são JSONC e suportam remapeamento, dead zones, chording e perfis de ac
 
 Pointer, touch e ray casting são resolvidos na apresentação para um alvo semântico estável ou para valores lógicos normalizados antes de entrar no kernel. Jogos de ação podem receber vetores como `move(x, y)` e `aim(x, y)`; nunca dependem diretamente de pixels, DPI ou coordenadas DOM.
 
+### 15.1 Navegação espacial
+
+Navegação usa mapas, regiões, layers, links, obstáculos, agents, path queries e avoidance por contratos textuais, conforme o [ADR 0054](docs/adr/0054-navigation-regions-pathfinding-and-avoidance.md). Baking e atualização por chunks acontecem fora da autoridade de gameplay; resultados que influenciam a simulação são comprometidos em boundary de tick e registrados quando necessário para replay.
+
+O backend concreto permanece atrás de adapter e só é fixado quando houver consumidor e benchmark. A Ludivra não implementa silenciosamente um navmesh universal nem faz da navegação uma responsabilidade do renderer.
+
 ## 16. Áudio e hápticos
 
 Gameplay emite intenções semânticas como `audio.card.score` ou `haptic.impact.medium`. O host escolhe backend, codec, dispositivo e política de interrupção.
 
-O protocolo oferece buses, prioridade, loop intent, spatial intent e deduplication key. Música e ambiência persistentes pertencem ao snapshot; efeitos one-shot pertencem ao stream de eventos.
+O protocolo oferece buses, sends, prioridade, loop intent, spatial intent, reverb/occlusion intent e deduplication key. Música e ambiência persistentes pertencem ao snapshot; efeitos one-shot pertencem ao stream de eventos. Clips curtos podem residir em memória; música, fala longa e ambiência extensa usam streaming e budgets declarados, conforme o [ADR 0025](docs/adr/0025-audio-backends-voice-budgets-and-fallback.md).
 
 ## 17. Hosts e serviços de plataforma
 
@@ -703,7 +737,7 @@ Conteúdo referencia IDs semânticos:
 }
 ```
 
-Todo asset possui manifest com origem, autoria/licença, hash, status, targets e configurações de importação.
+Todo asset possui manifest com origem, autoria/licença, hash, status, targets, configurações de importação e variantes cozidas. Visual Forge e importadores externos são produtores diferentes do mesmo contrato de asset; a proibição de entrada externa do [ADR 0033](docs/adr/0033-visual-forge-procedural-characters-and-generated-surfaces.md) vale apenas para outputs gerados pelo próprio Forge.
 
 ```jsonc
 {
@@ -716,17 +750,22 @@ Todo asset possui manifest com origem, autoria/licença, hash, status, targets e
 }
 ```
 
-Pipeline:
+glTF/GLB é o primeiro formato de intercâmbio 3D canônico. Texturas, áudio, fonts, modelos e animações passam pelo pipeline do [ADR 0049](docs/adr/0049-asset-ingest-cooking-and-residency.md):
 
 ```text
-fonte ─> validação ─> normalização ─> cooker por target ─> pack ─> manifest com hashes
+fonte/Forge ─> validação ─> normalização ─> cooker por target e perfil
+            ─> variantes + LOD/compressão ─> pack ─> manifest com hashes
 ```
 
-Materiais usam modelos semânticos limitados no início: unlit, PBR simples, toon, transparente, partículas e UI. Shader customizado deve declarar portabilidade e fallback. Asset sem origem ou licença aceitável bloqueia build de release.
+O manifest classifica residência (`boot`, `scene`, `streamed`, `transient`), dependências, bounds e budgets. Produção não interpreta livremente arquivos-fonte; consome variantes validadas e content-addressed.
+
+Materiais, shaders e ambientes seguem o [ADR 0050](docs/adr/0050-material-shader-environment-and-render-feature-tiers.md). Materiais usam modelos semânticos como unlit, PBR simples, toon, transparente, partículas e UI, com tiers `core`, `enhanced` e `advanced`. A Ludivra não cria linguagem própria de shader. Shader específico de renderer deve declarar backend, tier, parâmetros, fallback e evidência. Asset sem origem ou licença aceitável bloqueia build de release.
+
+Animação esquelética e procedural usa grafos textuais de clips, blends, layers, masks, one-shots, retarget e IK pelo [ADR 0051](docs/adr/0051-animation-graph-and-skeletal-runtime.md). VFX e partículas usam grafos de emitters, módulos, trails, subemitters, colisão e pooling pelo [ADR 0052](docs/adr/0052-textual-vfx-and-particle-runtime.md). Em ambos, estado visual pode seguir o gameplay, mas nunca substitui sua autoridade.
 
 ## 21. Perfis de capacidade e budgets
 
-Perfis controlam resolução interna, tamanho de textura, sombras, partículas, pós-processamento, LOD, draw distance, caches, vozes de áudio e limites de memória.
+Perfis controlam método gráfico, resolução interna, tamanho de textura, sombras, partículas, pós-processamento, LOD, draw distance, caches, vozes de áudio e limites de memória. Os perfis de distribuição `web-compatible`, `desktop-compatible` e `desktop-high` definem a superfície de features; presets de qualidade dentro deles ajustam budgets sem fingir suporte a uma feature ausente.
 
 Cada perfil possui budgets verificáveis, não apenas opções:
 
@@ -750,7 +789,7 @@ Cada perfil possui budgets verificáveis, não apenas opções:
 
 Os valores acima são ilustrativos. Budgets aprovados precisam indicar dispositivo de referência, margem e data de revisão.
 
-O benchmark registra hardware, OS, backend gráfico, versão, cenário e variância. Resultados de máquinas não comparáveis não substituem baselines controladas.
+O benchmark registra hardware, OS, perfil solicitado e efetivo, backend gráfico, adapter, driver, resolução, versão, cenário e variância. Ele mede CPU e GPU frame time, passes, draws, memória, shaders, VFX, animação, física, streaming e áudio quando aplicáveis. Resultados de máquinas não comparáveis não substituem baselines controladas.
 
 ## 22. Capacidades reutilizáveis
 
@@ -981,9 +1020,9 @@ A validação combina:
 - comparação visual com tolerâncias e máscaras;
 - detecção de overflow, texto cortado, contraste e touch targets;
 - inspeção multimodal do agente;
-- vídeo para animação, timing e transições.
+- sequência de frames ou vídeo para animação, partículas, névoa dinâmica, timing e transições.
 
-Avaliação por IA gera parecer e achados, mas não atualiza baseline automaticamente. Mudanças de baseline são diffs versionados e intencionais.
+Capturas registram host, target, perfil, método gráfico, GPU/adapter, driver, resolução, tick e estado de carregamento. Baselines são comparadas apenas dentro de uma classe compatível de backend e perfil. Avaliação por IA gera parecer e achados, mas não atualiza baseline automaticamente. Mudanças de baseline são diffs versionados e intencionais.
 
 ## 26. Observabilidade
 
@@ -995,6 +1034,7 @@ O modo de diagnóstico oferece:
 - inspeção de entidade por handle sem expor ponteiros;
 - hashes e diffs de estado;
 - contadores de Lua, bridge, renderer e assets;
+- tempos de CPU/GPU, passes, draws, compilação de shader, residência/streaming, VFX, animação e física;
 - flame/tracing hooks por camada;
 - export sanitizado anexável ao relatório.
 
@@ -1039,8 +1079,12 @@ Telemetria de produção é opt-in, minimizada e separada da telemetria local de
 - RNG não autorizado falha no lint;
 - estado autoritativo não usa tipos não determinísticos proibidos;
 - conteúdo usa IDs semânticos, não caminhos físicos;
+- cenas e prefabs possuem IDs estáveis, referências válidas e composição sem ciclos;
+- statecharts não contêm expressões executáveis e usam apenas guards/actions registrados;
 - saves não contêm tipos de apresentação;
 - assets possuem origem, licença e hash;
+- variantes cozidas e perfis gráficos possuem fallback e compatibilidade declarados;
+- animação, VFX e navegação não assumem autoridade lógica por conveniência;
 - dependências respeitam o grafo permitido;
 - arquivos gerados estão sincronizados;
 - mudanças públicas atualizam schema, testes e documentação.
@@ -1099,7 +1143,9 @@ WASM + TypeScript + renderer + content/asset packs. Deve suportar carregamento p
 
 ### 30.2 Desktop e Steam
 
-Electron fornece janela, lifecycle, filesystem controlado, crash reporting e integração nativa. Steamworks vive no adapter do host; gameplay usa contratos genéricos de achievement, cloud, user e overlay.
+Electron fornece janela, lifecycle, filesystem controlado, crash reporting e integração nativa. Steamworks vive no adapter do host; gameplay usa contratos genéricos de achievement, cloud, user e overlay. O host oferece `desktop-compatible` em WebGL2 e `desktop-high` em WebGPU, com fallback observável e manifests que declaram o mínimo exigido pelo jogo.
+
+Windows, macOS, Linux e Steam Deck são linhas próprias da target matrix. O smoke instalado registra método gráfico e driver, aquece shaders e exercita input, áudio e encerramento; Steam Deck acrescenta gamepad, resolução, suspensão/retomada e limite térmico. Empacotar não equivale a comprovar suporte.
 
 ### 30.3 Android e iOS
 
@@ -1221,7 +1267,7 @@ Uma funcionalidade está concluída quando:
 
 ### 33.2 Vertical slice
 
-Um vertical slice inclui começo, loop, fim, vitória/conclusão, derrota/falha, controles, feedback audiovisual, UI navegável, persistência quando necessária, pelo menos um perfil desktop e um mobile quando esses targets estiverem no escopo, build reproduzível e relatório de limitações.
+Um vertical slice inclui começo, loop, fim, vitória/conclusão, derrota/falha, controles, feedback audiovisual, UI navegável, persistência quando necessária, pelo menos um perfil desktop declarado e um mobile quando esses targets estiverem no escopo, build reproduzível e relatório de limitações. Para um slice que reivindique qualidade desktop alta, a evidência precisa executar `desktop-high` sem fallback silencioso.
 
 ### 33.3 Engine comprovada
 
@@ -1247,7 +1293,7 @@ A premissa completa da Ludivra só será considerada entregue quando, além do g
 
 A sequência, os critérios de promoção, as fases obrigatórias e a rota futura são publicados no [ROADMAP.md](ROADMAP.md), gerado de [docs/program-status.json](docs/program-status.json). Este documento continua sendo a autoridade para boundaries, objetivos e critérios de comprovação; a fonte do roadmap não pode alterá-los sem a mudança arquitetural e, quando aplicável, o ADR exigido.
 
-A separação evita duas listas de fases divergentes. O roadmap deve preservar a ordem de risco estabelecida aqui: estado e contratos, execução e controle, observabilidade causal, autoria text-first, fundações espaciais e de escala, física e rede, apresentação escalável, construção, Forges, diagnóstico e performance, e por fim os cinco jogos como provas integradas. Fixtures técnicas e protótipos podem surgir antes; eles não substituem o gate final dos jogos. O sequenciamento feature-first é definido pelo [ADR 0012](docs/adr/0012-feature-first-roadmap-and-proof-games.md).
+A separação evita duas listas de fases divergentes. O roadmap deve preservar a ordem de risco estabelecida aqui: estado e contratos, execução e controle, observabilidade causal, autoria text-first — incluindo cenas, prefabs e statecharts —, fundações espaciais e de escala, navegação, física e rede, apresentação escalável — incluindo perfis desktop, assets, materiais, animação e VFX —, construção, Forges, diagnóstico e performance, e por fim os cinco jogos como provas integradas. Fixtures técnicas e protótipos podem surgir antes; eles não substituem o gate final dos jogos. O sequenciamento feature-first é definido pelo [ADR 0012](docs/adr/0012-feature-first-roadmap-and-proof-games.md).
 
 ## 35. Riscos principais e mitigação
 
@@ -1258,6 +1304,9 @@ A separação evita duas listas de fases divergentes. O roadmap deve preservar a
 | Lua dinâmica demais | sandbox, budgets, lint, schemas, comandos validados e promoção mensurada |
 | UI acoplada ao DOM | `UiViewModel`, `UiIntent`, árvore semântica e renderer substituível |
 | Three.js vazar para gameplay | pacote exclusivo, grafo de imports e fitness functions no CI |
+| Qualidade desktop virar coleção de flags ad hoc | perfis gráficos, feature tiers, cooking por target e benchmarks com fallback observado |
+| Cena, animação e VFX criarem autoridades paralelas | grafos textuais compilados, IDs estáveis e separação explícita entre gameplay e apresentação |
+| Asset importado perder licença ou explodir memória | manifest único, hashes, cooking, residência e budgets por target |
 | Agente “validar” apenas por compilação | harness obrigatório, cenários, capturas, vídeo, trace e artifact bundle |
 | Documentação ficar desatualizada | progresso estruturado, índices gerados, `--check` obrigatório e evidência versionada por entrega |
 | Abstração prematura | extrair após dois usos diferentes; estabilizar após o terceiro |
@@ -1287,8 +1336,16 @@ Este documento define a direção. As escolhas abaixo exigem ADR próprio, e a t
 | política de compatibilidade N/N-1 por protocolo | fechada pelo [ADR 0024](docs/adr/0024-player-hosted-multiplayer-and-protocol-compatibility.md) |
 | backend do `NativeDiagnosticHost` | gatilhos no [ADR 0031](docs/adr/0031-native-diagnostic-host-trigger-and-criteria.md) e backend no [ADR 0043](docs/adr/0043-native-diagnostic-host-backend.md) |
 | estratégia de assinatura e distribuição por plataforma | fechada pelo [ADR 0030](docs/adr/0030-target-hardening-signing-and-distribution.md) |
+| perfis gráficos desktop e política de backend | fechada pelo [ADR 0047](docs/adr/0047-desktop-rendering-profiles-and-backend-policy.md) |
+| formato textual de cenas, prefabs e recursos | fechada pelo [ADR 0048](docs/adr/0048-textual-scene-prefab-and-resource-graph.md) |
+| ingestão, cooking e residência de assets | fechada pelo [ADR 0049](docs/adr/0049-asset-ingest-cooking-and-residency.md) |
+| tiers de materiais, shaders e ambiente | fechada pelo [ADR 0050](docs/adr/0050-material-shader-environment-and-render-feature-tiers.md) |
+| grafo de animação esquelética e procedural | fechada pelo [ADR 0051](docs/adr/0051-animation-graph-and-skeletal-runtime.md) |
+| grafo textual de VFX e partículas | fechada pelo [ADR 0052](docs/adr/0052-textual-vfx-and-particle-runtime.md) |
+| statecharts determinísticas de gameplay | fechada pelo [ADR 0053](docs/adr/0053-deterministic-gameplay-statecharts.md) |
+| regiões, pathfinding e avoidance de navegação | fronteira fechada pelo [ADR 0054](docs/adr/0054-navigation-regions-pathfinding-and-avoidance.md); backend condicionado a consumidor e benchmark |
 
-Nenhuma escolha desta seção permanece sem ADR. As que antes apareciam como pendência foram decididas: solver físico no [ADR 0037](docs/adr/0037-physics-solver-selection.md), transportes de rede no [ADR 0038](docs/adr/0038-network-transport-adapters.md), camada de entidades no [ADR 0039](docs/adr/0039-entity-component-layer.md), framework de UI e UI diegética no [ADR 0040](docs/adr/0040-ui-framework-and-diegetic-ui.md), extensão nativa no [ADR 0044](docs/adr/0044-approved-native-extension-process.md) e threads no WebAssembly no [ADR 0045](docs/adr/0045-wasm-threads-and-shared-memory.md).
+Nenhuma fronteira desta seção permanece sem ADR. As que antes apareciam como pendência foram decididas: solver físico no [ADR 0037](docs/adr/0037-physics-solver-selection.md), transportes de rede no [ADR 0038](docs/adr/0038-network-transport-adapters.md), camada de entidades no [ADR 0039](docs/adr/0039-entity-component-layer.md), framework de UI e UI diegética no [ADR 0040](docs/adr/0040-ui-framework-and-diegetic-ui.md), extensão nativa no [ADR 0044](docs/adr/0044-approved-native-extension-process.md) e threads no WebAssembly no [ADR 0045](docs/adr/0045-wasm-threads-and-shared-memory.md). Escolhas condicionadas, como o backend de navegação ou um renderer nativo de produção, possuem gatilho e critério de evidência em vez de dependência ausente.
 
 Um ADR pode declarar condição de revisão — todos declaram — mas nenhum depende de um ADR que não exista.
 
@@ -1303,8 +1360,9 @@ JSONC descreve dados e cenários.
 Lua expressa gameplay por comandos e eventos.
 C++ mantém a simulação autoritativa, portátil e determinística.
 Protocolos projetam apresentação, UI e efeitos externos.
-Three.js entrega rapidamente o primeiro renderer.
-Electron atende desktop/Steam; Capacitor atende Android/iOS.
+Three.js entrega WebGPU/WebGL2 por perfis gráficos observáveis.
+Grafos textuais descrevem cenas, prefabs, animação, VFX, statecharts e navegação.
+Electron atende desktop/Steam com cooking e budgets próprios; Capacitor atende Android/iOS.
 Hosts nativos futuros substituem apresentação e integrações, não as regras.
 A CLI executa todo o fluxo e produz evidências estruturadas.
 Git e artifact bundles tornam cada sessão auditável e continuável.

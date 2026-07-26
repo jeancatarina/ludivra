@@ -2,6 +2,7 @@
 
 - Status: provisório
 - Data: 2026-07-24
+- Revisado: 2026-07-26 para acomodar os contratos desktop sem reservar pacotes vazios
 - Revisão: antes da primeira versão estável, ou ao adicionar uma categoria de pacote que não caiba nas existentes
 - Fecha o item "layout final do monorepo" da seção 36 de [architecture.md](../../architecture.md)
 - Complementa: [ADR 0001](0001-build-system.md)
@@ -42,7 +43,7 @@ O plural `packages/` foi recusado por um motivo prático: ele não adiciona info
 
 `audio-authoring` e `audio-runtime-web` pelo ADR 0032; `visual-authoring` pelo ADR 0033. Os nomes ficam reservados aqui para que a implementação não precise decidir localização.
 
-`lua-sdk/` e `content-compiler/`, esboçados na arquitetura, só existirão quando os ADRs 0016 e 0017 forem implementados; até lá não são criados vazios.
+`lua-sdk/` e `content-compiler/`, esboçados na arquitetura, só existirão quando os ADRs 0016 e 0017 forem implementados; até lá não são criados vazios. Compiladores de cenas, prefabs, assets, materiais, animação, VFX, statecharts e navegação começam no pacote de authoring que os consome. Só ganham pacote próprio quando houver fronteira publicável real, sempre em uma categoria desta tabela.
 
 ### Enforcement
 

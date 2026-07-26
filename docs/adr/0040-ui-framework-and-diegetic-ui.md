@@ -2,6 +2,7 @@
 
 - Status: provisório
 - Data: 2026-07-24
+- Revisado: 2026-07-26 para explicitar a política de UI nos perfis desktop
 - Revisão: se uma tela do jogo exigir comportamento que DOM acessível não consiga expressar com o mesmo nível de evidência
 - Fecha as pendências de: [ADR 0014](0014-declarative-ui-contracts-and-initial-renderer.md)
 - Fase: 8
@@ -34,7 +35,9 @@ Nó diegético que não consiga medir bounds ou contraste é `UI_DIEGETIC_NOT_ME
 
 ### Consequência de projeto
 
-Menu, HUD, inventário e diálogo permanecem em DOM. O canvas recebe apenas o que precisa existir dentro do mundo para o jogo funcionar. Essa divisão é o que mantém a acessibilidade verificável por dado em vez de reimplementada.
+Menu, HUD, inventário e diálogo permanecem em DOM nos hosts Browser e Electron, inclusive no perfil `desktop-high` do ADR 0047. O canvas recebe apenas o que precisa existir dentro do mundo para o jogo funcionar. Essa divisão é o que mantém a acessibilidade verificável por dado em vez de reimplementada.
+
+Se um host nativo de produção vier a ser justificado, ele precisará de um adapter que preserve `UiViewModel`, `RenderedUiSnapshot`, navegação e acessibilidade, ou de revisão explícita deste ADR. A possibilidade futura de host nativo não justifica duplicar a UI agora.
 
 Códigos: `UI_FRAMEWORK_DEPENDENCY_FORBIDDEN`, `UI_DIEGETIC_NOT_MEASURABLE`, `UI_DIEGETIC_INTERACTIVE_WITHOUT_FALLBACK`.
 

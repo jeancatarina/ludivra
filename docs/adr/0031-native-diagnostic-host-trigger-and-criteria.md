@@ -2,8 +2,9 @@
 
 - Status: provisório
 - Data: 2026-07-24
+- Revisado: 2026-07-26 para separar a sonda nativa de uma eventual decisão de renderer de produção
 - Revisão: quando um dos gatilhos abaixo ocorrer; o backend concreto está decidido no [ADR 0043](0043-native-diagnostic-host-backend.md)
-- Complementa: [ADR 0002](0002-runtime-c-abi.md) e [ADR 0005](0005-first-steam-delivery.md)
+- Complementa: [ADR 0002](0002-runtime-c-abi.md), [ADR 0005](0005-first-steam-delivery.md) e [ADR 0047](0047-desktop-rendering-profiles-and-backend-policy.md)
 - Fecha: item "backend do `NativeDiagnosticHost`" da seção 36 de [architecture.md](../../architecture.md), junto do [ADR 0043](0043-native-diagnostic-host-backend.md)
 - Fase: 11
 
@@ -25,9 +26,9 @@ Basta um:
 
 1. acesso oficial a um SDK de console, com justificativa comercial registrada;
 2. classe de defeito reproduzível apenas fora do navegador e do Electron, comprovada por tentativa registrada de reproduzi-la no `NativeHeadlessHost`;
-3. target nativo de desktop sem WebAssembly entrando no escopo de release.
+3. target nativo de desktop sem WebAssembly entrando no escopo de release após a política de benchmark do ADR 0047 justificar esse target.
 
-Preferência por tecnologia nativa, desconforto com o stack web ou expectativa de desempenho não são gatilhos.
+Preferência por tecnologia nativa, desconforto com o stack web ou expectativa de desempenho não são gatilhos. Um renderer nativo de produção só entra em avaliação quando um jogo de prova otimizado falhar, com benchmark reproduzível, o envelope `desktop-high`; o host de diagnóstico não é atalho para essa decisão.
 
 ### Critérios que o host deverá satisfazer
 
@@ -51,6 +52,7 @@ Código: `HOST_NATIVE_DIAGNOSTIC_NOT_AVAILABLE`, usado para classificar explicit
 - quando o host existir, ele nasce obrigado aos contratos já decididos, sem formato paralelo;
 - o `NativeHeadlessHost` continua sendo a prova de portabilidade lógica;
 - port de console permanece condicionado a acesso oficial e justificativa comercial.
+- criar a sonda nativa não promove automaticamente SDL3 ou qualquer renderer a backend de produção.
 
 ## Alternativas rejeitadas
 

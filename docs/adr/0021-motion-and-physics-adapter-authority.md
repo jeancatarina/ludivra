@@ -2,9 +2,11 @@
 
 - Status: provisório
 - Data: 2026-07-24
+- Revisado: 2026-07-26 para fechar a cobertura mínima de física desktop
 - Revisão: ao registrar o primeiro benchmark oficial de física; a escolha de solver está no [ADR 0037](0037-physics-solver-selection.md)
 - Depende de: [ADR 0018](0018-numeric-determinism-and-rng-streams.md) e [ADR 0019](0019-spatial-model-chunk-lifecycle-and-job-commit.md)
 - Complementa: [ADR 0008](0008-mandatory-scale-and-procedural-capabilities.md)
+- Complementa: [ADR 0051](0051-animation-graph-and-skeletal-runtime.md) e [ADR 0054](0054-navigation-regions-pathfinding-and-avoidance.md)
 - Fase: 6
 
 ## Contexto
@@ -53,6 +55,20 @@ Este ADR decide a fronteira, não o produto. Os solvers concretos são decididos
 
 Até existir um solver adotado, o contrato é exercitado por um adapter de referência mínimo, suficiente para cenários e testes de boundary. Character controllers, ragdolls, grabs e breakables só entram depois dos fundamentos, cada um com consumidor declarado.
 
+### Cobertura mínima do adapter desktop
+
+O adapter de produção expõe, por capability e sem vazar tipos do solver:
+
+- layers e masks, material físico, sleep/wake e continuous collision detection;
+- rigid, static, kinematic/character e trigger bodies;
+- ray, shape e overlap queries com filtros estáveis;
+- joints necessários pelo Physics Forge e pelo physics party brawler;
+- character controller com slope, step, floor state e causa de bloqueio;
+- ragdoll por corpos e joints derivados do skeleton, com transição explícita entre animação e física;
+- interpolação entre ticks e debug snapshot de corpos, colliders, contatos e constraints.
+
+Feature ausente no solver ou target é capability indisponível, não implementação vazia. Soft body, vehicle e destruction permanecem fora até consumidor e benchmark próprios.
+
 Códigos: `MOTION_AUTHORITY_VIOLATION`, `MOTION_LOGICAL_TIME_REQUIRED`, `MOTION_CANCELLED_WITHOUT_CAUSE`, `PHYSICS_AUTHORITY_MISMATCH`, `PHYSICS_COLLIDER_INVALID`, `PHYSICS_DIVERGENCE`, `PHYSICS_ADAPTER_NOT_REPLAY_DETERMINISTIC`.
 
 ## Consequências
@@ -63,6 +79,7 @@ Códigos: `MOTION_AUTHORITY_VIOLATION`, `MOTION_LOGICAL_TIME_REQUIRED`, `MOTION_
 - adapter sem determinismo de replay continua utilizável, com autoridade reduzida e declarada;
 - a escolha de solver vive no ADR 0037 e pode mudar sem tocar este contrato;
 - ragdoll, grab e breakable ficam explicitamente depois dos fundamentos;
+- character controller, CCD, queries, layers e joints formam o gate mínimo do adapter desktop;
 - o cenário de divergência precisa comparar posições quantizadas, não posições do solver.
 
 ## Alternativas rejeitadas

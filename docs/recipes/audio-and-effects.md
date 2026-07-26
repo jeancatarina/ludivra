@@ -28,6 +28,8 @@ Use `bus: "music"` or `"ambience"` with `loop: true` for persistent tracks. A de
 
 ## 2. Declare an effect
 
+`particle-burst` é o bootstrap implementado hoje, não o formato final de VFX:
+
 ```jsonc
 "effects": [
   {
@@ -67,3 +69,4 @@ Emissive surfaces feed bloom. Matte and metal surfaces cast shadows, while opaqu
 - BrowserHost unlocks audio only after a user gesture.
 - Run `game validate --project <game>` before preview or packaging.
 - Treat synth definitions as placeholders unless the intended game style explicitly uses generated tones.
+- Efeitos persistentes, trails, subemitters, colisão e perfis GPU/CPU pertencem ao contrato futuro do [ADR 0052](../adr/0052-textual-vfx-and-particle-runtime.md); não amplie `particle-burst` com um pseudo-grafo ad hoc.

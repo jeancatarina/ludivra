@@ -2,6 +2,7 @@
 
 - Status: provisório
 - Data: 2026-07-24
+- Revisado: 2026-07-26 para separar SDL3 da política de renderer de produção
 - Revisão: quando um gatilho do ADR 0031 ocorrer, e antes de portar para um console
 - Fecha a pendência de: [ADR 0031](0031-native-diagnostic-host-trigger-and-criteria.md) e o item correspondente da seção 36 de [architecture.md](../../architecture.md)
 - Fase: 11
@@ -30,7 +31,7 @@ O host implementa os mesmos contratos dos demais: consome buffers de apresentaç
 
 ### O que ele não é
 
-Ele não é um segundo caminho de simulação, não recebe renderer próprio fora dos contratos, e não é requisito para publicar o jogo. Sua ausência continua sendo `HOST_NATIVE_DIAGNOSTIC_NOT_AVAILABLE`, como já definido pelo ADR 0031.
+Ele não é um segundo caminho de simulação, não recebe renderer próprio fora dos contratos, e não é requisito para publicar o jogo. SDL3 cobre shell, janela, input e áudio; ele não decide renderer nem substitui a política WebGPU/WebGL2 do ADR 0047. Sua ausência continua sendo `HOST_NATIVE_DIAGNOSTIC_NOT_AVAILABLE`, como já definido pelo ADR 0031.
 
 Códigos: `HOST_NATIVE_BACKEND_UNAVAILABLE`, `HOST_NATIVE_BACKEND_VERSION_UNSUPPORTED`, `HOST_NATIVE_AUDIO_UNAVAILABLE`.
 
@@ -42,6 +43,7 @@ Códigos: `HOST_NATIVE_BACKEND_UNAVAILABLE`, `HOST_NATIVE_BACKEND_VERSION_UNSUPP
 - licença zlib não altera o regime de licenciamento do projeto;
 - o caminho para console permanece substituir a camada de plataforma, não o host;
 - nada é instalado ou compilado antes de um gatilho ocorrer.
+- SDL3 não se torna dependência do host Electron nem backend nativo de produção por consequência deste ADR.
 
 ## Alternativas rejeitadas
 

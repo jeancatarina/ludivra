@@ -2,6 +2,7 @@
 
 - Status: aceito
 - Data: 2026-07-18
+- Revisado: 2026-07-26 para tornar serviços Steam independentes do host
 - Revisão: antes do primeiro release assinado
 
 ## Contexto
@@ -10,13 +11,16 @@ O pacote Electron existente abre o jogo, mas não implementa os serviços e evid
 
 ## Decisão
 
-`platform-contracts` será a fonte gerada dos contratos IPC. O ElectronHost manterá `contextIsolation`, sandbox do renderer e preload mínimo; filesystem, crash reporting e SDKs nativos existirão somente no processo principal. Saves locais usarão escrita atômica com backup. Crashpad coletará dumps localmente por padrão, sem upload implícito. Steamworks.js 0.4.0 será o binding opcional no adapter Steam do processo principal; indisponibilidade de Steam, App ID ou cliente será um status explícito. Steam Auto-Cloud poderá sincronizar a pasta de saves configurada no Steamworks, enquanto o adapter de Remote Storage permanecerá disponível para jogos que o declararem. Updates serão desabilitados por padrão e só consultarão feed HTTPS declarado em build assinado.
+`platform-contracts` será a fonte gerada dos contratos IPC e dos serviços de plataforma. O ElectronHost manterá `contextIsolation`, sandbox do renderer e preload mínimo; filesystem, crash reporting e SDKs nativos existirão somente no processo principal. Saves locais usarão escrita atômica com backup. Crashpad coletará dumps localmente por padrão, sem upload implícito. Steamworks.js 0.4.0 será o binding opcional do **adapter Electron**; indisponibilidade de Steam, App ID ou cliente será um status explícito. Steam Auto-Cloud poderá sincronizar a pasta de saves configurada no Steamworks, enquanto o adapter de Remote Storage permanecerá disponível para jogos que o declararem. Updates serão desabilitados por padrão e só consultarão feed HTTPS declarado em build assinado.
+
+Achievement, cloud, user, overlay e networking são contratos independentes do binding. Um host nativo futuro implementa os mesmos contratos com seu binding aprovado, sem alterar gameplay, save ou apresentação. Objetos e erros específicos de Steamworks.js não atravessam `platform-contracts`.
 
 O pacote produzirá SBOM CycloneDX mínimo derivado dos locks, provenance, hashes e smoke test local. Assinatura, notarização e upload permanecem comandos externos que exigem credenciais e autorização.
 
 ## Consequências
 
 - renderer e gameplay nunca recebem Node.js ou objetos Steam;
+- Steamworks.js é detalhe do ElectronHost, não parte do contrato Steam da engine;
 - o preload expõe somente operações tipadas e canais gerados;
 - testes usam adapters falsos apenas no boundary Steam/Electron;
 - pacote sem Steam continua jogável com storage local e diagnósticos;

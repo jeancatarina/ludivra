@@ -2,8 +2,9 @@
 
 - Status: provisório
 - Data: 2026-07-24
+- Revisado: 2026-07-26 para incluir perfil gráfico, driver e Steam Deck na evidência de target
 - Revisão: antes do primeiro release assinado de cada plataforma
-- Complementa: [ADR 0005](0005-first-steam-delivery.md) e [ADR 0006](0006-desktop-commercial-host.md)
+- Complementa: [ADR 0005](0005-first-steam-delivery.md), [ADR 0006](0006-desktop-commercial-host.md) e [ADR 0047](0047-desktop-rendering-profiles-and-backend-policy.md)
 - Fecha: item "estratégia de assinatura e distribuição por plataforma" da seção 36 de [architecture.md](../../architecture.md)
 - Backlog: `ENG-009` e `ENG-013`
 - Fase: 11
@@ -42,6 +43,10 @@ Um release auditável carrega: SBOM, provenance, hashes de todos os artefatos, r
 
 O smoke instalado é o que fecha `ENG-009`: um pacote Windows só é validado por execução em Windows, e o mesmo vale para Linux e macOS. Sem isso, o item da target matrix permanece `NOT_AVAILABLE`.
 
+O smoke visual registra também perfil gráfico solicitado e efetivo, backend, adapter, driver, resolução e motivo de fallback. Ele percorre carregamento do primeiro cenário, aquecimento de shaders, input, áudio e encerramento limpo. Um pacote que abre apenas uma janela vazia não prova o target.
+
+Steam Deck é uma target Linux própria porque exige evidência adicional em SteamOS: gamepad, resolução do dispositivo, suspensão e retomada, limite térmico e pelo menos o perfil `desktop-compatible`. Resultado em uma distribuição Linux de desktop não substitui essa evidência.
+
 ### Hardening por target
 
 Browser e Electron mantêm as decisões do ADR 0006 — `contextIsolation`, sandbox do renderer, preload mínimo, ausência de Node no renderer. O hardening adiciona, por target: superfície de rede declarada, permissões solicitadas justificadas, ausência de endpoint de telemetria implícito e caminho de crash dump local sem upload por padrão.
@@ -58,6 +63,8 @@ Códigos: `RELEASE_SIGNATURE_MISSING`, `RELEASE_SIGNATURE_INVALID`, `RELEASE_CRE
 
 - `ENG-009` e `ENG-013` ganham critério objetivo de conclusão;
 - alegação de suporte a target passa a exigir smoke a partir do pacote instalado naquele sistema;
+- suporte gráfico fica vinculado ao perfil e ao hardware realmente observados, sem inferência pelo artefato;
+- Steam Deck deixa de herdar suporte de Linux sem teste no dispositivo;
 - build não assinado continua utilizável para teste e nunca é apresentado como release;
 - credenciais permanecem fora do repositório e fora do CI por padrão;
 - Linux e browser podem ter release verificável sem credencial de assinatura;

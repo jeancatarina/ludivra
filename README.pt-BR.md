@@ -65,6 +65,8 @@ No momento, a engine é consumida diretamente pelo repositório clonado. Ainda n
 | Kernel nativo e WebAssembly | Experimental, com teste de equivalência |
 | Pacote Electron para macOS | Validado localmente |
 | Pacotes Windows e Linux | Geráveis, ainda exigem validação nos respectivos sistemas |
+| Steam Deck | O pacote deriva do Linux; smoke no dispositivo ainda não foi executado |
+| Perfis gráficos desktop | Planejados; o renderer atual ainda não comprova `desktop-high` |
 | Integração Steam | Implementada, exige App ID, Depot ID e conta Steamworks |
 | Assinatura e notarização | Responsabilidade do proprietário do jogo |
 | Áudio semântico, música e partículas | Experimental, funcional no Browser e Electron |
@@ -360,7 +362,7 @@ inspecione o resultado, use o run manifest compatível como evidência e atualiz
 somente a fonte canônica de qualquer limitação alterada.
 ```
 
-Para mudanças na própria engine, agentes devem começar por [AGENTS.md](AGENTS.md). As fronteiras técnicas estão em [architecture.md](architecture.md), a sequência de evolução em [ROADMAP.md](ROADMAP.md), e os gates obrigatórios em [docs/guardrails/](docs/guardrails/).
+Para mudanças na própria engine, agentes devem começar por [AGENTS.md](AGENTS.md). As fronteiras técnicas estão em [architecture.md](architecture.md), a sequência de evolução em [ROADMAP.md](ROADMAP.md), e os gates obrigatórios em [docs/guardrails/](docs/guardrails/). A comparação de capacidades desktop que motivou os ADRs 0047–0054 está na [análise de lacunas da Godot](docs/research/godot-desktop-gap-analysis.md).
 
 ## Referência da CLI
 
@@ -427,6 +429,7 @@ ludivra/
 - API e formatos permanecem experimentais até 1.0;
 - o áudio usa Web Audio no Browser/Electron; adapters nativos de áudio ainda não existem;
 - o feedback visual oferece bursts determinísticos de partículas; trails, decals, presets de pós-processamento e grafos de efeitos ficam para capacidades futuras;
+- cenas/prefabs, cooking geral de assets, grafos de animação, VFX em GPU, navegação e o perfil WebGPU `desktop-high` são contratos planejados, não capacidades implementadas;
 - Windows e Linux ainda precisam de testes em runners nativos;
 - pacotes não são assinados ou notarizados pela engine;
 - updates exigem pacote assinado e feed HTTPS controlado;

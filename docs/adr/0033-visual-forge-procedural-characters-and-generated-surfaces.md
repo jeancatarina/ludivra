@@ -2,10 +2,10 @@
 
 - Status: provisório
 - Data: 2026-07-24
-- Revisado: 2026-07-25 para tornar o Forge responsável por todo conteúdo visual
+- Revisado: 2026-07-26 para delimitar a geração interna ao conteúdo produzido pelo Forge
 - Revisão: antes de adicionar um novo arquétipo canônico ou modo de renderização
 - Especializa: [ADR 0027](0027-forge-output-contract-and-authoring-boundary.md)
-- Complementa: [ADR 0020](0020-presentation-buffers-and-wasm-memory.md) e [ADR 0026](0026-construction-graph-as-source-of-truth.md)
+- Complementa: [ADR 0020](0020-presentation-buffers-and-wasm-memory.md), [ADR 0026](0026-construction-graph-as-source-of-truth.md) e [ADR 0049](0049-asset-ingest-cooking-and-residency.md)
 - Fase: 10, com consumo na Fase 8
 
 ## Contexto
@@ -16,11 +16,13 @@ A revisão anterior transformou o perfil de produção em importador de PNG e gl
 
 ## Decisão
 
-### A receita é a única fonte visual
+### A receita é a única fonte do asset produzido pelo Forge
 
 `visuals/*.character.json` versão 2 contém identidade, arquétipo, anatomia, rosto, vestuário, equipamento, acessórios, animações, efeitos, seed e saídas desejadas. O schema proíbe superfícies externas: `surfaces` deve ser vazio e nenhum output possui `path`, origem, licença ou hash de asset.
 
 O Forge não lê imagem, sprite sheet, modelo ou material como entrada de produção. Dependências de software do authoring podem codificar PNG, YAML ou glTF, mas não fornecem conteúdo visual.
+
+Essa fronteira pertence ao perfil `visuals/*.character.json` do Visual Forge. Ela não proíbe que um jogo importe assets próprios, licenciados ou produzidos por outras ferramentas pelo pipeline de ingestão do ADR 0049. Assets importados não se tornam outputs do Forge, não usam a proveniência `forge-recipe` e passam pelos próprios gates de licença, cooking e budget.
 
 ### Personagem canônico compartilhado
 
@@ -121,14 +123,14 @@ Os estados do job v2 são `PLANNED`, `COMPILING`, `VALIDATING`, `NEEDS_REVISION`
 - o Visual Forge cria todos os pixels, vértices, materiais e animações do personagem;
 - 2D, 2.5D e 3D preservam a mesma identidade por construção;
 - builds são locais, offline, determinísticos e auditáveis pela receita;
-- não há licença ou disponibilidade de asset visual externo para administrar;
+- outputs do Forge não têm licença ou disponibilidade de asset visual externo para administrar;
 - aumentar a cobertura artística exige novos geradores canônicos e Style Bibles, não novos importadores;
 - o primeiro gerador de produção cobre humanoides estilizados; quadrúpedes, veículos, fotorealismo, bake raster de todos os clipes e simplificação multi-LOD continuam explícitos como próximos perfis.
 
 ## Alternativas rejeitadas
 
-- **Importar PNG ou sprite sheet como produção:** o Forge deixaria de criar o personagem.
-- **Importar glTF/GLB como produção:** validaria um personagem feito fora do Forge e quebraria a identidade compartilhada.
+- **Importar PNG ou sprite sheet como produção do Forge:** o Forge deixaria de criar o personagem.
+- **Importar glTF/GLB como produção do Forge:** validaria um personagem feito fora do Forge e quebraria a identidade compartilhada.
 - **Gerar cada modo separadamente:** permite divergência de rosto, proporção, roupa e equipamento.
 - **Derivar 2.5D de uma única ilustração:** inventa vistas sem geometria canônica.
 - **Executar geração remota:** perde operação offline, determinismo e domínio completo do pipeline.

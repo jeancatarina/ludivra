@@ -2,6 +2,7 @@
 
 - Status: provisório
 - Data: 2026-07-24
+- Revisado: 2026-07-26 para fechar áudio espacial e mixagem desktop
 - Revisão: antes de declarar suporte a áudio em um target novo
 - Complementa: [ADR 0007](0007-semantic-audio-and-effects.md)
 - Fecha: item "backend de áudio por host" da seção 36 de [architecture.md](../../architecture.md)
@@ -38,6 +39,14 @@ Cada target declara budget de vozes simultâneas e de memória de áudio. Ao exc
 
 O evento continua no hash conforme o ADR 0007. **Colapso, corte por budget e escolha de voz são decisões de apresentação e não podem alterar o lote de eventos autoritativo**, o que mantém replay estável entre hosts com budgets diferentes.
 
+### Áudio espacial e mixagem
+
+Definições podem declarar posição ou attachment semântico, distância mínima/máxima, curva de atenuação, directivity e prioridade. Listener vem da câmera efetiva, mas não entra no estado autoritativo.
+
+Buses, sends e snapshots de mix são IDs declarados. Reverb zones e occlusion podem usar volumes de scene e queries de física reduzidas segundo budget; falha ou indisponibilidade degrada para mix sem processamento com diagnóstico. Música longa usa streaming quando o backend oferecer; efeitos curtos permanecem pré-decodificados conforme o budget de memória.
+
+Áudio espacial, reverb e occlusion são apresentação. Nenhum deles muda detecção, stealth ou dano; gameplay emite e resolve esses resultados logicamente antes do som.
+
 ### Fallback observável
 
 Dispositivo ausente, contexto suspenso por falta de gesto do usuário, arquivo ausente e decodificação falha são estados declarados e diagnosticados, cada um com código próprio. Nenhum deles pode ser tratado como sucesso silencioso.
@@ -48,7 +57,7 @@ Evento cujo ID não existe no manifest é `AUDIO_EVENT_UNRESOLVED` — defeito d
 
 Captura de áudio para evidência é forma de dado, não gravação de sessão: contagem de vozes por bus, eventos resolvidos e não resolvidos, colapsos, cortes por budget e envelope agregado. Waveform e espectro entram quando houver consumidor material — validação de loop e LUFS pertencem ao Audio Forge, não a este ADR.
 
-Códigos: `AUDIO_EVENT_UNRESOLVED`, `AUDIO_VOICE_BUDGET_EXCEEDED`, `AUDIO_MEMORY_BUDGET_EXCEEDED`, `AUDIO_DEVICE_UNAVAILABLE`, `AUDIO_CONTEXT_SUSPENDED`, `AUDIO_ASSET_DECODE_FAILED`, `AUDIO_BACKEND_NULL_SELECTED`.
+Códigos: `AUDIO_EVENT_UNRESOLVED`, `AUDIO_VOICE_BUDGET_EXCEEDED`, `AUDIO_MEMORY_BUDGET_EXCEEDED`, `AUDIO_DEVICE_UNAVAILABLE`, `AUDIO_CONTEXT_SUSPENDED`, `AUDIO_ASSET_DECODE_FAILED`, `AUDIO_BACKEND_NULL_SELECTED`, `AUDIO_SPATIAL_PROFILE_UNAVAILABLE`, `AUDIO_STREAM_UNDERRUN`.
 
 ## Consequências
 
@@ -58,6 +67,7 @@ Códigos: `AUDIO_EVENT_UNRESOLVED`, `AUDIO_VOICE_BUDGET_EXCEEDED`, `AUDIO_MEMORY
 - a diferença entre evento não emitido e evento não audível fica registrada em dado;
 - cada target passa a declarar budget de vozes antes de alegar suporte a áudio;
 - backends nativos futuros permanecem possíveis sem alterar gameplay;
+- áudio espacial, buses e streaming ganham fallback e budget explícitos;
 - análise espectral fica reservada ao Forge, evitando dependência de DSP no host.
 
 ## Alternativas rejeitadas

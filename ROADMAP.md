@@ -30,7 +30,7 @@
 | 5 | Runtime espacial e mundo procedural | `PARCIAL` | Jobs assíncronos reais sem alterar a ordem de commit. |
 | 6 | Motion, física e Mass Simulation | `PLANEJADA` | Motion por tempo declarado e comandos semânticos. |
 | 7 | Persistência, replays e multiplayer player-hosted | `PARCIAL` | Region storage atômico com journal, compactação, recovery e migrations. |
-| 8 | Renderer, UI, áudio e apresentação escalável | `PARCIAL` | Buffers contíguos, instancing, LOD, culling, pooling e terrain streaming. |
+| 8 | Renderer, UI, áudio e apresentação escalável | `PARCIAL` | Perfis web-compatible, desktop-compatible e desktop-high com fallback gráfico observado. |
 | 9 | Procedural Construction Runtime | `PLANEJADA` | Construction Graph, comandos semânticos, undo/redo e replay. |
 | 10 | Procedural Forges | `PARCIAL` | Completar música, stems, previews gráficos e runtime/cooker do Audio Forge. |
 | 11 | Diagnose, Repair, Verify e performance gates | `PARCIAL` | Fluxo real de diagnose, explain, fix dry-run/apply e verify com classes de reparo. |
@@ -118,7 +118,7 @@ Um defeito nos pixels é correlacionado a estado, ação, evento, projector e or
 | Estado | `PARCIAL` |
 | Owners | kernel, Lua SDK, content compiler, presentation protocol |
 | Dependências | Fase 3 |
-| ADRs | [ADR 0004](docs/adr/0004-lua-sandbox.md), [ADR 0016](docs/adr/0016-public-lua-sdk-layers-and-escape-hatches.md), [ADR 0017](docs/adr/0017-content-pack-compilation-and-migrations.md), [ADR 0018](docs/adr/0018-numeric-determinism-and-rng-streams.md), [ADR 0044](docs/adr/0044-approved-native-extension-process.md) |
+| ADRs | [ADR 0004](docs/adr/0004-lua-sandbox.md), [ADR 0016](docs/adr/0016-public-lua-sdk-layers-and-escape-hatches.md), [ADR 0017](docs/adr/0017-content-pack-compilation-and-migrations.md), [ADR 0018](docs/adr/0018-numeric-determinism-and-rng-streams.md), [ADR 0044](docs/adr/0044-approved-native-extension-process.md), [ADR 0048](docs/adr/0048-textual-scene-prefab-and-resource-graph.md), [ADR 0053](docs/adr/0053-deterministic-gameplay-statecharts.md) |
 
 Permitir que jogos sejam criados por APIs públicas textuais sem alterar internals da engine.
 
@@ -132,6 +132,8 @@ Permitir que jogos sejam criados por APIs públicas textuais sem alterar interna
 - Contrato público e versionado da camada 1 do SDK, incluindo queries declarativas e maturidade por símbolo.
 - Projectors read-only declarados e medidos separadamente.
 - Migrations explícitas de schema e conteúdo com fixtures.
+- Grafo textual compilado de cenas, prefabs e recursos com IDs estáveis.
+- Statecharts determinísticas com guards/actions registrados, save, hash e replay.
 - Gate integrado de UI, localização, navegação, foco, touch targets e breakpoints.
 
 ### Gate de saída
@@ -145,7 +147,7 @@ Uma sessão nova cria regra, conteúdo, tela, apresentação e cenário usando a
 | Estado | `PARCIAL` |
 | Owners | kernel spatial runtime, world runtime, job system |
 | Dependências | Fase 4 |
-| ADRs | [ADR 0018](docs/adr/0018-numeric-determinism-and-rng-streams.md), [ADR 0019](docs/adr/0019-spatial-model-chunk-lifecycle-and-job-commit.md), [ADR 0039](docs/adr/0039-entity-component-layer.md), [ADR 0045](docs/adr/0045-wasm-threads-and-shared-memory.md) |
+| ADRs | [ADR 0018](docs/adr/0018-numeric-determinism-and-rng-streams.md), [ADR 0019](docs/adr/0019-spatial-model-chunk-lifecycle-and-job-commit.md), [ADR 0039](docs/adr/0039-entity-component-layer.md), [ADR 0045](docs/adr/0045-wasm-threads-and-shared-memory.md), [ADR 0054](docs/adr/0054-navigation-regions-pathfinding-and-avoidance.md) |
 
 Criar uma fundação opt-in para mapas pequenos, mundos extensos e sandboxes virtualmente infinitos.
 
@@ -159,6 +161,7 @@ Criar uma fundação opt-in para mapas pequenos, mundos extensos e sandboxes vir
 - Jobs assíncronos reais sem alterar a ordem de commit.
 - Simulation LOD, catch-up lógico e inspeção de regiões, chunks, jobs e caches.
 - Posição com região e partitioning interno comprovado pelo consumidor.
+- Regiões de navegação, pathfinding, links, obstacles, agents e avoidance por adapter.
 - Superfície pública apenas quando um jogo declarar a capability.
 
 ### Gate de saída
@@ -218,7 +221,7 @@ Save mundial sobrevive a crash e migration, replay localiza divergência e uma s
 | Estado | `PARCIAL` |
 | Owners | presentation protocol, renderer-three, UI renderer, hosts |
 | Dependências | Fase 3, Fase 4, Fase 5, Fase 6, Fase 7 |
-| ADRs | [ADR 0014](docs/adr/0014-declarative-ui-contracts-and-initial-renderer.md), [ADR 0015](docs/adr/0015-raster-capture-and-visual-baselines.md), [ADR 0020](docs/adr/0020-presentation-buffers-and-wasm-memory.md), [ADR 0025](docs/adr/0025-audio-backends-voice-budgets-and-fallback.md), [ADR 0040](docs/adr/0040-ui-framework-and-diegetic-ui.md) |
+| ADRs | [ADR 0014](docs/adr/0014-declarative-ui-contracts-and-initial-renderer.md), [ADR 0015](docs/adr/0015-raster-capture-and-visual-baselines.md), [ADR 0020](docs/adr/0020-presentation-buffers-and-wasm-memory.md), [ADR 0025](docs/adr/0025-audio-backends-voice-budgets-and-fallback.md), [ADR 0040](docs/adr/0040-ui-framework-and-diegetic-ui.md), [ADR 0047](docs/adr/0047-desktop-rendering-profiles-and-backend-policy.md), [ADR 0049](docs/adr/0049-asset-ingest-cooking-and-residency.md), [ADR 0050](docs/adr/0050-material-shader-environment-and-render-feature-tiers.md), [ADR 0051](docs/adr/0051-animation-graph-and-skeletal-runtime.md), [ADR 0052](docs/adr/0052-textual-vfx-and-particle-runtime.md) |
 
 Apresentar jogos pequenos e massivos com observabilidade e degradação sem alterar gameplay.
 
@@ -228,6 +231,11 @@ Apresentar jogos pequenos e massivos com observabilidade e degradação sem alte
 
 ### Falta
 
+- Perfis web-compatible, desktop-compatible e desktop-high com fallback gráfico observado.
+- Ingestão glTF/GLB, cooking, LOD, compressão, residência e streaming por target.
+- Materiais e ambientes por tiers, shader warmup, cache e fallback verificável.
+- Grafos de animação com blend, layers, masks, retarget, IK e root motion controlado.
+- VFX GPU/CPU com trails, subemitters, colisão, pooling e budgets.
 - Buffers contíguos, instancing, LOD, culling, pooling e terrain streaming.
 - UI completa por teclado, controle e touch com baselines por perfil.
 - Budgets de voz e memória, prioridade, deduplicação, música adaptativa e fallback observável.
@@ -264,7 +272,7 @@ Uma edição reconstrói apenas a região necessária e toda consequência deriv
 | Estado | `PARCIAL` |
 | Owners | authoring toolchains |
 | Dependências | Fase 4, Fase 5, Fase 6, Fase 7, Fase 8, Fase 9 |
-| ADRs | [ADR 0027](docs/adr/0027-forge-output-contract-and-authoring-boundary.md), [ADR 0032](docs/adr/0032-audio-forge-recipes-and-deterministic-renderer.md), [ADR 0033](docs/adr/0033-visual-forge-procedural-characters-and-generated-surfaces.md), [ADR 0034](docs/adr/0034-world-forge-textual-world-recipes.md), [ADR 0035](docs/adr/0035-construction-forge-style-grammars.md), [ADR 0036](docs/adr/0036-physics-forge-collider-and-stability-recipes.md) |
+| ADRs | [ADR 0027](docs/adr/0027-forge-output-contract-and-authoring-boundary.md), [ADR 0032](docs/adr/0032-audio-forge-recipes-and-deterministic-renderer.md), [ADR 0033](docs/adr/0033-visual-forge-procedural-characters-and-generated-surfaces.md), [ADR 0034](docs/adr/0034-world-forge-textual-world-recipes.md), [ADR 0035](docs/adr/0035-construction-forge-style-grammars.md), [ADR 0036](docs/adr/0036-physics-forge-collider-and-stability-recipes.md), [ADR 0049](docs/adr/0049-asset-ingest-cooking-and-residency.md) |
 
 Produzir assets e receitas convencionais, rastreáveis e regeneráveis em cinco famílias.
 
@@ -290,7 +298,7 @@ Os cinco Forges produzem artefatos rastreáveis usados nas fixtures e preparados
 | Estado | `PARCIAL` |
 | Owners | CLI, diagnostics, benchmark registry, target hardening |
 | Dependências | Fase 3, Fase 4, Fase 5, Fase 6, Fase 7, Fase 8, Fase 9, Fase 10 |
-| ADRs | [ADR 0028](docs/adr/0028-diagnose-repair-verify-and-repair-classes.md), [ADR 0029](docs/adr/0029-benchmark-registry-profiles-and-baselines.md), [ADR 0030](docs/adr/0030-target-hardening-signing-and-distribution.md), [ADR 0031](docs/adr/0031-native-diagnostic-host-trigger-and-criteria.md), [ADR 0043](docs/adr/0043-native-diagnostic-host-backend.md) |
+| ADRs | [ADR 0028](docs/adr/0028-diagnose-repair-verify-and-repair-classes.md), [ADR 0029](docs/adr/0029-benchmark-registry-profiles-and-baselines.md), [ADR 0030](docs/adr/0030-target-hardening-signing-and-distribution.md), [ADR 0031](docs/adr/0031-native-diagnostic-host-trigger-and-criteria.md), [ADR 0043](docs/adr/0043-native-diagnostic-host-backend.md), [ADR 0047](docs/adr/0047-desktop-rendering-profiles-and-backend-policy.md) |
 
 Transformar falhas e regressões em diagnóstico causal, reparo controlado e comparação verificável.
 
@@ -334,10 +342,11 @@ Os cinco jogos passam pelos gates aplicáveis usando releases compatíveis da en
 | Target | Estado atual | Situação | Para alegar suporte |
 |---|---|---|---|
 | Native headless | `experimental` | Executado em CI e nos testes nativos. | Manter equivalência e corpus de replays verdes. |
-| Browser | `experimental` | Host WASM, Three.js, UI DOM e controle local existem. | Fechar Control Plane, budgets e fallbacks gráficos. |
-| Electron/macOS | `experimental` | Pacote local, lifecycle, storage e Steam opcional existem. | Smoke instalado e política de assinatura. |
-| Electron/Windows | `NOT_RUN` | Empacotamento existe sem smoke no target. | Build e smoke em runner Windows. |
-| Electron/Linux | `NOT_RUN` | Empacotamento existe sem smoke no target. | Build e smoke em runner Linux. |
+| Browser | `experimental` | Host WASM, Three.js, UI DOM e controle local existem. | Fechar Control Plane, budgets e o perfil web-compatible com fallback gráfico observado. |
+| Electron/macOS | `experimental` | Pacote local, lifecycle, storage e Steam opcional existem. | Smoke instalado, política de assinatura e baseline desktop-compatible/high com método e driver registrados. |
+| Electron/Windows | `NOT_RUN` | Empacotamento existe sem smoke no target. | Build e smoke em runner Windows com desktop-compatible/high, shader warmup e driver registrados. |
+| Electron/Linux | `NOT_RUN` | Empacotamento existe sem smoke no target. | Build e smoke em runner Linux com desktop-compatible/high, shader warmup e driver registrados. |
+| Steam Deck | `NOT_RUN` | O pacote Electron/Linux existe, mas não há smoke no SteamOS nem baseline de perfil gráfico. | Build instalado, desktop-compatible/high, gamepad, resolução, suspensão/retomada e budget térmico em Steam Deck. |
 | Android | `NOT_AVAILABLE` | Host não implementado. | Host, lifecycle, touch, persistência e dispositivo real. |
 | iOS | `NOT_AVAILABLE` | Host não implementado. | Host, lifecycle, touch, persistência e dispositivo real. |
 | Consoles | `rota futura` | Rota arquitetural futura. | Acesso oficial, infraestrutura privada e hosts/renderers nativos. |
@@ -347,9 +356,9 @@ Os cinco jogos passam pelos gates aplicáveis usando releases compatíveis da en
 | Jogo | Estado | Comprova |
 |---|---|---|
 | Card roguelite | fixture antecipada | Determinismo, conteúdo, UI declarativa, saves, replays, áudio, captura e operação. |
-| Survivor-like | planejado | Spatial grid, Mass Runtime, instancing, partículas e performance. |
-| Physics party brawler | planejado | Física 3D, ragdolls, multiplayer, reconexão e host migration. |
-| Procedural indie sandbox | planejado | Chunks, streaming, geração, persistência por deltas e Simulation LOD. |
+| Survivor-like | planejado | Spatial grid, Mass Runtime, instancing, animação, VFX/partículas, fog e performance desktop. |
+| Physics party brawler | planejado | Física 3D, character controllers, ragdolls, statecharts, animação, multiplayer, reconexão e host migration. |
+| Procedural indie sandbox | planejado | Chunks, streaming, navegação por regiões, geração, persistência por deltas e Simulation LOD. |
 | Procedural diorama builder | planejado | Construction Graph, constraints, geometria incremental e terrain sculpting. |
 
 ## Definition of Done de uma capability
