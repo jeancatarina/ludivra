@@ -2,18 +2,18 @@ import { copyFile, mkdir, readFile, readdir, writeFile } from "node:fs/promises"
 import { basename, isAbsolute, relative, resolve } from "node:path";
 import {
   compileCharacter,
-  compileRasterProduction,
+  compileGeneratedRaster,
   compileTexture,
-  inspectProductionGltfBytes,
   parseStyleBible,
   productionCacheKey,
+  productionCharacterRecipe,
   renderCharacterPreview,
   texturePrompt,
+  validateGeneratedModel,
   visualCacheKey,
   VISUAL_GENERATOR_VERSION,
   type CharacterSpec,
   type ProductionCharacterSpec,
-  type ProductionOutput,
   type ProductionValidationReport,
   type TextureRequest,
   type VisualStyleBible,
@@ -36,7 +36,6 @@ export const VISUAL_INDEX_FILE = ".ludivra/visual-index.json";
 
 export type VisualJobState =
   | "PLANNED"
-  | "WAITING_FOR_SOURCES"
   | "WAITING_FOR_TEXTURES"
   | "TEXTURES_IMPORTED"
   | "COMPILING"
@@ -515,15 +514,6 @@ async function writeIndex(
   }, null, 2)}\n`, "utf8");
 }
 
-function projectSourcePath(project: string, sourcePath: string): string {
-  const path = resolve(project, sourcePath);
-  const relation = relative(project, path);
-  if (relation.startsWith("..") || isAbsolute(relation)) {
-    throw new Error(`VISUAL_SOURCE_MISSING: source escapes project: ${sourcePath}`);
-  }
-  return path;
-}
-
 async function compileProductionSpec(
   project: string,
   file: string,
@@ -534,31 +524,9 @@ async function compileProductionSpec(
   forceCompile: boolean,
   diagnostics: Diagnostic[]
 ): Promise<RenderedVisualRecord | null> {
-  const sourceInputs = new Map<string, { output: ProductionOutput; path: string; bytes: Buffer }>();
-  const sourceHashes: Record<string, string> = {};
-  try {
-    for (const output of spec.outputs) {
-      const path = projectSourcePath(project, output.source.path);
-      const bytes = await readFile(path);
-      const hash = sha256(bytes);
-      if (hash !== output.source.provenance.sha256) {
-        throw new Error(`VISUAL_SOURCE_HASH_MISMATCH: ${output.source.path}`);
-      }
-      sourceInputs.set(output.id, { output, path, bytes });
-      sourceHashes[output.id] = hash;
-    }
-  } catch (error) {
-    diagnostics.push({
-      code: error instanceof Error && error.message.startsWith("VISUAL_SOURCE_HASH_MISMATCH")
-        ? "VISUAL_SOURCE_HASH_MISMATCH" : "VISUAL_SOURCE_MISSING",
-      severity: "error",
-      message: error instanceof Error ? error.message : `${spec.id} has an unavailable source`,
-      file: displayPath
-    });
-    return null;
-  }
-
-  const cacheKey = productionCacheKey(spec, loaded.source, sourceHashes);
+  const recipeBytes = await readFile(file);
+  const recipeSha256 = sha256(recipeBytes);
+  const cacheKey = productionCacheKey(spec, loaded.source);
   const outputDirectory = resolve(project, visualCacheDirectory, cacheKey);
   const manifestPath = resolve(outputDirectory, "manifest.json");
   const stored = forceCompile
@@ -600,36 +568,63 @@ async function compileProductionSpec(
       mode: string;
       profile: string;
       quality: string;
-      source: { path: string; origin: string; license: string; sha256: string };
+      generatedFrom: { kind: "canonical-character"; canonicalId: string; recipeSha256: string };
       artifacts: Array<{ kind: string; path: string; sha256: string }>;
       metrics: ProductionValidationReport["metrics"];
       validation: { status: "passed" | "failed"; report: string };
     }> = [];
     try {
-      for (const [outputId, input] of sourceInputs) {
-        const targetDirectory = resolve(outputDirectory, "outputs", outputId);
+      const compiled = compileCharacter(productionCharacterRecipe(spec), loaded.style);
+      for (const output of spec.outputs) {
+        const targetDirectory = resolve(outputDirectory, "outputs", output.id);
         await mkdir(targetDirectory, { recursive: true });
         let report: ProductionValidationReport;
         let artifactNames: Array<[string, string]>;
-        if (input.output.mode === "3d") {
-          report = inspectProductionGltfBytes(input.bytes, input.output);
-          const modelName = input.output.source.path.toLowerCase().endsWith(".glb") ? "model.glb" : "model.gltf";
+        if (output.mode === "3d") {
+          report = validateGeneratedModel(compiled, spec, output);
+          const previewOutput = spec.outputs.find((candidate) => candidate.mode === "2d");
+          const generatedPreview = compileGeneratedRaster(
+            compiled,
+            spec,
+            loaded.style,
+            previewOutput?.mode === "2d"
+              ? previewOutput
+              : {
+                  id: `${output.id}.preview`,
+                  mode: "2d",
+                  profile: "illustrated-character-2d",
+                  quality: "production",
+                  resolution: 768,
+                  camera: { yaw: 25, pitch: 10 },
+                  pixelsPerMeter: 512,
+                  padding: 16,
+                  edgeExtrusion: 4,
+                  animations: ["idle"]
+                }
+          );
           await Promise.all([
-            copyFile(input.path, resolve(targetDirectory, modelName)),
-            writeFile(
-              resolve(targetDirectory, "preview.json"),
-              `${JSON.stringify({ profile: input.output.profile, metrics: report.metrics, animations: report.metrics.animations }, null, 2)}\n`,
-              "utf8"
-            )
+            writeFile(resolve(targetDirectory, "model.gltf"), compiled.model.gltf, "utf8"),
+            writeFile(resolve(targetDirectory, "model.bin"), compiled.model.binary),
+            writeFile(resolve(targetDirectory, "albedo.png"), compiled.model.textures.albedo),
+            writeFile(resolve(targetDirectory, "normal.png"), compiled.model.textures.normal),
+            writeFile(resolve(targetDirectory, "metallic-roughness.png"), compiled.model.textures.roughness),
+            writeFile(resolve(targetDirectory, "preview.png"), generatedPreview.atlas)
           ]);
-          artifactNames = [["model", modelName], ["preview", "preview.json"]];
+          artifactNames = [
+            ["model", "model.gltf"],
+            ["mesh-buffer", "model.bin"],
+            ["albedo", "albedo.png"],
+            ["normal", "normal.png"],
+            ["metallic-roughness", "metallic-roughness.png"],
+            ["preview", "preview.png"]
+          ];
         } else {
-          const compiled = compileRasterProduction(input.bytes, input.output);
-          report = compiled.report;
+          const raster = compileGeneratedRaster(compiled, spec, loaded.style, output);
+          report = raster.report;
           await Promise.all([
-            writeFile(resolve(targetDirectory, "atlas.png"), compiled.atlas),
-            writeFile(resolve(targetDirectory, "atlas.json"), `${JSON.stringify(compiled.metadata, null, 2)}\n`, "utf8"),
-            writeFile(resolve(targetDirectory, "preview.png"), compiled.atlas)
+            writeFile(resolve(targetDirectory, "atlas.png"), raster.atlas),
+            writeFile(resolve(targetDirectory, "atlas.json"), `${JSON.stringify(raster.metadata, null, 2)}\n`, "utf8"),
+            writeFile(resolve(targetDirectory, "preview.png"), raster.atlas)
           ]);
           artifactNames = [["atlas", "atlas.png"], ["atlas-metadata", "atlas.json"], ["preview", "preview.png"]];
         }
@@ -641,16 +636,11 @@ async function compileProductionSpec(
           sha256: await hashArtifactPath(resolve(targetDirectory, name))
         })));
         outputs.push({
-          id: outputId,
-          mode: input.output.mode,
-          profile: input.output.profile,
-          quality: input.output.quality,
-          source: {
-            path: input.output.source.path,
-            origin: input.output.source.provenance.origin,
-            license: input.output.source.provenance.license,
-            sha256: input.output.source.provenance.sha256
-          },
+          id: output.id,
+          mode: output.mode,
+          profile: output.profile,
+          quality: output.quality,
+          generatedFrom: { kind: "canonical-character", canonicalId: spec.id, recipeSha256 },
           artifacts,
           metrics: report.metrics,
           validation: {
@@ -658,12 +648,11 @@ async function compileProductionSpec(
             report: relative(outputDirectory, resolve(targetDirectory, "validation.json"))
           }
         });
-        reports.push({ id: outputId, report });
+        reports.push({ id: output.id, report });
       }
     } catch (error) {
       diagnostics.push({
-        code: error instanceof Error && error.message.startsWith("VISUAL_3D_DEPENDENCY_MISSING")
-          ? "VISUAL_3D_DEPENDENCY_MISSING" : "VISUAL_QUALITY_PROFILE_FAILED",
+        code: "VISUAL_QUALITY_PROFILE_FAILED",
         severity: "error",
         message: error instanceof Error ? `${spec.id}: ${error.message}` : `${spec.id}: production compilation failed`,
         file: displayPath
@@ -695,10 +684,15 @@ async function compileProductionSpec(
       schemaVersion: 2,
       family: "visual",
       id: spec.id,
-      generator: { name: "@ludivra/visual-authoring", version: VISUAL_GENERATOR_VERSION },
+      generator: {
+        name: "@ludivra/visual-authoring",
+        version: VISUAL_GENERATOR_VERSION,
+        pipeline: "canonical-character-local"
+      },
       source: {
+        kind: "forge-recipe",
         recipe: displayPath,
-        recipeSha256: sha256(await readFile(file)),
+        recipeSha256,
         style: relative(project, loaded.path),
         styleSha256: sha256(loaded.source),
         seed: spec.seed,

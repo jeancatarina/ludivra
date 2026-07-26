@@ -8,13 +8,13 @@ import { Ajv2020 } from "ajv/dist/2020.js";
 import { PNG } from "pngjs";
 import {
   compileCharacter,
-  compileRasterProduction,
+  compileGeneratedRaster,
   compileTexture,
-  inspectProductionGltf,
-  inspectProductionGltfBytes,
   parseStyleBible,
   productionCacheKey,
+  productionCharacterRecipe,
   texturePrompt,
+  validateGeneratedModel,
   visualCacheKey
 } from "../dist/index.js";
 
@@ -26,29 +26,6 @@ const style = parseStyleBible(styleSource);
 
 function hash(value) {
   return createHash("sha256").update(value).digest("hex");
-}
-
-function gltfToGlb(source) {
-  const gltf = JSON.parse(source);
-  const binary = Buffer.from(gltf.buffers[0].uri.split(",")[1], "base64");
-  delete gltf.buffers[0].uri;
-  const jsonSource = Buffer.from(JSON.stringify(gltf), "utf8");
-  const jsonPadding = (4 - jsonSource.length % 4) % 4;
-  const binaryPadding = (4 - binary.length % 4) % 4;
-  const json = Buffer.concat([jsonSource, Buffer.alloc(jsonPadding, 0x20)]);
-  const paddedBinary = Buffer.concat([binary, Buffer.alloc(binaryPadding)]);
-  const glb = Buffer.alloc(12 + 8 + json.length + 8 + paddedBinary.length);
-  glb.writeUInt32LE(0x46546c67, 0);
-  glb.writeUInt32LE(2, 4);
-  glb.writeUInt32LE(glb.length, 8);
-  glb.writeUInt32LE(json.length, 12);
-  glb.writeUInt32LE(0x4e4f534a, 16);
-  json.copy(glb, 20);
-  const binaryHeader = 20 + json.length;
-  glb.writeUInt32LE(paddedBinary.length, binaryHeader);
-  glb.writeUInt32LE(0x004e4942, binaryHeader + 4);
-  paddedBinary.copy(glb, binaryHeader + 8);
-  return glb;
 }
 
 test("published schemas accept the Style Bible and CharacterSpec fixture", () => {
@@ -71,10 +48,10 @@ test("skeleton-first compilation is deterministic, rigged and within the visual 
   const first = compileCharacter(spec, style);
   const second = compileCharacter(spec, style);
   assert.equal(first.validation.status, "passed");
-  assert.equal(first.validation.metrics.triangles, 15200);
-  assert.equal(first.validation.metrics.vertices, 8000);
+  assert.ok(first.validation.metrics.triangles >= 40000);
+  assert.ok(first.validation.metrics.vertices >= 20000);
   assert.equal(first.validation.metrics.bones, 21);
-  assert.equal(first.validation.metrics.weightedVertices, 8000);
+  assert.equal(first.validation.metrics.weightedVertices, first.validation.metrics.vertices);
   assert.ok(first.validation.metrics.maxInfluences <= 4);
   assert.equal(first.validation.metrics.degenerateTriangles, 0);
   assert.equal(first.validation.metrics.invalidWeights, 0);
@@ -146,14 +123,10 @@ test("texture compiler derives technical maps locally and enforces tiling", () =
   assert.match(prompt, /no transparency|transparent-background/);
 });
 
-test("production contracts compile final 2D, 2.5D and validate a rigged animated 3D source", () => {
+test("production contracts generate final 2D, 2.5D and rigged 3D from one local recipe", () => {
   const productionRoot = resolve(fixtureRoot, "production");
   const productionSpec = JSON.parse(readFileSync(
     resolve(productionRoot, "visuals/goblin-shaman-production.character.json"),
-    "utf8"
-  ));
-  const wizardSpec = JSON.parse(readFileSync(
-    resolve(productionRoot, "visuals/wizard-production.character.json"),
     "utf8"
   ));
   const validator = new Ajv2020({ allErrors: true, strict: false });
@@ -161,39 +134,42 @@ test("production contracts compile final 2D, 2.5D and validate a rigged animated
     JSON.parse(readFileSync(resolve(root, "schemas/character-spec-v2.schema.json"), "utf8"))
   );
   assert.ok(characterValidator(productionSpec), JSON.stringify(characterValidator.errors));
-  assert.ok(characterValidator(wizardSpec), JSON.stringify(characterValidator.errors));
+  assert.equal(
+    characterValidator({
+      ...productionSpec,
+      outputs: [{ ...productionSpec.outputs[0], source: { path: "foreign.png" } }]
+    }),
+    false,
+    "schema v2 must reject every external visual source"
+  );
+  assert.equal(characterValidator({ ...productionSpec, surfaces: [{ path: "foreign-texture.png" }] }), false);
 
-  const [cutout, directional] = productionSpec.outputs;
-  const [model] = wizardSpec.outputs;
-  const cutoutBytes = readFileSync(resolve(productionRoot, cutout.source.path));
-  const directionsBytes = readFileSync(resolve(productionRoot, directional.source.path));
-  const modelSource = readFileSync(resolve(productionRoot, model.source.path), "utf8");
-  assert.equal(hash(cutoutBytes), cutout.source.provenance.sha256);
-  assert.equal(hash(directionsBytes), directional.source.provenance.sha256);
-  assert.equal(hash(modelSource), model.source.provenance.sha256);
-
-  const compiled2d = compileRasterProduction(cutoutBytes, cutout);
-  const compiled25d = compileRasterProduction(directionsBytes, directional);
-  const compiled3d = inspectProductionGltf(modelSource, model);
-  const compiledGlb = inspectProductionGltfBytes(gltfToGlb(modelSource), model);
+  const productionStyleSource = readFileSync(resolve(productionRoot, "styles/stylized/style.yaml"), "utf8");
+  const productionStyle = parseStyleBible(productionStyleSource);
+  const canonical = compileCharacter(productionCharacterRecipe(productionSpec), productionStyle);
+  const [cutout, directional, model] = productionSpec.outputs;
+  const compiled2d = compileGeneratedRaster(canonical, productionSpec, productionStyle, cutout);
+  const compiled25d = compileGeneratedRaster(canonical, productionSpec, productionStyle, directional);
+  const compiled3d = validateGeneratedModel(canonical, productionSpec, model);
   assert.equal(compiled2d.report.status, "passed", JSON.stringify(compiled2d.report.checks));
   assert.equal(compiled2d.metadata.frames.length, 1);
   assert.equal(PNG.sync.read(compiled2d.atlas).colorType, 6);
-  assert.equal(hash(compiled2d.atlas), "5d2a053fa2f09c36ba5570a9ae92c0b4bf8f33d641139fddd3adec03cdd58b9c");
   assert.equal(compiled25d.report.status, "passed", JSON.stringify(compiled25d.report.checks));
-  assert.deepEqual(compiled25d.metadata.frames.map(({ direction }) => direction), directional.source.directions);
-  assert.equal(hash(compiled25d.atlas), "36d329929eeb7534e31f5cafa63bbaefc7a7d40ecc4dc85f81f86a5cd4fc641f");
+  assert.deepEqual(compiled25d.metadata.frames.map(({ direction }) => direction), directional.directions);
   assert.equal(compiled3d.status, "passed", JSON.stringify(compiled3d.checks));
-  assert.equal(compiledGlb.status, "passed", JSON.stringify(compiledGlb.checks));
-  assert.equal(compiledGlb.metrics.triangles, compiled3d.metrics.triangles);
-  assert.ok(compiled3d.metrics.animations.includes("Idle"));
+  assert.ok(compiled3d.metrics.animations.includes("idle"));
   assert.ok(compiled3d.metrics.triangles > 0);
-
-  const hashes = Object.fromEntries(productionSpec.outputs.map((output) => [output.id, output.source.provenance.sha256]));
-  const style = readFileSync(resolve(productionRoot, "styles/stylized/style.yaml"), "utf8");
+  assert.equal(JSON.parse(canonical.model.gltf).images.length, 3);
+  assert.equal(productionCacheKey(productionSpec, productionStyleSource), productionCacheKey(productionSpec, productionStyleSource));
+  assert.equal(hash(compiled2d.atlas), hash(compileGeneratedRaster(canonical, productionSpec, productionStyle, cutout).atlas));
   assert.equal(
-    productionCacheKey(productionSpec, style, hashes),
-    productionCacheKey(productionSpec, style, Object.fromEntries(Object.entries(hashes).reverse()))
+    hash(compiled2d.atlas),
+    hash(readFileSync(resolve(productionRoot, "generated/goblin-shaman-2d.png"))),
+    "the checked-in 2D evidence must be a byte-identical Forge output"
   );
-  assert.equal(hash(compiled2d.atlas), hash(compileRasterProduction(cutoutBytes, cutout).atlas));
+  assert.equal(
+    hash(compiled25d.atlas),
+    hash(readFileSync(resolve(productionRoot, "generated/goblin-shaman-2.5d.png"))),
+    "the checked-in directional evidence must be a byte-identical Forge output"
+  );
 });

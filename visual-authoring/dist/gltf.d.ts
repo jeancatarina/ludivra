@@ -3,5 +3,10 @@ import type { CharacterSpec, VisualStyleBible } from "./spec.js";
 export interface GltfArtifact {
     json: string;
     binary: Buffer;
+    textures: {
+        albedo: Buffer;
+        normal: Buffer;
+        roughness: Buffer;
+    };
 }
 export declare function buildGltf(spec: CharacterSpec, style: VisualStyleBible, geometry: CharacterGeometry): GltfArtifact;

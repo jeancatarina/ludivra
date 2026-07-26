@@ -6,7 +6,7 @@ import { renderCharacterPreview } from "./preview.js";
 import type { CharacterSpec, VisualStyleBible } from "./spec.js";
 import { validateCharacter, type VisualValidationReport } from "./validation.js";
 
-export const VISUAL_GENERATOR_VERSION = 2;
+export const VISUAL_GENERATOR_VERSION = 3;
 
 export function visualCacheKey(
   spec: CharacterSpec,
@@ -23,7 +23,11 @@ export function visualCacheKey(
 
 export interface CompiledCharacter {
   geometry: CharacterGeometry;
-  model: { gltf: string; binary: Buffer };
+  model: {
+    gltf: string;
+    binary: Buffer;
+    textures: { albedo: Buffer; normal: Buffer; roughness: Buffer };
+  };
   preview: string;
   validation: VisualValidationReport;
   material: {
@@ -46,7 +50,7 @@ export function compileCharacter(spec: CharacterSpec, style: VisualStyleBible): 
   const materialRole = spec.skin;
   return {
     geometry,
-    model: { gltf: model.json, binary: model.binary },
+    model: { gltf: model.json, binary: model.binary, textures: model.textures },
     preview: renderCharacterPreview(spec, style, geometry, validation),
     validation,
     material: {

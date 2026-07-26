@@ -18,6 +18,7 @@ export interface CharacterGeometry {
     positions: Float32Array;
     normals: Float32Array;
     colors: Float32Array;
+    texcoords: Float32Array;
     joints: Uint16Array;
     weights: Float32Array;
     indices: Uint32Array;

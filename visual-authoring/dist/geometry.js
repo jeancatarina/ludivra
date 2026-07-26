@@ -111,6 +111,45 @@ function attachmentSegments(spec, style, skeleton) {
             color: hexColor(style, role)
         });
     };
+    const head = find("head");
+    const crown = find("head-crown");
+    const faceCenter = add(head.bone.end, [0, -height * 0.025, height * 0.075]);
+    if (spec.archetype.head === "goblin" || spec.archetype.head === "orc") {
+        push("face.left-ear", head.index, add(head.bone.end, [-height * 0.055, 0, 0]), add(head.bone.end, [-height * 0.19, height * 0.035, -height * 0.015]), height * 0.044, 0.003, spec.skin);
+        push("face.right-ear", head.index, add(head.bone.end, [height * 0.055, 0, 0]), add(head.bone.end, [height * 0.19, height * 0.035, -height * 0.015]), height * 0.044, 0.003, spec.skin);
+    }
+    if (spec.archetype.head !== "skeleton") {
+        push("face.nose", head.index, add(faceCenter, [0, height * 0.01, -height * 0.025]), add(faceCenter, [0, -height * 0.012, height * (0.055 + spec.face.nose * 0.025)]), height * 0.026, height * 0.012, spec.skin);
+    }
+    const eyeSpread = height * 0.045;
+    const eyeY = crown.bone.start[1] - height * 0.016;
+    const eyeZ = crown.bone.start[2] + height * 0.085;
+    push("face.left-eye", head.index, [-eyeSpread, eyeY, eyeZ], [-eyeSpread, eyeY + height * 0.002, eyeZ + height * 0.012], height * 0.019, height * 0.014, "accent");
+    push("face.right-eye", head.index, [eyeSpread, eyeY, eyeZ], [eyeSpread, eyeY + height * 0.002, eyeZ + height * 0.012], height * 0.019, height * 0.014, "accent");
+    push("face.left-brow", head.index, [-eyeSpread * 1.5, eyeY + height * 0.035, eyeZ + height * 0.005], [-eyeSpread * 0.35, eyeY + height * 0.024, eyeZ + height * 0.014], height * 0.009, height * 0.006, "shadow");
+    push("face.right-brow", head.index, [eyeSpread * 1.5, eyeY + height * 0.035, eyeZ + height * 0.005], [eyeSpread * 0.35, eyeY + height * 0.024, eyeZ + height * 0.014], height * 0.009, height * 0.006, "shadow");
+    push("face.mouth", head.index, [-height * 0.042, eyeY - height * 0.078, eyeZ + height * 0.006], [height * 0.042, eyeY - height * 0.078, eyeZ + height * 0.006], height * 0.01, height * 0.01, "shadow");
+    if (spec.archetype.head === "goblin" || spec.archetype.head === "orc") {
+        push("face.left-tusk", head.index, [-height * 0.035, eyeY - height * 0.073, eyeZ + height * 0.012], [-height * 0.04, eyeY - height * 0.035, eyeZ + height * 0.016], height * 0.009, 0.002, "bone");
+        push("face.right-tusk", head.index, [height * 0.035, eyeY - height * 0.073, eyeZ + height * 0.012], [height * 0.04, eyeY - height * 0.035, eyeZ + height * 0.016], height * 0.009, 0.002, "bone");
+    }
+    const hips = find("hips");
+    const spine = find("spine");
+    const primaryClothing = spec.clothing[0];
+    if (primaryClothing !== undefined) {
+        const role = primaryClothing.colorRole;
+        push("clothing.upper-layer", spine.index, add(spine.bone.start, [0, height * 0.02, 0]), add(spine.bone.end, [0, -height * 0.03, 0]), spine.bone.radiusStart * 1.18, spine.bone.radiusEnd * 1.08, role);
+        if (primaryClothing.type === "robe" || primaryClothing.type === "cape") {
+            push("clothing.robe-front", hips.index, add(hips.bone.start, [0, height * 0.055, height * 0.025]), add(hips.bone.start, [0, -height * 0.31, height * 0.055]), height * 0.14, height * 0.21, role);
+            push("clothing.robe-back", hips.index, add(hips.bone.start, [0, height * 0.045, -height * 0.035]), add(hips.bone.start, [0, -height * 0.34, -height * 0.075]), height * 0.13, height * 0.23, role);
+        }
+        push("clothing.belt", hips.index, add(hips.bone.start, [-height * 0.16, height * 0.025, height * 0.01]), add(hips.bone.start, [height * 0.16, height * 0.025, height * 0.01]), height * 0.025, height * 0.025, "leather");
+        push("clothing.belt-buckle", hips.index, add(hips.bone.start, [0, height * 0.014, height * 0.105]), add(hips.bone.start, [0, height * 0.05, height * 0.115]), height * 0.032, height * 0.032, "metal");
+        const leftWrist = find("left-lower-arm");
+        const rightWrist = find("right-lower-arm");
+        push("clothing.left-cuff", leftWrist.index, add(leftWrist.bone.end, [0, height * 0.035, 0]), leftWrist.bone.end, height * 0.048, height * 0.046, "leather");
+        push("clothing.right-cuff", rightWrist.index, add(rightWrist.bone.end, [0, height * 0.035, 0]), rightWrist.bone.end, height * 0.048, height * 0.046, "leather");
+    }
     for (const [index, equipment] of spec.equipment.entries()) {
         const handName = equipment.hand === "left" ? "left-hand" : "right-hand";
         const hand = find(handName);
@@ -119,6 +158,11 @@ function attachmentSegments(spec, style, skeleton) {
         const role = equipment.material;
         if (equipment.type === "staff") {
             push(`equipment.${index}.staff`, hand.index, add(anchor, [0, -height * 0.48, 0]), add(anchor, [0, height * 0.42, 0]), radius, radius * 0.75, role);
+            const staffTop = add(anchor, [0, height * 0.44, 0]);
+            push(`equipment.${index}.staff-wrap`, hand.index, add(anchor, [0, -height * 0.06, 0]), add(anchor, [0, height * 0.1, 0]), radius * 1.35, radius * 1.35, "leather");
+            push(`equipment.${index}.staff-crystal`, hand.index, staffTop, add(staffTop, [0, height * 0.14, 0]), radius * 3.8, 0.003, "crystal");
+            push(`equipment.${index}.staff-prong-left`, hand.index, add(staffTop, [0, -height * 0.025, 0]), add(staffTop, [-height * 0.065, height * 0.09, 0]), radius * 1.25, radius * 0.45, role);
+            push(`equipment.${index}.staff-prong-right`, hand.index, add(staffTop, [0, -height * 0.025, 0]), add(staffTop, [height * 0.065, height * 0.09, 0]), radius * 1.25, radius * 0.45, role);
         }
         else if (equipment.type === "sword") {
             push(`equipment.${index}.sword`, hand.index, anchor, add(anchor, [0, -height * 0.42, height * 0.06]), radius * 1.35, radius * 0.32, role);
@@ -160,7 +204,11 @@ function attachmentSegments(spec, style, skeleton) {
             push(`accessory.${index}.bones-cross`, anchor.index, add(base, [height * 0.07, 0, height * 0.08]), add(base, [-height * 0.07, -height * 0.11, height * 0.08]), radius * 1.5, radius, accessory.material);
         }
         else {
-            push(`accessory.${index}.${accessory.type}`, anchor.index, base, add(base, [0, height * 0.1 * accessory.scale, height * 0.035]), radius * 2.2, radius * 0.45, accessory.material);
+            const side = index % 2 === 0 ? -1 : 1;
+            const offsetBase = accessory.type === "pouch"
+                ? add(base, [side * height * 0.13, -height * 0.08, height * 0.055])
+                : base;
+            push(`accessory.${index}.${accessory.type}`, anchor.index, offsetBase, add(offsetBase, [0, height * 0.1 * accessory.scale, height * 0.035]), radius * 2.2, radius * 0.45, accessory.material);
         }
     }
     return segments;
@@ -177,15 +225,16 @@ export function generateCharacterGeometry(spec, style) {
         ...skeleton.map((boneDefinition, index) => baseSegment(spec, style, boneDefinition, index)),
         ...attachmentSegments(spec, style, skeleton)
     ];
-    const sides = 16;
-    const rings = 20;
-    const verticesPerBone = sides * rings;
+    const sides = 24;
+    const rings = 24;
+    const verticesPerBone = sides * rings + 2;
     const positions = new Float32Array(segments.length * verticesPerBone * 3);
     const normals = new Float32Array(segments.length * verticesPerBone * 3);
     const colors = new Float32Array(segments.length * verticesPerBone * 4);
+    const texcoords = new Float32Array(segments.length * verticesPerBone * 2);
     const joints = new Uint16Array(segments.length * verticesPerBone * 4);
     const weights = new Float32Array(segments.length * verticesPerBone * 4);
-    const indices = new Uint32Array(segments.length * (rings - 1) * sides * 6);
+    const indices = new Uint32Array(segments.length * ((rings - 1) * sides * 6 + sides * 6));
     const bounds = {
         min: [Number.POSITIVE_INFINITY, Number.POSITIVE_INFINITY, Number.POSITIVE_INFINITY],
         max: [Number.NEGATIVE_INFINITY, Number.NEGATIVE_INFINITY, Number.NEGATIVE_INFINITY]
@@ -210,7 +259,13 @@ export function generateCharacterGeometry(spec, style) {
         for (let ring = 0; ring < rings; ring += 1) {
             const along = ring / (rings - 1);
             const center = add(definition.start, scale(subtract(definition.end, definition.start), along));
-            const radius = definition.radiusStart + (definition.radiusEnd - definition.radiusStart) * along;
+            const organic = definition.name.includes("head") ? 0.24
+                : definition.name.includes("arm") || definition.name.includes("thigh") || definition.name.includes("shin") ? 0.1
+                    : definition.name === "spine" || definition.name.includes("upper-layer") ? 0.12
+                        : definition.name.includes("robe") ? 0.04
+                            : 0;
+            const linearRadius = definition.radiusStart + (definition.radiusEnd - definition.radiusStart) * along;
+            const radius = linearRadius * (1 + Math.sin(Math.PI * along) * organic);
             for (let side = 0; side < sides; side += 1) {
                 const angle = (side / sides) * Math.PI * 2;
                 const radial = add(scale(tangent, Math.cos(angle)), scale(bitangent, Math.sin(angle)));
@@ -219,6 +274,7 @@ export function generateCharacterGeometry(spec, style) {
                 positions.set(position, vertex * 3);
                 normals.set(radial, vertex * 3);
                 colors.set(color, vertex * 4);
+                texcoords.set([side / sides, along], vertex * 2);
                 for (let component = 0; component < 3; component += 1) {
                     bounds.min[component] = Math.min(bounds.min[component] ?? 0, position[component] ?? 0);
                     bounds.max[component] = Math.max(bounds.max[component] ?? 0, position[component] ?? 0);
@@ -230,6 +286,26 @@ export function generateCharacterGeometry(spec, style) {
                 weights.set([ownWeight, 1 - ownWeight, 0, 0], vertex * 4);
             }
         }
+        const capStart = vertexBase + sides * rings;
+        const capEnd = capStart + 1;
+        const capColor = [
+            ((colorValue >> 16) & 255) / 255,
+            ((colorValue >> 8) & 255) / 255,
+            (colorValue & 255) / 255,
+            1
+        ];
+        positions.set(definition.start, capStart * 3);
+        positions.set(definition.end, capEnd * 3);
+        normals.set(scale(axis, -1), capStart * 3);
+        normals.set(axis, capEnd * 3);
+        colors.set(capColor, capStart * 4);
+        colors.set(capColor, capEnd * 4);
+        texcoords.set([0.5, 0], capStart * 2);
+        texcoords.set([0.5, 1], capEnd * 2);
+        joints.set([definition.skinBone, definition.skinBone, 0, 0], capStart * 4);
+        joints.set([definition.skinBone, definition.skinBone, 0, 0], capEnd * 4);
+        weights.set([1, 0, 0, 0], capStart * 4);
+        weights.set([1, 0, 0, 0], capEnd * 4);
         for (let ring = 0; ring < rings - 1; ring += 1) {
             for (let side = 0; side < sides; side += 1) {
                 const nextSide = (side + 1) % sides;
@@ -242,6 +318,14 @@ export function generateCharacterGeometry(spec, style) {
                 indexCursor += 6;
             }
         }
+        const lastRing = vertexBase + (rings - 1) * sides;
+        for (let side = 0; side < sides; side += 1) {
+            const nextSide = (side + 1) % sides;
+            indices.set([capStart, vertexBase + nextSide, vertexBase + side], indexCursor);
+            indexCursor += 3;
+            indices.set([capEnd, lastRing + side, lastRing + nextSide], indexCursor);
+            indexCursor += 3;
+        }
     }
-    return { skeleton, segments, positions, normals, colors, joints, weights, indices, bounds };
+    return { skeleton, segments, positions, normals, colors, texcoords, joints, weights, indices, bounds };
 }

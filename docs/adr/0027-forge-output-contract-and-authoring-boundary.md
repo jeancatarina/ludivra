@@ -17,16 +17,14 @@ O risco concreto da primeira forma é o artefato opaco: um asset sem receita, se
 
 ## Decisão
 
-### A receita textual e as fontes declaradas são a fonte de verdade
+### A receita textual é a fonte de verdade
 
-Todo Forge é um **compilador**: recebe um documento textual versionado, valida-o por schema e produz artefatos derivados. A receita é a fonte editável. Quando a qualidade exige um insumo autorado ou generativo — imagem, modelo, gravação ou fonte tipográfica — esse insumo também faz parte da fonte de verdade, de forma explícita, imutável e auditável por hash, origem, licença e termos do gerador.
+Todo Forge é um **compilador**: recebe um documento textual versionado, valida-o por schema e produz artefatos derivados. A receita é a fonte editável. Cada ADR de família define se existem insumos técnicos adicionais. O Visual Forge v2 é estritamente local e não aceita conteúdo visual binário como entrada; imagem, modelo, material e animação são artefatos gerados.
 
 ```text
 intenção em linguagem natural
         ↓
 agente escreve ou edita a receita JSONC
-        ↓
-gerador/adaptador produz fonte declarada, quando necessário
         ↓
 game <familia> render
         ↓
@@ -37,11 +35,11 @@ artefato canônico + manifest + preview + análise
 agente inspeciona a evidência e ajusta a receita
 ```
 
-O agente não edita manualmente amostras, vértices, pixels ou bytes de asset. Ele escreve parâmetros semânticos e pode operar um gerador de authoring que produza uma fonte declarada. Essa é a fronteira que torna o sistema operável por texto sem limitar a qualidade final ao que um compilador procedural consegue sintetizar.
+O agente não edita manualmente amostras, vértices, pixels ou bytes de asset. Ele escreve parâmetros semânticos e o gerador de authoring produz os artefatos.
 
 Editar o artefato derivado é proibido. Reconstruir a receita a partir do artefato é proibido.
 
-Fonte importada não pode ser confundida com artefato derivado. Ela vive em diretório de fontes, tem sidecar de proveniência e entra no manifest com hash. Substituí-la exige nova revisão da receita ou da proveniência. Um binário sem esses dados continua proibido.
+Um binário sem receita continua proibido. Quando uma família autorizar insumo técnico adicional, seu ADR deve separar esse insumo do artefato derivado e definir auditoria. Essa autorização não se aplica ao Visual Forge v2.
 
 ### Contrato comum de saída
 
@@ -50,7 +48,7 @@ Todo Forge produz, no mínimo:
 - a receita e a seed usadas;
 - arquivos em formatos convencionais;
 - manifest com hashes, toolchain, versão do gerador e parâmetros efetivos;
-- origem e licença de cada insumo;
+- identificação e hash de cada insumo permitido pelo ADR da família;
 - preview inspecionável por um agente — imagem, waveform, turntable ou relatório, conforme a família;
 - métricas, diagnósticos e validation report;
 - instrução de regeneração.
@@ -59,9 +57,7 @@ Artefato sem manifest não entra no repositório. Regeneração impossível é d
 
 ### Determinismo do compilador e identidade da fonte
 
-Mesma receita, mesmos hashes de fontes, mesma versão do compilador e mesmo perfil de render produzem bytes idênticos. Divergência na compilação local é defeito do Forge, verificada por fixture.
-
-Geradores externos e modelos generativos não prometem repetir pixels ou vértices apenas por seed. Sua saída aceita é congelada como fonte e identificada por hash; prompt, modelo, versão, seed quando disponível e termos ficam no sidecar para reexecução e auditoria. A identidade de cache é `hash(receita) + hashes(fontes) + versão do compilador + perfil`.
+Mesma receita, mesmos hashes de insumos técnicos autorizados, mesma versão do compilador e mesmo perfil de render produzem bytes idênticos. Divergência na compilação local é defeito do Forge, verificada por fixture. A identidade do Visual Forge v2 é `hash(receita) + hash(Style Bible) + versão do compilador`.
 
 ### Evidência que um agente consegue ler
 
@@ -81,7 +77,7 @@ Relatório de validação com falha bloqueia a promoção do artefato para fixtu
 
 Forges rodam em authoring ou build time. Nenhum Forge é dependência de execução do jogo, e nenhum jogo publicado exige um Forge instalado para rodar.
 
-Serviço externo pode ser adapter de authoring, sempre opcional no build e com credencial fora do repositório. O caminho local equivalente é compilar uma fonte já declarada; o build e o runtime nunca precisam chamar o serviço. Modelo generativo usado em authoring é registrado com nome, versão, prompt e termos, porque isso afeta a licença do artefato produzido; a decisão de licenciamento e publicação continua sendo do usuário.
+Serviço externo não pode ser requisito de uma família obrigatória. O Visual Forge v2 não possui adapter remoto.
 
 ### Uma família, um ADR
 
@@ -92,19 +88,19 @@ Códigos: `FORGE_MANIFEST_MISSING`, `FORGE_ARTIFACT_OPAQUE`, `FORGE_RECIPE_INVAL
 ## Consequências
 
 - geração passa a ser dirigível por prompt sem edição manual de bytes pelo agente;
-- todo artefato tem receita revisável; fontes binárias necessárias têm hash, licença e proveniência revisáveis;
+- todo artefato tem receita revisável e uma cadeia de geração explícita;
 - as cinco famílias compartilham manifest, cache e relatório em vez de cinco convenções;
 - o jogo publicado nunca depende de ferramenta de geração instalada;
-- serviço externo permanece possível e opcional, com equivalente local declarado;
-- o repositório prioriza receitas pequenas, mas versiona fontes binárias aprovadas quando elas são necessárias para reproduzir a qualidade;
+- serviço externo permanece proibido como requisito e pode ser vedado inteiramente pelo ADR da família;
+- o repositório prioriza receitas pequenas e artefatos regeneráveis;
 - cada família precisa do seu ADR antes de existir código.
 
 ## Alternativas rejeitadas
 
 - **Ferramenta interativa como caminho principal:** exclui o agente, não produz diff e transforma o asset em artefato opaco.
 - **Aceitar arquivo opaco:** impede revisão, correção e auditoria de licença, e é irreversível quando o volume cresce.
-- **Tratar uma saída generativa como determinística por seed:** cria uma promessa falsa; o hash da fonte aceita é a identidade reproduzível.
-- **Proibir fontes raster ou 3D autoradas:** limita a qualidade final à geometria e aos pixels que o compilador local consegue sintetizar.
+- **Tratar uma saída remota como determinística por seed:** cria uma promessa falsa e não satisfaz uma família local obrigatória.
+- **Usar fonte raster ou 3D autorada no Visual Forge v2:** transfere a criação para fora do Forge e viola o ADR 0033.
 - **Um manifest por família:** cinco formatos para o mesmo problema, com cinco validadores divergentes.
 - **Forge como dependência de runtime:** transformaria ferramenta de authoring em requisito de execução do jogo.
 - **Exigir serviço externo em uma família obrigatória:** cria dependência comercial em um compromisso do ADR 0008.

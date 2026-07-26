@@ -1,5 +1,6 @@
 import type { CharacterGeometry, Vector3 } from "./geometry.js";
 import type { AnimationKind, CharacterSpec, VisualStyleBible } from "./spec.js";
+import { PNG } from "pngjs";
 
 interface BufferView {
   buffer: 0;
@@ -13,7 +14,7 @@ interface Accessor {
   byteOffset: 0;
   componentType: 5123 | 5125 | 5126;
   count: number;
-  type: "SCALAR" | "VEC3" | "VEC4" | "MAT4";
+  type: "SCALAR" | "VEC2" | "VEC3" | "VEC4" | "MAT4";
   min?: number[];
   max?: number[];
   normalized?: boolean;
@@ -112,6 +113,46 @@ function animationQuaternions(kind: AnimationKind): Float32Array {
 export interface GltfArtifact {
   json: string;
   binary: Buffer;
+  textures: {
+    albedo: Buffer;
+    normal: Buffer;
+    roughness: Buffer;
+  };
+}
+
+function generatedTexture(
+  style: VisualStyleBible,
+  kind: "albedo" | "normal" | "roughness",
+  size = 512
+): Buffer {
+  const image = new PNG({ width: size, height: size });
+  for (let y = 0; y < size; y += 1) {
+    for (let x = 0; x < size; x += 1) {
+      const offset = (y * size + x) * 4;
+      const weave = Math.sin(x * 0.31) * Math.sin(y * 0.27);
+      const grain = Math.sin((x * 17 + y * 31) * 0.071) * 0.5 + Math.sin((x * 7 - y * 13) * 0.113) * 0.5;
+      if (kind === "normal") {
+        image.data.set([
+          Math.round(128 + grain * 9),
+          Math.round(128 + weave * 7),
+          252,
+          255
+        ], offset);
+      } else if (kind === "roughness") {
+        const rough = Math.round(166 + weave * 9 + grain * 7);
+        image.data.set([0, rough, 0, 255], offset);
+      } else {
+        const variation = 0.92 + weave * 0.025 + grain * 0.018;
+        image.data.set([
+          Math.round(255 * variation),
+          Math.round(252 * variation),
+          Math.round(246 * variation),
+          255
+        ], offset);
+      }
+    }
+  }
+  return PNG.sync.write(image, { colorType: 6 });
 }
 
 export function buildGltf(
@@ -136,6 +177,11 @@ export function buildGltf(
     componentType: 5126,
     count: geometry.colors.length / 4,
     type: "VEC4"
+  }, 34962);
+  const texcoordAccessor = binary.add(geometry.texcoords, {
+    componentType: 5126,
+    count: geometry.texcoords.length / 2,
+    type: "VEC2"
   }, 34962);
   const jointAccessor = binary.add(geometry.joints, {
     componentType: 5123,
@@ -203,6 +249,11 @@ export function buildGltf(
     };
   });
   const roughness = Math.min(1, Math.max(0.04, 0.62 + style.roughnessBias * 0.25));
+  const textures = {
+    albedo: generatedTexture(style, "albedo"),
+    normal: generatedTexture(style, "normal"),
+    roughness: generatedTexture(style, "roughness")
+  };
   const binaryBytes = binary.bytes();
   const gltf = {
     asset: {
@@ -220,6 +271,7 @@ export function buildGltf(
           POSITION: positionAccessor,
           NORMAL: normalAccessor,
           COLOR_0: colorAccessor,
+          TEXCOORD_0: texcoordAccessor,
           JOINTS_0: jointAccessor,
           WEIGHTS_0: weightAccessor
         },
@@ -238,19 +290,33 @@ export function buildGltf(
       name: `${spec.id}.procedural-base`,
       pbrMetallicRoughness: {
         baseColorFactor: hexToFactor("#ffffff"),
+        baseColorTexture: { index: 0 },
         metallicFactor: spec.skin === "metal" ? 0.8 : 0,
-        roughnessFactor: roughness
+        roughnessFactor: roughness,
+        metallicRoughnessTexture: { index: 2 }
       },
+      normalTexture: { index: 1, scale: 0.35 },
       doubleSided: false,
       extras: {
         mapping: "triplanar",
         layers: ["base-color", "cellular-noise", "curvature-darkening", "joint-warmth"]
       }
     }],
+    images: [
+      { name: `${spec.id}.albedo`, uri: `data:image/png;base64,${textures.albedo.toString("base64")}` },
+      { name: `${spec.id}.normal`, uri: `data:image/png;base64,${textures.normal.toString("base64")}` },
+      { name: `${spec.id}.roughness`, uri: `data:image/png;base64,${textures.roughness.toString("base64")}` }
+    ],
+    samplers: [{ magFilter: 9729, minFilter: 9987, wrapS: 10497, wrapT: 10497 }],
+    textures: [
+      { name: `${spec.id}.albedo`, sampler: 0, source: 0 },
+      { name: `${spec.id}.normal`, sampler: 0, source: 1 },
+      { name: `${spec.id}.roughness`, sampler: 0, source: 2 }
+    ],
     animations,
     buffers: [{ uri: `data:application/octet-stream;base64,${binaryBytes.toString("base64")}`, byteLength: binaryBytes.length }],
     bufferViews: binary.views,
     accessors: binary.accessors
   };
-  return { json: `${JSON.stringify(gltf, null, 2)}\n`, binary: binaryBytes };
+  return { json: `${JSON.stringify(gltf, null, 2)}\n`, binary: binaryBytes, textures };
 }

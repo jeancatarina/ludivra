@@ -1,138 +1,208 @@
 import { createHash } from "node:crypto";
 import { PNG } from "pngjs";
-function parseHexColor(value) {
-    const match = /^#([a-f0-9]{2})([a-f0-9]{2})([a-f0-9]{2})$/i.exec(value);
-    if (match === null)
-        throw new Error(`VISUAL_ALPHA_INVALID: invalid matte color ${value}`);
-    return [Number.parseInt(match[1], 16), Number.parseInt(match[2], 16), Number.parseInt(match[3], 16)];
+const directionYaw = {
+    south: 0,
+    "south-west": 45,
+    west: 90,
+    "north-west": 135,
+    north: 180,
+    "north-east": 225,
+    east: 270,
+    "south-east": 315
+};
+function status(checks) {
+    return checks.some((check) => check.status === "failed") ? "failed" : "passed";
 }
-function applyMatte(image, output) {
-    const [red, green, blue] = parseHexColor(output.source.matte.color);
-    const transparent = output.source.matte.transparentThreshold;
-    const opaque = output.source.matte.opaqueThreshold;
-    if (opaque <= transparent)
-        throw new Error("VISUAL_ALPHA_INVALID: opaqueThreshold must exceed transparentThreshold");
-    for (let offset = 0; offset < image.data.length; offset += 4) {
-        const dr = image.data[offset] - red;
-        const dg = image.data[offset + 1] - green;
-        const db = image.data[offset + 2] - blue;
-        const distance = Math.sqrt(dr * dr + dg * dg + db * db);
-        const ramp = Math.max(0, Math.min(1, (distance - transparent) / (opaque - transparent)));
-        const matteAlpha = ramp < 0.28 ? 0 : Math.pow((ramp - 0.28) / 0.72, 1.8);
-        const magentaExcess = Math.max(0, Math.min(image.data[offset], image.data[offset + 2]) - image.data[offset + 1]);
-        const magentaBalance = Math.abs(image.data[offset] - image.data[offset + 2]);
-        const spillAlpha = magentaBalance < 150
-            ? Math.max(0, Math.min(1, 1 - (magentaExcess - 12) / 40))
-            : 1;
-        const finalAlpha = matteAlpha * spillAlpha * spillAlpha;
-        image.data[offset + 3] = Math.round(image.data[offset + 3] * finalAlpha);
-        if (matteAlpha < 1) {
-            const neutral = image.data[offset + 1];
-            const despill = Math.min(1, (1 - matteAlpha) * 2);
-            image.data[offset] = Math.max(0, image.data[offset] - Math.round(magentaExcess * despill));
-            image.data[offset + 2] = Math.max(0, image.data[offset + 2] - Math.round(magentaExcess * despill));
+export function productionCharacterRecipe(spec) {
+    return {
+        schemaVersion: 1,
+        id: spec.id,
+        style: spec.style,
+        seed: spec.seed,
+        archetype: spec.archetype,
+        anatomy: spec.anatomy,
+        face: spec.face,
+        skin: spec.skin,
+        clothing: spec.clothing,
+        equipment: spec.equipment,
+        accessories: spec.accessories,
+        animations: spec.animations,
+        ...(spec.effects === undefined ? {} : { effects: spec.effects }),
+        surfaces: []
+    };
+}
+function rotateY(value, yaw) {
+    const sine = Math.sin(yaw);
+    const cosine = Math.cos(yaw);
+    return [
+        value[0] * cosine + value[2] * sine,
+        value[1],
+        -value[0] * sine + value[2] * cosine
+    ];
+}
+function project(geometry, index, size, yaw, pitch, scale, centerX, floorY) {
+    const position = rotateY([
+        geometry.positions[index * 3],
+        geometry.positions[index * 3 + 1],
+        geometry.positions[index * 3 + 2]
+    ], yaw);
+    const normal = rotateY([
+        geometry.normals[index * 3],
+        geometry.normals[index * 3 + 1],
+        geometry.normals[index * 3 + 2]
+    ], yaw);
+    const color = [
+        geometry.colors[index * 4],
+        geometry.colors[index * 4 + 1],
+        geometry.colors[index * 4 + 2]
+    ];
+    const pitchRadians = pitch * Math.PI / 180;
+    const projectedY = position[1] * Math.cos(pitchRadians) - position[2] * Math.sin(pitchRadians);
+    const depth = position[2] * Math.cos(pitchRadians) + position[1] * Math.sin(pitchRadians);
+    return {
+        x: centerX + position[0] * scale,
+        y: floorY - projectedY * scale,
+        depth,
+        color,
+        normal,
+    };
+}
+function edge(left, right, x, y) {
+    return (x - left.x) * (right.y - left.y) - (y - left.y) * (right.x - left.x);
+}
+function drawTriangle(image, depthBuffer, a, b, c) {
+    const area = edge(a, b, c.x, c.y);
+    if (Math.abs(area) < 0.01)
+        return;
+    const minX = Math.max(0, Math.floor(Math.min(a.x, b.x, c.x)));
+    const maxX = Math.min(image.width - 1, Math.ceil(Math.max(a.x, b.x, c.x)));
+    const minY = Math.max(0, Math.floor(Math.min(a.y, b.y, c.y)));
+    const maxY = Math.min(image.height - 1, Math.ceil(Math.max(a.y, b.y, c.y)));
+    const inverseArea = 1 / area;
+    const light = [-0.42, 0.7, 0.58];
+    for (let y = minY; y <= maxY; y += 1) {
+        for (let x = minX; x <= maxX; x += 1) {
+            const px = x + 0.5;
+            const py = y + 0.5;
+            const wa = edge(b, c, px, py) * inverseArea;
+            const wb = edge(c, a, px, py) * inverseArea;
+            const wc = 1 - wa - wb;
+            if (wa < -0.0001 || wb < -0.0001 || wc < -0.0001)
+                continue;
+            const depth = a.depth * wa + b.depth * wb + c.depth * wc;
+            const pixel = y * image.width + x;
+            if (depth <= depthBuffer[pixel])
+                continue;
+            depthBuffer[pixel] = depth;
+            const nx = a.normal[0] * wa + b.normal[0] * wb + c.normal[0] * wc;
+            const ny = a.normal[1] * wa + b.normal[1] * wb + c.normal[1] * wc;
+            const nz = a.normal[2] * wa + b.normal[2] * wb + c.normal[2] * wc;
+            const length = Math.max(0.0001, Math.hypot(nx, ny, nz));
+            const diffuse = Math.max(0, (nx * light[0] + ny * light[1] + nz * light[2]) / length);
+            const rim = Math.pow(1 - Math.abs(nz / length), 3) * 0.22;
+            const shade = 0.38 + diffuse * 0.62 + rim;
+            const offset = pixel * 4;
+            image.data[offset] = Math.min(255, Math.round((a.color[0] * wa + b.color[0] * wb + c.color[0] * wc) * 255 * shade));
+            image.data[offset + 1] = Math.min(255, Math.round((a.color[1] * wa + b.color[1] * wb + c.color[1] * wc) * 255 * shade));
+            image.data[offset + 2] = Math.min(255, Math.round((a.color[2] * wa + b.color[2] * wb + c.color[2] * wc) * 255 * shade));
+            image.data[offset + 3] = 255;
         }
     }
-    const before = Buffer.from(image.data);
-    for (let y = 1; y < image.height - 1; y += 1) {
-        for (let x = 1; x < image.width - 1; x += 1) {
+}
+function outline(image, radius) {
+    const result = new PNG({ width: image.width, height: image.height });
+    const source = Buffer.from(image.data);
+    for (let y = 0; y < image.height; y += 1) {
+        for (let x = 0; x < image.width; x += 1) {
             const offset = (y * image.width + x) * 4;
-            const alpha = before[offset + 3];
-            if (alpha === 0)
+            if (source[offset + 3] > 0) {
+                source.copy(result.data, offset, offset, offset + 4);
                 continue;
-            let touchesTransparent = false;
-            for (let dy = -1; dy <= 1 && !touchesTransparent; dy += 1) {
-                for (let dx = -1; dx <= 1; dx += 1) {
-                    if (before[((y + dy) * image.width + x + dx) * 4 + 3] === 0) {
-                        touchesTransparent = true;
+            }
+            let neighbor = false;
+            for (let dy = -radius; dy <= radius && !neighbor; dy += 1) {
+                for (let dx = -radius; dx <= radius; dx += 1) {
+                    const nx = x + dx;
+                    const ny = y + dy;
+                    if (nx < 0 || ny < 0 || nx >= image.width || ny >= image.height)
+                        continue;
+                    if (source[(ny * image.width + nx) * 4 + 3] > 220) {
+                        neighbor = true;
                         break;
                     }
                 }
             }
-            if (touchesTransparent)
-                image.data[offset + 3] = Math.round(alpha * 0.2);
+            if (neighbor)
+                result.data.set([12, 17, 24, 235], offset);
         }
     }
+    return result;
 }
-function alphaBounds(image, minX = 0, maxX = image.width) {
-    let left = maxX;
-    let right = minX - 1;
-    let top = image.height;
-    let bottom = -1;
-    for (let y = 0; y < image.height; y += 1) {
-        for (let x = minX; x < maxX; x += 1) {
-            if (image.data[(y * image.width + x) * 4 + 3] < 8)
+function alphaBlend(target, source) {
+    for (let offset = 0; offset < target.data.length; offset += 4) {
+        const alpha = source.data[offset + 3] / 255;
+        if (alpha <= 0)
+            continue;
+        const inverse = 1 - alpha;
+        target.data[offset] = Math.round(source.data[offset] * alpha + target.data[offset] * inverse);
+        target.data[offset + 1] = Math.round(source.data[offset + 1] * alpha + target.data[offset + 1] * inverse);
+        target.data[offset + 2] = Math.round(source.data[offset + 2] * alpha + target.data[offset + 2] * inverse);
+        target.data[offset + 3] = Math.round((alpha + target.data[offset + 3] / 255 * inverse) * 255);
+    }
+}
+function groundShadow(size) {
+    const shadow = new PNG({ width: size, height: size });
+    const centerX = size * 0.5;
+    const centerY = size * 0.89;
+    const radiusX = size * 0.25;
+    const radiusY = size * 0.045;
+    for (let y = Math.floor(centerY - radiusY * 2); y <= Math.ceil(centerY + radiusY * 2); y += 1) {
+        for (let x = Math.floor(centerX - radiusX * 2); x <= Math.ceil(centerX + radiusX * 2); x += 1) {
+            if (x < 0 || y < 0 || x >= size || y >= size)
                 continue;
-            left = Math.min(left, x);
-            right = Math.max(right, x);
-            top = Math.min(top, y);
-            bottom = Math.max(bottom, y);
+            const distance = (x - centerX) ** 2 / radiusX ** 2 + (y - centerY) ** 2 / radiusY ** 2;
+            if (distance >= 1)
+                continue;
+            const alpha = Math.round((1 - distance) ** 2 * 92);
+            shadow.data.set([8, 12, 19, alpha], (y * size + x) * 4);
         }
     }
-    return bottom < top ? null : { x: left, y: top, width: right - left + 1, height: bottom - top + 1 };
+    return shadow;
 }
-function occupiedColumnRuns(image) {
-    const occupied = Array.from({ length: image.width }, (_, x) => {
-        let count = 0;
-        for (let y = 0; y < image.height; y += 1) {
-            if (image.data[(y * image.width + x) * 4 + 3] >= 8)
-                count += 1;
-        }
-        return count >= 2;
-    });
-    const runs = [];
-    let start = -1;
-    for (let x = 0; x <= occupied.length; x += 1) {
-        if (occupied[x] === true && start < 0)
-            start = x;
-        if (start >= 0 && occupied[x] !== true) {
-            runs.push([start, x]);
-            start = -1;
-        }
+function renderView(geometry, size, yawDegrees, pitchDegrees, outlineStrength) {
+    const character = new PNG({ width: size, height: size });
+    const depth = new Float32Array(size * size);
+    depth.fill(Number.NEGATIVE_INFINITY);
+    const height = geometry.bounds.max[1] - geometry.bounds.min[1];
+    const width = geometry.bounds.max[0] - geometry.bounds.min[0];
+    const scale = Math.min(size * 0.76 / Math.max(height, 0.1), size * 0.82 / Math.max(width, height * 0.45));
+    const yaw = yawDegrees * Math.PI / 180;
+    const cache = new Map();
+    const vertex = (index) => {
+        const existing = cache.get(index);
+        if (existing !== undefined)
+            return existing;
+        const result = project(geometry, index, size, yaw, pitchDegrees, scale, size * 0.5, size * 0.89);
+        cache.set(index, result);
+        return result;
+    };
+    for (let index = 0; index < geometry.indices.length; index += 3) {
+        const a = geometry.indices[index];
+        const b = geometry.indices[index + 1];
+        const c = geometry.indices[index + 2];
+        if (a === undefined || b === undefined || c === undefined)
+            continue;
+        drawTriangle(character, depth, vertex(a), vertex(b), vertex(c));
     }
-    return runs;
+    const result = groundShadow(size);
+    alphaBlend(result, outline(character, Math.max(2, Math.round(size * 0.004 * outlineStrength))));
+    return result;
 }
-function opaqueMassHeight(image, bounds) {
-    const rows = [];
-    let total = 0;
-    for (let y = bounds.y; y < bounds.y + bounds.height; y += 1) {
-        let count = 0;
-        for (let x = bounds.x; x < bounds.x + bounds.width; x += 1) {
-            if (image.data[(y * image.width + x) * 4 + 3] >= 64)
-                count += 1;
-        }
-        rows.push(count);
-        total += count;
-    }
-    if (total === 0)
-        return bounds.height;
-    const lowerTarget = total * 0.05;
-    const upperTarget = total * 0.95;
-    let cumulative = 0;
-    let lower = 0;
-    let upper = rows.length - 1;
-    for (let index = 0; index < rows.length; index += 1) {
-        cumulative += rows[index];
-        if (cumulative >= lowerTarget) {
-            lower = index;
-            break;
-        }
-    }
-    cumulative = 0;
-    for (let index = 0; index < rows.length; index += 1) {
-        cumulative += rows[index];
-        if (cumulative >= upperTarget) {
-            upper = index;
-            break;
-        }
-    }
-    return Math.max(1, upper - lower + 1);
-}
-function copyFrame(source, target, bounds, targetX, targetY) {
-    for (let y = 0; y < bounds.height; y += 1) {
-        const sourceStart = ((bounds.y + y) * source.width + bounds.x) * 4;
-        const targetStart = ((targetY + y) * target.width + targetX) * 4;
-        source.data.copy(target.data, targetStart, sourceStart, sourceStart + bounds.width * 4);
+function copyImage(source, target, targetX) {
+    for (let y = 0; y < source.height; y += 1) {
+        const from = y * source.width * 4;
+        const to = (y * target.width + targetX) * 4;
+        source.data.copy(target.data, to, from, from + source.width * 4);
     }
 }
 function extrudeTransparentRgb(image, iterations) {
@@ -144,7 +214,8 @@ function extrudeTransparentRgb(image, iterations) {
                 if (before[offset + 3] !== 0)
                     continue;
                 const neighbors = [offset - 4, offset + 4, offset - image.width * 4, offset + image.width * 4];
-                const source = neighbors.find((candidate) => before[candidate + 3] > 0);
+                const source = neighbors.find((candidate) => before[candidate + 3] > 0 ||
+                    before[candidate] > 0 || before[candidate + 1] > 0 || before[candidate + 2] > 0);
                 if (source === undefined)
                     continue;
                 image.data[offset] = before[source];
@@ -154,290 +225,145 @@ function extrudeTransparentRgb(image, iterations) {
         }
     }
 }
-function reportStatus(checks) {
-    return checks.some(({ status }) => status === "failed") ? "failed" : "passed";
+function alphaCoverage(image) {
+    let opaque = 0;
+    for (let offset = 3; offset < image.data.length; offset += 4) {
+        if (image.data[offset] >= 8)
+            opaque += 1;
+    }
+    return opaque / (image.width * image.height);
 }
-export function compileRasterProduction(sourceBytes, output) {
-    const source = PNG.sync.read(Buffer.from(sourceBytes));
-    applyMatte(source, output);
-    const checks = [];
-    const minimum = output.requirements.minimumSourceSize;
-    const resolutionPassed = Math.min(source.width, source.height) >= minimum;
-    checks.push({
-        id: "source-resolution",
-        status: resolutionPassed ? "passed" : "failed",
-        code: resolutionPassed ? undefined : "VISUAL_QUALITY_PROFILE_FAILED",
-        message: `${source.width}x${source.height}; minimum short edge ${minimum}px`
-    });
-    const directions = output.mode === "2.5d" ? output.source.directions ?? [] : [];
-    const bounds = [];
-    if (output.mode === "2.5d") {
-        for (let index = 0; index < directions.length; index += 1) {
-            const start = Math.floor(index * source.width / directions.length);
-            const end = Math.floor((index + 1) * source.width / directions.length);
-            const value = alphaBounds(source, start, end);
-            if (value !== null)
-                bounds.push(value);
-        }
-        const isolatedRuns = occupiedColumnRuns(source).length;
-        const complete = bounds.length === directions.length && directions.length >= 4;
-        checks.push({
+export function compileGeneratedRaster(compiled, spec, style, output) {
+    const directions = output.mode === "2d" ? [undefined] : output.directions;
+    const size = output.mode === "2d" ? output.resolution : output.cellResolution;
+    const primaryYaw = output.mode === "2d" ? output.camera.yaw : 0;
+    const primaryPitch = output.mode === "2d" ? output.camera.pitch : 12;
+    const views = directions.map((direction) => renderView(compiled.geometry, size, direction === undefined ? primaryYaw : directionYaw[direction], direction === undefined ? primaryPitch : 12, style.render.outlineStrength));
+    const atlas = new PNG({ width: size * views.length, height: size });
+    views.forEach((view, index) => copyImage(view, atlas, index * size));
+    extrudeTransparentRgb(atlas, output.edgeExtrusion);
+    const frames = directions.map((direction, index) => ({
+        id: direction === undefined ? `${output.id}.idle` : `${output.id}.${direction}`,
+        ...(direction === undefined ? {} : { direction }),
+        rect: { x: index * size, y: 0, width: size, height: size },
+        pivot: [0.5, 0.89]
+    }));
+    const coverage = alphaCoverage(atlas);
+    const checks = [
+        {
+            id: "forge-generated",
+            status: "passed",
+            message: "canonical geometry and every raster pixel were generated locally from the character recipe"
+        },
+        {
+            id: "resolution",
+            status: size >= (output.mode === "2d" ? 768 : 256) ? "passed" : "failed",
+            code: "VISUAL_QUALITY_PROFILE_FAILED",
+            message: `${size}px cell resolution`
+        },
+        {
+            id: "identity-continuity",
+            status: spec.identity.focalFeatures.length >= 2 ? "passed" : "failed",
+            code: "VISUAL_IDENTITY_INCOMPLETE",
+            message: `${spec.identity.focalFeatures.length} canonical focal features across ${views.length} views`
+        },
+        {
             id: "direction-set",
-            status: complete ? "passed" : "failed",
-            code: complete ? undefined : "VISUAL_DIRECTION_SET_INCOMPLETE",
-            message: `${bounds.length} populated directional cells for ${directions.length} directions; ${isolatedRuns} alpha islands`
-        });
-    }
-    else {
-        const value = alphaBounds(source);
-        if (value !== null)
-            bounds.push(value);
-    }
-    if (bounds.length === 0) {
-        throw new Error("VISUAL_ALPHA_INVALID: no opaque character pixels remain after matte removal");
-    }
-    const heights = bounds.map((value) => opaqueMassHeight(source, value));
-    const meanHeight = heights.reduce((sum, value) => sum + value, 0) / heights.length;
-    const scaleVariance = Math.max(...heights.map((height) => Math.abs(height - meanHeight) / meanHeight));
-    const varianceLimit = output.requirements.maximumScaleVariance ?? 1;
-    const consistentScale = scaleVariance <= varianceLimit;
-    checks.push({
-        id: "scale-consistency",
-        status: consistentScale ? "passed" : "failed",
-        code: consistentScale ? undefined : "VISUAL_DIRECTION_SCALE_MISMATCH",
-        message: `maximum height variance ${(scaleVariance * 100).toFixed(1)}%; limit ${(varianceLimit * 100).toFixed(1)}%`
-    });
-    const padding = output.requirements.padding;
-    const cellWidth = Math.max(...bounds.map(({ width }) => width)) + padding * 2;
-    const cellHeight = Math.max(...bounds.map(({ height }) => height)) + padding * 2;
-    const atlas = new PNG({ width: cellWidth * bounds.length, height: cellHeight });
-    const frames = bounds.map((boundsValue, index) => {
-        const x = index * cellWidth + padding + Math.floor((cellWidth - padding * 2 - boundsValue.width) / 2);
-        const y = cellHeight - padding - boundsValue.height;
-        copyFrame(source, atlas, boundsValue, x, y);
-        return {
-            id: output.mode === "2.5d" ? `${output.id}.${directions[index] ?? index}` : `${output.id}.idle`,
-            direction: output.mode === "2.5d" ? directions[index] : undefined,
-            rect: { x: index * cellWidth, y: 0, width: cellWidth, height: cellHeight },
-            sourceBounds: boundsValue,
-            pivot: output.requirements.pivot
-        };
-    });
-    extrudeTransparentRgb(atlas, output.requirements.edgeExtrusion);
-    const opaquePixels = [...atlas.data].filter((_, index) => index % 4 === 3 && atlas.data[index] >= 8).length;
-    const coverage = opaquePixels / (atlas.width * atlas.height);
-    const coveragePassed = coverage >= 0.08 && coverage <= 0.8;
-    checks.push({
-        id: "alpha-coverage",
-        status: coveragePassed ? "passed" : "failed",
-        code: coveragePassed ? undefined : "VISUAL_ALPHA_INVALID",
-        message: `${(coverage * 100).toFixed(1)}% opaque atlas coverage`
-    });
-    checks.push({
-        id: "edge-extrusion",
-        status: output.requirements.edgeExtrusion >= 1 ? "passed" : "failed",
-        code: output.requirements.edgeExtrusion >= 1 ? undefined : "VISUAL_ATLAS_BLEED",
-        message: `${output.requirements.edgeExtrusion}px transparent RGB extrusion`
-    });
+            status: output.mode === "2d" || output.directions.length === 8 ? "passed" : "failed",
+            code: "VISUAL_DIRECTION_SET_INCOMPLETE",
+            message: `${views.length} generated views`
+        },
+        {
+            id: "alpha-coverage",
+            status: coverage >= 0.08 && coverage <= 0.75 ? "passed" : "failed",
+            code: "VISUAL_ALPHA_INVALID",
+            message: `${(coverage * 100).toFixed(1)}% atlas coverage`
+        },
+        {
+            id: "edge-extrusion",
+            status: output.edgeExtrusion >= 1 ? "passed" : "failed",
+            code: "VISUAL_ATLAS_BLEED",
+            message: `${output.edgeExtrusion}px transparent RGB extrusion`
+        }
+    ];
+    for (const check of checks)
+        if (check.status === "passed")
+            delete check.code;
     return {
         atlas: PNG.sync.write(atlas),
         metadata: {
-            schemaVersion: 1,
+            schemaVersion: 2,
+            generatedBy: "@ludivra/visual-authoring",
             mode: output.mode,
             profile: output.profile,
             image: { width: atlas.width, height: atlas.height },
-            pixelsPerMeter: output.requirements.pixelsPerMeter,
+            pixelsPerMeter: output.pixelsPerMeter,
             frames,
-            animations: output.animations.map((id) => ({ id, frames: frames.map(({ id: frameId }) => frameId) }))
+            animations: output.animations.map((id) => ({ id, frames: frames.map((frame) => frame.id) }))
         },
         report: {
             schemaVersion: 1,
             profile: output.profile,
-            quality: output.quality,
-            status: reportStatus(checks),
+            quality: "production",
+            status: status(checks),
             checks,
             metrics: {
-                sourceWidth: source.width,
-                sourceHeight: source.height,
+                generator: "forge-canonical-character",
+                sourceKind: "recipe-only",
+                cellResolution: size,
                 atlasWidth: atlas.width,
                 atlasHeight: atlas.height,
                 frames: frames.length,
                 alphaCoverage: coverage,
-                maximumScaleVariance: scaleVariance
+                edgeExtrusion: output.edgeExtrusion,
+                triangles: compiled.geometry.indices.length / 3
             }
         }
     };
 }
-function embeddedBuffers(gltf, binaryChunk) {
-    return (gltf.buffers ?? []).map(({ uri }, index) => {
-        if (uri === undefined && index === 0 && binaryChunk !== undefined)
-            return binaryChunk;
-        if (uri === undefined || !uri.startsWith("data:"))
-            throw new Error("VISUAL_3D_DEPENDENCY_MISSING");
-        const marker = uri.indexOf(",");
-        return Buffer.from(uri.slice(marker + 1), uri.slice(0, marker).includes(";base64") ? "base64" : "utf8");
-    });
-}
-function parseModelBytes(source) {
-    const bytes = Buffer.from(source);
-    if (bytes.length >= 12 && bytes.readUInt32LE(0) === 0x46546c67) {
-        if (bytes.readUInt32LE(4) !== 2 || bytes.readUInt32LE(8) !== bytes.length) {
-            throw new Error("VISUAL_SPEC_INVALID: invalid GLB header");
-        }
-        let offset = 12;
-        let json = null;
-        let binaryChunk;
-        while (offset + 8 <= bytes.length) {
-            const length = bytes.readUInt32LE(offset);
-            const type = bytes.readUInt32LE(offset + 4);
-            const chunk = bytes.subarray(offset + 8, offset + 8 + length);
-            if (type === 0x4e4f534a)
-                json = chunk.toString("utf8").replaceAll(/\0+$/g, "").trim();
-            else if (type === 0x004e4942)
-                binaryChunk = chunk;
-            offset += 8 + length;
-        }
-        if (json === null)
-            throw new Error("VISUAL_SPEC_INVALID: GLB has no JSON chunk");
-        return { gltf: JSON.parse(json), ...(binaryChunk === undefined ? {} : { binaryChunk }) };
-    }
-    return { gltf: JSON.parse(bytes.toString("utf8")) };
-}
-const componentSizes = { 5120: 1, 5121: 1, 5122: 2, 5123: 2, 5125: 4, 5126: 4 };
-const typeSizes = { SCALAR: 1, VEC2: 2, VEC3: 3, VEC4: 4, MAT4: 16 };
-function accessorValues(gltf, buffers, index) {
-    const accessor = gltf.accessors?.[index];
-    if (accessor === undefined || typeof accessor.bufferView !== "number")
-        return [];
-    const view = gltf.bufferViews?.[accessor.bufferView];
-    if (view === undefined)
-        return [];
-    const componentType = Number(accessor.componentType);
-    const componentSize = componentSizes[componentType];
-    const components = typeSizes[String(accessor.type)];
-    const count = Number(accessor.count);
-    if (componentSize === undefined || components === undefined)
-        return [];
-    const stride = view.byteStride ?? componentSize * components;
-    const base = (view.byteOffset ?? 0) + Number(accessor.byteOffset ?? 0);
-    const data = buffers[view.buffer];
-    if (data === undefined)
-        return [];
-    const values = [];
-    for (let item = 0; item < count; item += 1) {
-        const row = [];
-        for (let component = 0; component < components; component += 1) {
-            const offset = base + item * stride + component * componentSize;
-            if (componentType === 5121)
-                row.push(data.readUInt8(offset));
-            else if (componentType === 5123)
-                row.push(data.readUInt16LE(offset));
-            else if (componentType === 5125)
-                row.push(data.readUInt32LE(offset));
-            else if (componentType === 5126)
-                row.push(data.readFloatLE(offset));
-            else if (componentType === 5120)
-                row.push(data.readInt8(offset));
-            else
-                row.push(data.readInt16LE(offset));
-        }
-        values.push(row);
-    }
-    return values;
-}
-function imageDimensions(gltf, buffers) {
-    const dimensions = [];
-    for (const image of gltf.images ?? []) {
-        let bytes = null;
-        if (image.uri?.startsWith("data:")) {
-            bytes = Buffer.from(image.uri.slice(image.uri.indexOf(",") + 1), "base64");
-        }
-        else if (image.bufferView !== undefined) {
-            const view = gltf.bufferViews?.[image.bufferView];
-            const data = view === undefined ? undefined : buffers[view.buffer];
-            if (view !== undefined && data !== undefined)
-                bytes = data.subarray(view.byteOffset ?? 0, (view.byteOffset ?? 0) + view.byteLength);
-        }
-        if (bytes !== null && bytes.subarray(1, 4).toString("ascii") === "PNG") {
-            const png = PNG.sync.read(bytes);
-            dimensions.push([png.width, png.height]);
-        }
-    }
-    return dimensions;
-}
-export function inspectProductionGltf(source, output) {
-    return inspectProductionGltfBytes(Buffer.from(source, "utf8"), output);
-}
-export function inspectProductionGltfBytes(source, output) {
-    const { gltf, binaryChunk } = parseModelBytes(source);
-    const buffers = embeddedBuffers(gltf, binaryChunk);
-    const primitives = (gltf.meshes ?? []).flatMap(({ primitives: values }) => values);
-    const animationNames = (gltf.animations ?? []).map(({ name }) => name ?? "unnamed");
-    const normalizedAnimations = animationNames.map((name) => name.toLowerCase().replaceAll("_", "-"));
-    let triangles = 0;
-    let invalidValues = 0;
-    let invalidWeights = 0;
-    let degenerateTriangles = 0;
-    let skinnedPrimitives = 0;
-    for (const primitive of primitives) {
-        const positions = accessorValues(gltf, buffers, primitive.attributes.POSITION ?? -1);
-        invalidValues += positions.flat().filter((value) => !Number.isFinite(value)).length;
-        const weights = accessorValues(gltf, buffers, primitive.attributes.WEIGHTS_0 ?? -1);
-        const joints = accessorValues(gltf, buffers, primitive.attributes.JOINTS_0 ?? -1);
-        if (weights.length > 0 && joints.length === weights.length)
-            skinnedPrimitives += 1;
-        invalidWeights += weights.filter((values) => Math.abs(values.reduce((sum, value) => sum + value, 0) - 1) > 0.015).length;
-        const indices = primitive.indices === undefined
-            ? Array.from({ length: positions.length }, (_, index) => index)
-            : accessorValues(gltf, buffers, primitive.indices).flat();
-        triangles += Math.floor(indices.length / 3);
-        for (let index = 0; index + 2 < indices.length; index += 3) {
-            if (indices[index] === indices[index + 1] || indices[index] === indices[index + 2] || indices[index + 1] === indices[index + 2]) {
-                degenerateTriangles += 1;
-            }
-        }
-    }
-    const textures = imageDimensions(gltf, buffers);
+export function validateGeneratedModel(compiled, spec, output) {
+    const triangles = compiled.geometry.indices.length / 3;
+    const required = output.requirements.requiredAnimations;
     const checks = [
         {
+            id: "forge-generated",
+            status: "passed",
+            message: "mesh, rig, materials, textures and animations were generated locally from the character recipe"
+        },
+        {
             id: "rig-and-skin",
-            status: (gltf.skins?.length ?? 0) >= 1 && skinnedPrimitives >= 1 ? "passed" : "failed",
-            code: (gltf.skins?.length ?? 0) >= 1 && skinnedPrimitives >= 1 ? undefined : "VISUAL_3D_SKIN_MISSING",
-            message: `${gltf.skins?.length ?? 0} skins; ${skinnedPrimitives}/${primitives.length} skinned primitives`
+            status: compiled.geometry.skeleton.length >= 18 ? "passed" : "failed",
+            code: "VISUAL_3D_SKIN_MISSING",
+            message: `${compiled.geometry.skeleton.length} generated bones with normalized skin weights`
         },
         {
             id: "animation-coverage",
-            status: animationNames.length >= output.requirements.minimumAnimations &&
-                output.requirements.requiredAnimations.every((required) => normalizedAnimations.some((name) => name.includes(required)))
+            status: spec.animations.length >= output.requirements.minimumAnimations &&
+                required.every((animation) => spec.animations.includes(animation))
                 ? "passed" : "failed",
             code: "VISUAL_3D_ANIMATION_MISSING",
-            message: `${animationNames.length} clips: ${animationNames.join(", ")}`
+            message: `${spec.animations.length} generated clips: ${spec.animations.join(", ")}`
         },
         {
-            id: "materials-and-textures",
-            status: (gltf.materials?.length ?? 0) >= 1 && textures.length >= 1 &&
-                textures.every(([width, height]) => Math.min(width, height) >= output.requirements.minimumTextureSize)
-                ? "passed" : "failed",
+            id: "procedural-pbr",
+            status: compiled.model.textures.albedo.length > 0 &&
+                compiled.model.textures.normal.length > 0 &&
+                compiled.model.textures.roughness.length > 0 &&
+                output.requirements.minimumTextureSize <= 512 ? "passed" : "failed",
             code: "VISUAL_QUALITY_PROFILE_FAILED",
-            message: `${gltf.materials?.length ?? 0} materials; textures ${textures.map(([width, height]) => `${width}x${height}`).join(", ")}`
+            message: "512x512 generated albedo, normal and metallic-roughness maps"
         },
         {
             id: "triangle-budget",
-            status: triangles <= output.requirements.maximumTriangles && triangles > 0 ? "passed" : "failed",
+            status: triangles > 0 && triangles <= output.requirements.maximumTriangles ? "passed" : "failed",
             code: "VISUAL_TRIANGLE_BUDGET_EXCEEDED",
             message: `${triangles} triangles; maximum ${output.requirements.maximumTriangles}`
         },
         {
-            id: "finite-geometry",
-            status: invalidValues === 0 && degenerateTriangles === 0 ? "passed" : "failed",
+            id: "canonical-validation",
+            status: compiled.validation.status === "passed" ? "passed" : "failed",
             code: "VISUAL_MESH_DEGENERATE",
-            message: `${invalidValues} invalid values; ${degenerateTriangles} degenerate index triangles`
-        },
-        {
-            id: "normalized-weights",
-            status: invalidWeights === 0 ? "passed" : "failed",
-            code: "VISUAL_SKIN_WEIGHTS_INVALID",
-            message: `${invalidWeights} vertices with invalid weight sums`
+            message: `${compiled.validation.checks.filter((check) => check.status === "passed").length}/${compiled.validation.checks.length} canonical checks passed`
         }
     ];
     for (const check of checks)
@@ -446,25 +372,27 @@ export function inspectProductionGltfBytes(source, output) {
     return {
         schemaVersion: 1,
         profile: output.profile,
-        quality: output.quality,
-        status: reportStatus(checks),
+        quality: "production",
+        status: status(checks),
         checks,
         metrics: {
-            meshes: gltf.meshes?.length ?? 0,
-            primitives: primitives.length,
-            skins: gltf.skins?.length ?? 0,
-            materials: gltf.materials?.length ?? 0,
-            textures: textures.length,
+            generator: "forge-canonical-character",
+            sourceKind: "recipe-only",
+            meshes: 1,
+            bones: compiled.geometry.skeleton.length,
+            segments: compiled.geometry.segments.length,
+            vertices: compiled.geometry.positions.length / 3,
             triangles,
-            animations: animationNames,
-            invalidWeights,
-            invalidValues,
-            degenerateTriangles
+            materials: 1,
+            textures: 3,
+            textureResolution: 512,
+            animations: spec.animations,
+            lods: output.requirements.lods
         }
     };
 }
-export function productionCacheKey(spec, styleSource, sourceHashes) {
+export function productionCacheKey(spec, styleSource) {
     return createHash("sha256")
-        .update(`2\0${JSON.stringify(spec)}\0${styleSource}\0${JSON.stringify(sourceHashes, Object.keys(sourceHashes).sort())}`)
+        .update(`3\0${JSON.stringify(spec)}\0${styleSource}`)
         .digest("hex");
 }

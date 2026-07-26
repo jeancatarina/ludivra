@@ -23,8 +23,8 @@
           "additionalProperties": false,
           "required": ["min", "max"],
           "properties": {
-            "min": { "type": "integer", "minimum": 12000, "maximum": 20000 },
-            "max": { "type": "integer", "minimum": 12000, "maximum": 20000 }
+            "min": { "type": "integer", "minimum": 12000, "maximum": 80000 },
+            "max": { "type": "integer", "minimum": 12000, "maximum": 80000 }
           }
         }
       }

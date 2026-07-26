@@ -43,12 +43,3 @@ The packaged Steam adapter also contains Valve Steamworks redistributable binari
 ## Authoring-only dependencies
 
 The Visual Forge uses `yaml` 2.9.0 under the ISC License and `pngjs` 7.0.0 under the MIT License. These packages run only in the authoring/build toolchain and are not dependencies of a published game runtime.
-
-## Visual Forge test fixture — Quaternius RPG Character Pack
-
-`visual-authoring/test/fixtures/production/sources/3d/wizard.gltf` is from the
-Quaternius RPG Character Pack and is dedicated to the public domain under
-CC0 1.0 Universal. Its source page is
-https://quaternius.com/packs/rpgcharacters.html and the downloaded license is
-kept beside the fixture at
-`visual-authoring/test/fixtures/production/sources/3d/LICENSE.txt`.

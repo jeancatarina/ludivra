@@ -8,7 +8,7 @@
   "properties": {
     "schemaVersion": { "const": 1 },
     "id": {
-      "enum": ["painted-cutout-2d", "directional-impostor-2.5d", "stylized-pbr-3d", "stylized-humanoid-blockout-3d"]
+      "enum": ["illustrated-character-2d", "directional-character-2.5d", "stylized-pbr-3d", "stylized-humanoid-blockout-3d"]
     },
     "mode": { "enum": ["2d", "2.5d", "3d"] },
     "quality": { "enum": ["blockout", "production"] },

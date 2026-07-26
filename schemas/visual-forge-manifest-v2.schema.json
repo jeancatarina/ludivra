@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://ludivra.dev/schemas/visual-forge-manifest/v2",
-  "title": "Ludivra Visual Forge multi-render artifact manifest",
+  "title": "Ludivra source-free multi-render Visual Forge manifest",
   "type": "object",
   "additionalProperties": false,
   "required": ["schemaVersion", "family", "id", "generator", "source", "outputs", "validation", "regeneration"],
@@ -12,17 +12,19 @@
     "generator": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["name", "version"],
+      "required": ["name", "version", "pipeline"],
       "properties": {
         "name": { "const": "@ludivra/visual-authoring" },
-        "version": { "type": "integer", "minimum": 2 }
+        "version": { "type": "integer", "minimum": 3 },
+        "pipeline": { "const": "canonical-character-local" }
       }
     },
     "source": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["recipe", "recipeSha256", "style", "styleSha256", "seed", "cacheKey"],
+      "required": ["kind", "recipe", "recipeSha256", "style", "styleSha256", "seed", "cacheKey"],
       "properties": {
+        "kind": { "const": "forge-recipe" },
         "recipe": { "type": "string", "minLength": 1 },
         "recipeSha256": { "$ref": "#/$defs/hash" },
         "style": { "type": "string", "minLength": 1 },
@@ -37,21 +39,20 @@
       "items": {
         "type": "object",
         "additionalProperties": false,
-        "required": ["id", "mode", "profile", "quality", "source", "artifacts", "metrics", "validation"],
+        "required": ["id", "mode", "profile", "quality", "generatedFrom", "artifacts", "metrics", "validation"],
         "properties": {
           "id": { "type": "string", "minLength": 1 },
           "mode": { "enum": ["2d", "2.5d", "3d"] },
           "profile": { "type": "string", "minLength": 1 },
-          "quality": { "enum": ["blockout", "production"] },
-          "source": {
+          "quality": { "const": "production" },
+          "generatedFrom": {
             "type": "object",
             "additionalProperties": false,
-            "required": ["path", "origin", "license", "sha256"],
+            "required": ["kind", "canonicalId", "recipeSha256"],
             "properties": {
-              "path": { "type": "string", "minLength": 1 },
-              "origin": { "type": "string", "minLength": 1 },
-              "license": { "type": "string", "minLength": 1 },
-              "sha256": { "$ref": "#/$defs/hash" }
+              "kind": { "const": "canonical-character" },
+              "canonicalId": { "type": "string", "minLength": 1 },
+              "recipeSha256": { "$ref": "#/$defs/hash" }
             }
           },
           "artifacts": {

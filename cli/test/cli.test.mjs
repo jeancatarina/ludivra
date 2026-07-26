@@ -568,7 +568,7 @@ test("game visual compiles production-ready 2D, 2.5D and 3D character profiles",
   const fixture = resolve(engineRoot, "visual-authoring/test/fixtures/production");
   try {
     assert.equal(runCli(["new", project, "--name", "Visual Production Game", "--format", "json"]).execution.status, 0);
-    for (const directory of ["sources", "styles", "profiles", "visuals"]) {
+    for (const directory of ["styles", "visuals"]) {
       cpSync(resolve(fixture, directory), resolve(project, directory), { recursive: true });
     }
     const first = runCli([
@@ -580,13 +580,6 @@ test("game visual compiles production-ready 2D, 2.5D and 3D character profiles",
     const [rendered] = first.result.data.rendered;
     assert.equal(rendered.validation, "passed");
     assert.equal(rendered.reused, false);
-    const wizard = runCli([
-      "visual", "compile", "visual.wizard.production",
-      "--project", project,
-      "--format", "json"
-    ]);
-    assert.equal(wizard.execution.status, 0, wizard.execution.stdout);
-    assert.equal(wizard.result.data.rendered[0].validation, "passed");
     const index = JSON.parse(readFileSync(resolve(project, ".ludivra/visual-index.json"), "utf8"));
     assert.deepEqual(index.entries.flatMap(({ outputs }) => outputs.map(({ mode }) => mode)), ["2d", "2.5d", "3d"]);
     for (const entry of index.entries) {
@@ -597,7 +590,10 @@ test("game visual compiles production-ready 2D, 2.5D and 3D character profiles",
     }
     const manifest = JSON.parse(readFileSync(resolve(project, rendered.manifest), "utf8"));
     assert.equal(manifest.schemaVersion, 2);
-    assert.equal(manifest.outputs.length, 2);
+    assert.equal(manifest.source.kind, "forge-recipe");
+    assert.equal(manifest.generator.pipeline, "canonical-character-local");
+    assert.equal(manifest.outputs.length, 3);
+    assert.ok(manifest.outputs.every(({ generatedFrom }) => generatedFrom.kind === "canonical-character"));
     assert.ok(manifest.outputs.every(({ quality, validation }) =>
       quality === "production" && validation.status === "passed"
     ));

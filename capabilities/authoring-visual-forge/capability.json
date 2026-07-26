@@ -1,7 +1,7 @@
 {
   "id": "authoring.visual-forge",
   "status": "experimental",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "owner": "visual-authoring",
   "targets": ["native-headless", "browser", "electron"],
   "contracts": [
@@ -17,9 +17,8 @@
     "visual-authoring/test/fixtures/goblin-shaman.character.json",
     "visual-authoring/test/fixtures/stylized/style.yaml",
     "visual-authoring/test/fixtures/production/visuals/goblin-shaman-production.character.json",
-    "visual-authoring/test/fixtures/production/visuals/wizard-production.character.json",
-    "visual-authoring/test/fixtures/production/previews",
-    "visual-authoring/test/fixtures/production/profiles"
+    "visual-authoring/test/fixtures/production/styles/stylized/style.yaml",
+    "visual-authoring/test/fixtures/production/generated"
   ],
   "dependencies": ["presentation.three"],
   "verification": [
@@ -28,16 +27,16 @@
   ],
   "limitations": [
     {
-      "code": "VISUAL_PROCEDURAL_BLOCKOUT_ONLY",
-      "message": "The skeleton-first procedural generator is a blockout profile; production outputs require declared raster, directional-sheet or rigged glTF sources."
+      "code": "VISUAL_ARCHETYPE_SET_LIMITED",
+      "message": "The production generator currently covers stylized small and medium humanoids; quadrupeds, vehicles and photoreal characters need additional canonical generators."
     },
     {
-      "code": "VISUAL_GENERATIVE_SOURCE_FROZEN",
-      "message": "Generative source re-execution is not byte deterministic; the accepted source is frozen and verified by SHA-256."
+      "code": "VISUAL_LOD_GENERATION_LIMITED",
+      "message": "The current production profile emits one gameplay mesh; automatic multi-LOD simplification is not implemented yet."
     },
     {
-      "code": "VISUAL_2D_FIXTURE_IDLE_ONLY",
-      "message": "The production raster fixtures prove final-quality idle cutouts and directions; projects must supply additional declared frames for movement animation."
+      "code": "VISUAL_RASTER_POSE_COVERAGE_LIMITED",
+      "message": "2D and 2.5D currently render the canonical idle pose and directional views; skeletal animation clips are complete in 3D, while raster frame baking for every clip is the next priority."
     }
   ]
 }

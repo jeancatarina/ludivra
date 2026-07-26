@@ -4,89 +4,125 @@
   "style": "stylized",
   "seed": 48192,
   "identity": {
-    "description": "A short hunched goblin shaman with a carved ritual mask, layered teal and ochre robes, bone charms and an emerald crystal staff.",
-    "silhouette": "Compact triangular body, oversized ears and a crooked staff rising above the head.",
+    "description": "A short hunched goblin shaman with angular features, layered teal robes, bone charms, belt pouches and an emerald crystal staff.",
+    "silhouette": "Compact triangular robe, oversized ears and a crooked crystal staff rising above the head.",
     "paletteRoles": ["skin", "cloth", "leather", "bone", "wood", "crystal", "accent"],
-    "focalFeatures": ["angular goblin face", "wooden ritual mask", "emerald crystal staff"]
+    "focalFeatures": [
+      "oversized pointed goblin ears",
+      "amber eyes under heavy brows",
+      "layered teal ritual robe",
+      "crossed bone charms",
+      "emerald crystal staff"
+    ]
   },
+  "archetype": {
+    "body": "small-humanoid",
+    "head": "goblin"
+  },
+  "anatomy": {
+    "heightM": 1.28,
+    "headScale": 1.28,
+    "shoulderScale": 0.92,
+    "armScale": 1.05,
+    "legScale": 0.86,
+    "posture": 0.58
+  },
+  "face": {
+    "generator": "goblin",
+    "eyes": 0.78,
+    "jaw": 0.62,
+    "nose": 0.76
+  },
+  "skin": "skin",
+  "clothing": [
+    {
+      "type": "robe",
+      "material": "cloth",
+      "colorRole": "cloth",
+      "fit": 0.34,
+      "asymmetry": 0.35
+    }
+  ],
+  "equipment": [
+    {
+      "type": "staff",
+      "material": "wood",
+      "hand": "right",
+      "scale": 1.16
+    }
+  ],
+  "accessories": [
+    {
+      "type": "bones",
+      "material": "bone",
+      "anchor": "chest",
+      "scale": 1.05
+    },
+    {
+      "type": "pouch",
+      "material": "leather",
+      "anchor": "waist",
+      "scale": 1.15
+    }
+  ],
+  "animations": ["idle", "walk", "run", "attack", "cast", "hit", "death"],
+  "effects": [
+    {
+      "id": "staff-glow",
+      "colorRole": "crystal",
+      "anchor": "right-hand"
+    }
+  ],
+  "surfaces": [],
   "outputs": [
     {
       "id": "gameplay-2d",
       "mode": "2d",
-      "profile": "painted-cutout-2d",
+      "profile": "illustrated-character-2d",
       "quality": "production",
-      "source": {
-        "kind": "raster",
-        "path": "sources/2d/goblin-shaman-magenta.png",
-        "matte": {
-          "color": "#ff00ff",
-          "transparentThreshold": 18,
-          "opaqueThreshold": 90
-        },
-        "provenance": {
-          "origin": "OpenAI built-in image generation, accepted 2026-07-25",
-          "license": "project-owned; publication subject to OpenAI service terms",
-          "sha256": "369a49701152e8b704b6a6b3628523906b66b8d8436c4bbbe95cb8d55bba6a22",
-          "generator": {
-            "name": "OpenAI image generation",
-            "mode": "built-in",
-            "prompt": "Create a production-quality final game character asset, not concept art and not a rough prototype. Full-body goblin shaman for a premium stylized fantasy action RPG, painterly 2D character cutout with crisp hand-painted materials and highly resolved details. Distinct readable silhouette at gameplay scale: short hunched goblin, expressive angular face, carved wooden ritual mask raised above the forehead, layered weathered teal and ochre robes, leather belts and pouches, bone charms, crooked wooden staff topped with a luminous emerald crystal, subtle green magical glow confined close to the crystal. Three-quarter isometric view, facing down-right, neutral ready/idle pose, every limb and the entire staff fully visible, anatomically coherent hands and feet, consistent perspective, professional game-production polish comparable to a finished premium indie character sprite. Strong shape language, controlled value grouping, clean edges, no excessive micro-noise. Place the isolated character on a perfectly flat solid pure magenta (#FF00FF) background for deterministic chroma-key removal. No ground plane, no cast shadow, no vignette, no environment, no border, no UI, no labels, no typography, no watermark, no extra objects, no cropped extremities. Square image with generous even padding around the full silhouette."
-          }
-        }
+      "resolution": 1024,
+      "camera": {
+        "yaw": 25,
+        "pitch": 10
       },
-      "requirements": {
-        "minimumSourceSize": 1024,
-        "pixelsPerMeter": 320,
-        "padding": 16,
-        "edgeExtrusion": 4,
-        "pivot": [0.5, 0.96]
-      },
+      "pixelsPerMeter": 512,
+      "padding": 16,
+      "edgeExtrusion": 4,
       "animations": ["idle"]
     },
     {
       "id": "gameplay-2.5d",
       "mode": "2.5d",
-      "profile": "directional-impostor-2.5d",
+      "profile": "directional-character-2.5d",
       "quality": "production",
-      "source": {
-        "kind": "directional-sheet",
-        "path": "sources/2.5d/goblin-shaman-directions-magenta.png",
-        "segmentation": "alpha-columns",
-        "directions": [
-          "south",
-          "south-west",
-          "west",
-          "north-west",
-          "north",
-          "north-east",
-          "east",
-          "south-east"
-        ],
-        "matte": {
-          "color": "#ff00ff",
-          "transparentThreshold": 18,
-          "opaqueThreshold": 90
-        },
-        "provenance": {
-          "origin": "OpenAI built-in image generation, accepted 2026-07-25",
-          "license": "project-owned; publication subject to OpenAI service terms",
-          "sha256": "7a28175510832b7bbbed08b735c3278ad78a81bf91c257c36b53e04b0f183609",
-          "generator": {
-            "name": "OpenAI image generation",
-            "mode": "built-in",
-            "prompt": "Create a production-quality 2.5D directional character sprite sheet for a premium stylized fantasy action RPG. ONE exact same goblin shaman shown in eight consistent orthographic/isometric turntable directions: south, south-west, west, north-west, north, north-east, east, south-east. Arrange exactly 8 equal square cells in one horizontal row, with clear even gutters and no grid lines. In every cell preserve identical body proportions, costume, colors and equipment: short hunched green goblin, angular face, carved wooden ritual mask above forehead, layered weathered teal and ochre robes, leather belts and pouches, bone charms, crooked wooden staff with emerald crystal. Neutral idle pose, full body and full staff visible in every view, feet on the same baseline, same character scale and lighting, staff consistently in the right hand, no missing or duplicated limbs, no costume changes. Premium finished game sprite rendering with crisp hand-painted materials, strong readable silhouette, controlled details, transparent-ready clean contours. Flat pure magenta (#FF00FF) background across the entire sheet. No shadows, no environment, no perspective scene, no labels, no text, no direction names, no UI, no borders, no watermark. Wide 4:1 image suitable for deterministic slicing into eight equal cells."
-          }
-        }
-      },
+      "cellResolution": 384,
+      "directions": [
+        "south",
+        "south-west",
+        "west",
+        "north-west",
+        "north",
+        "north-east",
+        "east",
+        "south-east"
+      ],
+      "pixelsPerMeter": 256,
+      "padding": 12,
+      "edgeExtrusion": 4,
+      "animations": ["idle", "walk"]
+    },
+    {
+      "id": "gameplay-3d",
+      "mode": "3d",
+      "profile": "stylized-pbr-3d",
+      "quality": "production",
       "requirements": {
-        "minimumSourceSize": 512,
-        "pixelsPerMeter": 192,
-        "padding": 12,
-        "edgeExtrusion": 4,
-        "pivot": [0.5, 0.96],
-        "maximumScaleVariance": 0.25
-      },
-      "animations": ["idle"]
+        "minimumAnimations": 7,
+        "requiredAnimations": ["idle", "walk", "run", "attack", "cast", "hit", "death"],
+        "maximumTriangles": 80000,
+        "minimumTextureSize": 512,
+        "lods": 1
+      }
     }
   ]
 }

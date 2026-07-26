@@ -6,8 +6,8 @@ geometry:
   asymmetry: 0.35
   detailFrequency: 0.72
   triangleBudget:
-    min: 12000
-    max: 20000
+    min: 40000
+    max: 80000
 proportions:
   heightM:
     min: 0.9
@@ -29,6 +29,7 @@ palette:
   stone: "#72777a"
   crystal: "#52e35f"
   accent: "#e4a63b"
+  shadow: "#25302b"
 render:
   camera: isometric
   outlineStrength: 0.28

@@ -1,13 +1,18 @@
 import { type CharacterGeometry } from "./geometry.js";
 import type { CharacterSpec, VisualStyleBible } from "./spec.js";
 import { type VisualValidationReport } from "./validation.js";
-export declare const VISUAL_GENERATOR_VERSION = 2;
+export declare const VISUAL_GENERATOR_VERSION = 3;
 export declare function visualCacheKey(spec: CharacterSpec, style: VisualStyleBible, textureHashes?: Record<string, string>): string;
 export interface CompiledCharacter {
     geometry: CharacterGeometry;
     model: {
         gltf: string;
         binary: Buffer;
+        textures: {
+            albedo: Buffer;
+            normal: Buffer;
+            roughness: Buffer;
+        };
     };
     preview: string;
     validation: VisualValidationReport;
