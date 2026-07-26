@@ -3,7 +3,7 @@
 - Status: provisório
 - Data: 2026-07-26
 - Revisão: antes de fixar o primeiro encoder de textura ou formato binário de mesh
-- Complementa: [ADR 0027](0027-forge-output-contract-and-authoring-boundary.md), [ADR 0033](0033-visual-forge-procedural-characters-and-generated-surfaces.md) e [ADR 0048](0048-textual-scene-prefab-and-resource-graph.md)
+- Complementa: [ADR 0027](0027-forge-output-contract-and-authoring-boundary.md), [ADR 0033](0033-visual-forge-procedural-characters-and-generated-surfaces.md), [ADR 0048](0048-textual-scene-prefab-and-resource-graph.md) e [ADR 0055](0055-upstream-first-and-external-source-incorporation.md)
 - Fases: 8 e 10
 
 ## Contexto
@@ -29,6 +29,8 @@ O cooker normaliza coordenadas, unidades, pivôs, tangentes, bounds, materiais, 
 ### Variantes por target
 
 O build produz texturas GPU-compressed com fallback declarado, meshes indexadas e otimizadas, níveis de LOD quando exigidos, atlases, metadata de animação e pacotes content-addressed. O formato exato do encoder e do mesh pack será fixado com versão e licença na revisão que introduzir a dependência; até lá não se cria stub.
+
+Loaders, encoders e optimizers são avaliados em seus upstreams canônicos. O pipeline pode estudar a cobertura e os casos de importação da Godot, mas não copiar seus importers, resources ou hooks de editor. Transformações específicas da Ludivra permanecem no cooker sobre contratos próprios.
 
 ### Residência e streaming
 

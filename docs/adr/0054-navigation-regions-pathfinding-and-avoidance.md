@@ -3,7 +3,7 @@
 - Status: provisório
 - Data: 2026-07-26
 - Revisão: antes de adicionar o primeiro backend de navmesh ou liberar rebake em runtime
-- Complementa: [ADR 0019](0019-spatial-model-chunk-lifecycle-and-job-commit.md), [ADR 0022](0022-mass-runtime-storage-levels-and-budgets.md) e [ADR 0048](0048-textual-scene-prefab-and-resource-graph.md)
+- Complementa: [ADR 0019](0019-spatial-model-chunk-lifecycle-and-job-commit.md), [ADR 0022](0022-mass-runtime-storage-levels-and-budgets.md), [ADR 0048](0048-textual-scene-prefab-and-resource-graph.md) e [ADR 0055](0055-upstream-first-and-external-source-incorporation.md)
 - Fases: 5 e 6
 
 ## Contexto
@@ -32,7 +32,7 @@ Avoidance produz intenção de velocidade, não transform final. Para autoridade
 
 ### Backend permanece aberto com gate
 
-A primeira dependência concreta exige benchmark com o mapa e os perfis do consumidor, licença compatível, CMake, native/WASM e inspeção de queries. Até essa revisão, fixtures usam um adapter de referência pequeno em mapas fechados; ele não autoriza alegar navmesh de produção.
+A primeira dependência concreta exige benchmark com o mapa e os perfis do consumidor, licença compatível, CMake, native/WASM e inspeção de queries. Recast/Detour ou outra candidata será avaliada diretamente em seu upstream; `NavigationServer`, adapters e forks mantidos pela Godot não serão copiados. Até essa revisão, fixtures usam um adapter de referência pequeno em mapas fechados; ele não autoriza alegar navmesh de produção.
 
 Códigos: `NAVIGATION_MAP_UNAVAILABLE`, `NAVIGATION_REGION_INVALID`, `NAVIGATION_PROFILE_UNDECLARED`, `NAVIGATION_PATH_NOT_FOUND`, `NAVIGATION_QUERY_BUDGET_EXCEEDED`, `NAVIGATION_REGION_NOT_SYNCHRONIZED`, `NAVIGATION_BACKEND_NOT_AVAILABLE`.
 

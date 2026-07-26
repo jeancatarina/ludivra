@@ -8,6 +8,7 @@
 | Snapshot da Godot | [`159701651ad44335691dcbd632d8074307074c7b`](https://github.com/godotengine/godot/commit/159701651ad44335691dcbd632d8074307074c7b) |
 | Fonte de progresso da Ludivra | [`docs/program-status.json`](../program-status.json) |
 | Fonte de decisões | ADRs em [`docs/adr/`](../adr/) |
+| Política de reuso | [ADR 0055](../adr/0055-upstream-first-and-external-source-incorporation.md) |
 
 ## Pergunta respondida
 
@@ -42,6 +43,25 @@ A lista oficial de features da Godot foi usada como checklist de cobertura — P
 - APIs cuja principal finalidade seja dar suporte ao editor.
 
 Esses componentes resolvem problemas legítimos da Godot, mas aumentariam a superfície que uma engine AI-first precisa manter. Na Ludivra, autoria permanece em JSONC/Lua, compiladores e CLI; Three.js continua isolado em `renderer-three`; Jolt e Box2D ficam em adapters; um backend de navegação só será escolhido quando consumidor e benchmark existirem.
+
+## O que será reutilizado e de onde
+
+| Necessidade | Fonte | Forma de reuso |
+|---|---|---|
+| cobertura e casos extremos | documentação, casos cobertos e comportamento da Godot | requisitos e cenários próprios, sem copiar implementação |
+| física 3D | upstream Jolt Physics | dependência fixada e adapter Ludivra |
+| física 2D | upstream Box2D v3 | dependência fixada e adapter Ludivra |
+| render WebGPU/WebGL2 | upstream Three.js | único adapter em `renderer-three` |
+| navegação | upstream escolhido após benchmark, com Recast/Detour como candidato | adapter Ludivra; não usar `NavigationServer` |
+| glTF, texturas e meshes | loaders, encoders e optimizers upstream escolhidos pelo cooker | ferramenta fixada; não copiar importers da Godot |
+| algoritmos gráficos | especificação, paper ou upstream original | implementação do adapter ou dependência, nunca port indireto do renderer Godot |
+| contratos, authority e tooling AI-first | Ludivra | implementação própria |
+
+A integração Jolt da Godot é útil para conhecer diferenças de margins, joints, contacts e threading, mas implementa `PhysicsServer` e compatibilidade da Godot. A Ludivra usa diretamente as APIs upstream e escreve seus próprios testes contra o ADR 0021. A [documentação oficial de Jolt na Godot](https://docs.godotengine.org/en/stable/tutorials/physics/using_jolt_physics.html) é referência de comportamento, não fonte de adapter.
+
+Embora o código da Godot seja MIT, copiar porções substanciais exige preservar licença e copyright, além dos notices das dependências incluídas. A permissão jurídica não elimina custo de manutenção ou acoplamento: [orientação oficial de licenciamento da Godot](https://docs.godotengine.org/en/stable/about/complying_with_licenses.html).
+
+Trecho pequeno existente somente na Godot ainda precisa do gate excepcional do ADR 0055. Até `SUP-001` implementar provenance executável e verificação de CI, nova incorporação de fonte é `NOT_AVAILABLE`.
 
 ## Critério de equivalência útil
 

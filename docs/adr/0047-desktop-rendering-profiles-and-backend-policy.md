@@ -3,7 +3,7 @@
 - Status: provisório
 - Data: 2026-07-26
 - Revisão: após o primeiro benchmark oficial do perfil `desktop-high`, ou antes de adotar um renderer nativo de produção
-- Complementa: [ADR 0005](0005-first-steam-delivery.md), [ADR 0015](0015-raster-capture-and-visual-baselines.md), [ADR 0029](0029-benchmark-registry-profiles-and-baselines.md) e [ADR 0031](0031-native-diagnostic-host-trigger-and-criteria.md)
+- Complementa: [ADR 0005](0005-first-steam-delivery.md), [ADR 0015](0015-raster-capture-and-visual-baselines.md), [ADR 0029](0029-benchmark-registry-profiles-and-baselines.md), [ADR 0031](0031-native-diagnostic-host-trigger-and-criteria.md) e [ADR 0055](0055-upstream-first-and-external-source-incorporation.md)
 - Fases: 8 e 11
 
 ## Contexto
@@ -11,6 +11,8 @@
 O ElectronHost já empacota o renderer Three.js para Steam, mas isso prova distribuição, não um perfil gráfico desktop. A implementação atual usa WebGL2, primitivas simples, luzes fixas, fog exponencial, bloom e partículas CPU. Sem uma decisão de perfis, qualquer efeito novo vira uma opção isolada e fallback de backend pode mudar a imagem sem aparecer na evidência.
 
 Godot foi analisada como referência de cobertura, não como arquitetura a copiar. A separação útil é entre método de renderização, driver e feature set; a Ludivra não adotará editor, scene tree, renderer ou abstração de GPU próprios.
+
+Técnicas gráficas reutilizadas devem vir de Three.js, bibliotecas upstream, especificações ou papers originais. Código dos renderers da Godot não é fonte intermediária para portar uma técnica.
 
 ## Decisão
 

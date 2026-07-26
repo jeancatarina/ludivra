@@ -449,6 +449,7 @@ pnpm test       # mandatory full gate before completion
 ```
 
 Distributed dependencies and assets must have verifiable versions, origins, and licenses.
+Use specialized libraries from their canonical upstreams. Copying or forking external source requires the exceptional provenance process in [ADR 0055](docs/adr/0055-upstream-first-and-external-source-incorporation.md).
 
 ## License
 

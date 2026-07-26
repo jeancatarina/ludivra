@@ -238,7 +238,7 @@
       "status": "partial",
       "owners": ["CLI", "diagnostics", "benchmark registry", "target hardening"],
       "dependencies": [3, 4, 5, 6, 7, 8, 9, 10],
-      "adrs": ["0028", "0029", "0030", "0031", "0043", "0047"],
+      "adrs": ["0028", "0029", "0030", "0031", "0043", "0047", "0055"],
       "objective": "Transformar falhas e regressões em diagnóstico causal, reparo controlado e comparação verificável.",
       "delivered": [
         {
@@ -249,6 +249,7 @@
       "remaining": [
         "Fluxo real de diagnose, explain, fix dry-run/apply e verify com classes de reparo.",
         "Registry de métricas, profiles e benchmarks oficiais por target.",
+        "Registry e gate de provenance, licença, upstream e política de fork para fonte externa.",
         "Hardening, SBOM, provenance, licença e smoke instalado."
       ],
       "gate": "Todo reparo possui regressão e comparação de evidência; falhas de performance apontam o sistema responsável."
@@ -382,6 +383,14 @@
       "phase": 10,
       "work": "Completar música, stems, previews e integração final do Audio Forge.",
       "adrs": ["0032"]
+    },
+    {
+      "id": "SUP-001",
+      "priority": "medium",
+      "status": "planned",
+      "phase": 11,
+      "work": "Implementar registry e gate de CI para provenance, licença, upstream fixado e política de forks externos.",
+      "adrs": ["0055"]
     },
     {
       "id": "ENG-009",

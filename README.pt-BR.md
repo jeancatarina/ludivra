@@ -450,6 +450,7 @@ pnpm test       # gate completo obrigatório antes da conclusão
 ```
 
 Dependências e assets distribuídos precisam de versão, origem e licença verificáveis.
+Bibliotecas especializadas devem vir de seus upstreams canônicos. Copiar ou manter fork de fonte externa exige o processo excepcional de provenance do [ADR 0055](docs/adr/0055-upstream-first-and-external-source-incorporation.md).
 
 ## Licença
 

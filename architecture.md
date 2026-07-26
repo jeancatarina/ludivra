@@ -4,7 +4,7 @@
 
 | Campo | Valor |
 |---|---|
-| Versão do documento | 3.5 |
+| Versão do documento | 3.6 |
 | Status | Arquitetura proposta |
 | Escopo inicial | Web, Steam/desktop, Android e iOS |
 | Rota futura | Hosts e renderers nativos para consoles |
@@ -92,6 +92,10 @@ O kernel terá um runner nativo headless desde a fundação. Equivalência entre
 
 Criar, testar e empacotar são operações normais. Publicar, comprar, assinar, enviar a lojas, apagar saves ou alterar infraestrutura exigem comandos separados, permissões explícitas e trilha de auditoria.
 
+### 3.8 Upstream especializado antes de cópia ou reinvenção
+
+Algoritmos comoditizados são consumidos de bibliotecas upstream fixadas e isoladas por adapters. A Ludivra possui contratos, authority, schemas, compiladores, diagnósticos e operação AI-first; ela não recria renderer, solver, codec, compressor ou navmesh por preferência tecnológica. Código externo só pode ser incorporado pelo processo excepcional do [ADR 0055](docs/adr/0055-upstream-first-and-external-source-incorporation.md).
+
 ## 4. Objetivos e não objetivos
 
 ### 4.1 Objetivos do programa
@@ -133,6 +137,7 @@ Suporte a um gênero significa que há capacidades, exemplos, cenários, perfis 
 - editor visual completo;
 - linguagem de programação própria;
 - renderer ou engine física próprios;
+- fork da Godot ou incorporação de seus subsistemas de editor, render, física, navegação e importação;
 - multiplayer competitivo com rollback;
 - MMO, mundo aberto fotorrealista ou produção AAA;
 - hot-reload de código remoto em builds comerciais;
@@ -1124,6 +1129,7 @@ O jogo deve poder atualizar engine em branch isolada, executar migrations e comp
 ## 29. Segurança, supply chain e licenciamento
 
 - dependências e toolchains são fixadas por lock e verificadas por hash;
+- bibliotecas especializadas vêm do upstream canônico, não extraídas de outra engine;
 - builds registram provenance e produzem SBOM para release;
 - segredos, certificados e chaves ficam fora do repositório e do runtime normal do agente;
 - logs e relatórios removem tokens e dados pessoais;
@@ -1134,6 +1140,8 @@ O jogo deve poder atualizar engine em branch isolada, executar migrations e comp
 - publicação comercial requer autorização humana explícita;
 - SDKs sob NDA ficam em repositórios e runners privados;
 - o CLI oferece política de rede por comando e builds reproduzíveis podem rodar sem rede após o fetch aprovado.
+
+Usar ideias, especificações, papers, comportamento observado e cenários de teste não é copiar uma implementação. Dependência upstream permanece em adapter de borda ou toolchain. Incorporação de fonte ou fork exige ADR próprio, commit/hash, cadeia de licenças, notices, owner, testes e política de atualização. Até o gate `SUP-001` existir, nova fonte incorporada é `NOT_AVAILABLE`; a política completa está no ADR 0055.
 
 ## 30. Empacotamento por plataforma
 
@@ -1307,6 +1315,7 @@ A separação evita duas listas de fases divergentes. O roadmap deve preservar a
 | Qualidade desktop virar coleção de flags ad hoc | perfis gráficos, feature tiers, cooking por target e benchmarks com fallback observado |
 | Cena, animação e VFX criarem autoridades paralelas | grafos textuais compilados, IDs estáveis e separação explícita entre gameplay e apresentação |
 | Asset importado perder licença ou explodir memória | manifest único, hashes, cooking, residência e budgets por target |
+| Código copiado herdar arquitetura ou licença invisível | upstream-first, adapters próprios e gate de provenance do ADR 0055 |
 | Agente “validar” apenas por compilação | harness obrigatório, cenários, capturas, vídeo, trace e artifact bundle |
 | Documentação ficar desatualizada | progresso estruturado, índices gerados, `--check` obrigatório e evidência versionada por entrega |
 | Abstração prematura | extrair após dois usos diferentes; estabilizar após o terceiro |
@@ -1344,6 +1353,7 @@ Este documento define a direção. As escolhas abaixo exigem ADR próprio, e a t
 | grafo textual de VFX e partículas | fechada pelo [ADR 0052](docs/adr/0052-textual-vfx-and-particle-runtime.md) |
 | statecharts determinísticas de gameplay | fechada pelo [ADR 0053](docs/adr/0053-deterministic-gameplay-statecharts.md) |
 | regiões, pathfinding e avoidance de navegação | fronteira fechada pelo [ADR 0054](docs/adr/0054-navigation-regions-pathfinding-and-avoidance.md); backend condicionado a consumidor e benchmark |
+| reuso upstream e incorporação de fonte externa | fechada pelo [ADR 0055](docs/adr/0055-upstream-first-and-external-source-incorporation.md) |
 
 Nenhuma fronteira desta seção permanece sem ADR. As que antes apareciam como pendência foram decididas: solver físico no [ADR 0037](docs/adr/0037-physics-solver-selection.md), transportes de rede no [ADR 0038](docs/adr/0038-network-transport-adapters.md), camada de entidades no [ADR 0039](docs/adr/0039-entity-component-layer.md), framework de UI e UI diegética no [ADR 0040](docs/adr/0040-ui-framework-and-diegetic-ui.md), extensão nativa no [ADR 0044](docs/adr/0044-approved-native-extension-process.md) e threads no WebAssembly no [ADR 0045](docs/adr/0045-wasm-threads-and-shared-memory.md). Escolhas condicionadas, como o backend de navegação ou um renderer nativo de produção, possuem gatilho e critério de evidência em vez de dependência ausente.
 
@@ -1361,6 +1371,7 @@ Lua expressa gameplay por comandos e eventos.
 C++ mantém a simulação autoritativa, portátil e determinística.
 Protocolos projetam apresentação, UI e efeitos externos.
 Three.js entrega WebGPU/WebGL2 por perfis gráficos observáveis.
+Jolt, Box2D e vendors futuros vêm de seus upstreams por adapters próprios.
 Grafos textuais descrevem cenas, prefabs, animação, VFX, statecharts e navegação.
 Electron atende desktop/Steam com cooking e budgets próprios; Capacitor atende Android/iOS.
 Hosts nativos futuros substituem apresentação e integrações, não as regras.

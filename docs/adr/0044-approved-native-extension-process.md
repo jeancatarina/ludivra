@@ -2,9 +2,10 @@
 
 - Status: provisório
 - Data: 2026-07-24
+- Revisado: 2026-07-26 para aplicar provenance a extensões que incorporem fonte externa
 - Revisão: após a primeira extensão nativa aprovada
 - Fecha a pendência de: [ADR 0016](0016-public-lua-sdk-layers-and-escape-hatches.md)
-- Complementa: [ADR 0002](0002-runtime-c-abi.md) e [ADR 0012](0012-feature-first-roadmap-and-proof-games.md)
+- Complementa: [ADR 0002](0002-runtime-c-abi.md), [ADR 0012](0012-feature-first-roadmap-and-proof-games.md) e [ADR 0055](0055-upstream-first-and-external-source-incorporation.md)
 
 ## Contexto
 
@@ -43,6 +44,8 @@ Extensão que precise de qualquer um desses itens não é extensão: é mudança
 Se a extensão participa do caminho autoritativo, ela precisa de golden vectors e de equivalência native/WASM, como qualquer parte do kernel. Se não participa, ela é apresentação e não pode alterar hash, save nem replay.
 
 Toda extensão aparece no catálogo de capabilities com owner, targets, contratos, limitações e comandos de verificação, e sua ausência é `NOT_AVAILABLE` explícito.
+
+Se a extensão consumir biblioteca externa, ela usa o upstream canônico fixado. Se incorporar fonte ou mantiver fork, precisa também passar pelo gate excepcional do ADR 0055; aprovação como extensão nativa não substitui provenance e licença.
 
 ### Fallback obrigatório
 

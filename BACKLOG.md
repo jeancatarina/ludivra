@@ -21,6 +21,7 @@ Foco atual: **Fase 3 — Fechar os códigos específicos de renderer e shader e 
 | VFX-001 | alta | planejado | 8 | Implementar VFX e partículas GPU/CPU com pooling, colisão, trails e budgets. | [ADR 0052](docs/adr/0052-textual-vfx-and-particle-runtime.md) |
 | AUD-001 | alta | planejado | 10 | Completar música, stems, previews e integração final do Audio Forge. | [ADR 0032](docs/adr/0032-audio-forge-recipes-and-deterministic-renderer.md) |
 | ENG-009 | média | planejado | 11 | Validar pacotes Windows e Linux em runners nativos. | [ADR 0030](docs/adr/0030-target-hardening-signing-and-distribution.md) |
+| SUP-001 | média | planejado | 11 | Implementar registry e gate de CI para provenance, licença, upstream fixado e política de forks externos. | [ADR 0055](docs/adr/0055-upstream-first-and-external-source-incorporation.md) |
 | ENG-013 | média | bloqueado | 11 | Assinar e notarizar o pacote macOS após autorização e credenciais explícitas. | [ADR 0030](docs/adr/0030-target-hardening-signing-and-distribution.md) |
 
 Itens concluídos não permanecem no backlog. O estado entregue de cada fase está no [ROADMAP.md](ROADMAP.md), com evidência versionada; o histórico detalhado está no Git e nos manifests de `reports/runs/`.

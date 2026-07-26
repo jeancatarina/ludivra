@@ -61,7 +61,7 @@ O relatório final deve conter somente:
 
 A mudança é rejeitada se contiver:
 
-- código copiado ou regra duplicada;
+- código externo copiado sem o processo do ADR 0055 ou regra interna duplicada;
 - módulo genérico sem domínio proprietário;
 - import proibido, ciclo ou acoplamento a vendor fora de adapter;
 - teste desabilitado, erro ignorado ou fallback silencioso;

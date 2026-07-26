@@ -298,7 +298,7 @@ Os cinco Forges produzem artefatos rastreáveis usados nas fixtures e preparados
 | Estado | `PARCIAL` |
 | Owners | CLI, diagnostics, benchmark registry, target hardening |
 | Dependências | Fase 3, Fase 4, Fase 5, Fase 6, Fase 7, Fase 8, Fase 9, Fase 10 |
-| ADRs | [ADR 0028](docs/adr/0028-diagnose-repair-verify-and-repair-classes.md), [ADR 0029](docs/adr/0029-benchmark-registry-profiles-and-baselines.md), [ADR 0030](docs/adr/0030-target-hardening-signing-and-distribution.md), [ADR 0031](docs/adr/0031-native-diagnostic-host-trigger-and-criteria.md), [ADR 0043](docs/adr/0043-native-diagnostic-host-backend.md), [ADR 0047](docs/adr/0047-desktop-rendering-profiles-and-backend-policy.md) |
+| ADRs | [ADR 0028](docs/adr/0028-diagnose-repair-verify-and-repair-classes.md), [ADR 0029](docs/adr/0029-benchmark-registry-profiles-and-baselines.md), [ADR 0030](docs/adr/0030-target-hardening-signing-and-distribution.md), [ADR 0031](docs/adr/0031-native-diagnostic-host-trigger-and-criteria.md), [ADR 0043](docs/adr/0043-native-diagnostic-host-backend.md), [ADR 0047](docs/adr/0047-desktop-rendering-profiles-and-backend-policy.md), [ADR 0055](docs/adr/0055-upstream-first-and-external-source-incorporation.md) |
 
 Transformar falhas e regressões em diagnóstico causal, reparo controlado e comparação verificável.
 
@@ -310,6 +310,7 @@ Transformar falhas e regressões em diagnóstico causal, reparo controlado e com
 
 - Fluxo real de diagnose, explain, fix dry-run/apply e verify com classes de reparo.
 - Registry de métricas, profiles e benchmarks oficiais por target.
+- Registry e gate de provenance, licença, upstream e política de fork para fonte externa.
 - Hardening, SBOM, provenance, licença e smoke instalado.
 
 ### Gate de saída

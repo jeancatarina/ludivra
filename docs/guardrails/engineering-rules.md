@@ -7,7 +7,7 @@ Este documento é normativo. **DEVE** e **NÃO DEVE** são requisitos verificáv
 DRY significa uma única fonte autoritativa para cada regra, contrato, schema, constante, algoritmo e decisão. Não significa criar abstrações para semelhanças acidentais.
 
 1. Código existente DEVE ser pesquisado antes de código novo.
-2. Copiar e adaptar uma implementação existente é proibido.
+2. Copiar e adaptar uma implementação interna para criar uma segunda regra é proibido. Dependência upstream e incorporação excepcional de fonte externa seguem o [ADR 0055](../adr/0055-upstream-first-and-external-source-incorporation.md); sem seu gate, copiar fonte externa também é proibido.
 3. A segunda implementação da mesma regra NÃO DEVE ser criada: o conceito comum DEVE ser extraído antes da conclusão.
 4. A primeira implementação NÃO DEVE ser generalizada para usos hipotéticos.
 5. Schema, protocolo e modelo público DEVEM gerar bindings e validadores; definições manuais paralelas são proibidas.
@@ -70,6 +70,7 @@ Código específico de vendor só existe em adapter de borda. Código específic
 6. Não otimize sem benchmark; não ignore budget já comprovadamente excedido.
 7. TODO sem responsável, motivo e issue/backlog ID é proibido.
 8. Compatibilidade temporária DEVE possuir prazo e condição objetiva de remoção.
+9. Biblioteca especializada DEVE ser consumida do upstream canônico; extrair sua cópia de outra engine ou integração é proibido, salvo pelo processo excepcional do ADR 0055.
 
 ## 6. Testes e verificabilidade
 

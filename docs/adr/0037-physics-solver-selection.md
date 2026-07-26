@@ -2,9 +2,10 @@
 
 - Status: provisório
 - Data: 2026-07-24
-- Revisado: 2026-07-26 para vincular promoção dos solvers à cobertura desktop completa
+- Revisado: 2026-07-26 para vincular promoção dos solvers à cobertura desktop e ao upstream direto
 - Revisão: ao registrar o primeiro benchmark oficial de física, ou se um target suportado deixar de compilar o solver
 - Fecha a pendência de: [ADR 0021](0021-motion-and-physics-adapter-authority.md)
+- Complementa: [ADR 0055](0055-upstream-first-and-external-source-incorporation.md)
 - Fase: 6
 
 ## Contexto
@@ -27,7 +28,9 @@ Box2D v3 é MIT, escrito em C, compila com CMake e Emscripten, e cobre corpos, f
 
 ### Como as duas entram
 
-Ambos entram como **vendor em adapter de borda**, com versão fixada em `toolchain.lock` e no grafo CMake no momento da adoção, e nunca são importados por kernel, gameplay, Lua ou renderer. O contrato consumido é o do ADR 0021, inclusive layers e masks, materiais, sleep, CCD, queries, joints, triggers, character controller, ragdoll, interpolação e debug; trocar de solver não muda contrato, save nem replay.
+Ambos entram diretamente de seus repositórios upstream como **vendor em adapter de borda**, com versão e hash fixados em `toolchain.lock` e no grafo CMake no momento da adoção, e nunca são importados por kernel, gameplay, Lua ou renderer. O contrato consumido é o do ADR 0021, inclusive layers e masks, materiais, sleep, CCD, queries, joints, triggers, character controller, ragdoll, interpolação e debug; trocar de solver não muda contrato, save nem replay.
+
+Godot e godot-jolt podem informar cenários, diferenças de configuração e casos extremos. Seu `PhysicsServer`, adapter Jolt e código de integração não serão copiados: eles implementam contratos e compatibilidade da Godot, não a authority da Ludivra. O adapter Ludivra é escrito contra as APIs públicas upstream de Jolt e Box2D.
 
 Autoridade `gameplay` só é liberada para um solver após golden vector de contatos e posições quantizadas, conforme o ADR 0021, e após os cenários de estabilidade do ADR 0036. Até lá, o adapter só serve autoridade `presentation`.
 
@@ -55,4 +58,5 @@ Códigos: `PHYSICS_SOLVER_UNAVAILABLE`, `PHYSICS_SOLVER_VERSION_UNSUPPORTED`, `P
 - **Bullet:** determinismo e manutenção menos previsíveis que as alternativas escolhidas para o mesmo escopo.
 - **Um único solver 3D também para 2D:** paga custo de solver tridimensional em jogos planos.
 - **Implementar solver próprio:** recusado pelo ADR 0008 e fora do escopo do programa.
+- **Copiar Godot Physics ou o adapter godot-jolt:** importa abstrações da Godot e cria um fork indireto em vez de integrar o upstream escolhido.
 - **Escolher só na hora de implementar:** manteria a Fase 6 com dependência pendente e adiaria decisão de licença.
