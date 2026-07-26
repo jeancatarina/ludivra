@@ -6,7 +6,7 @@ import { renderCharacterPreview } from "./preview.js";
 import type { CharacterSpec, VisualStyleBible } from "./spec.js";
 import { validateCharacter, type VisualValidationReport } from "./validation.js";
 
-export const VISUAL_GENERATOR_VERSION = 1;
+export const VISUAL_GENERATOR_VERSION = 2;
 
 export function visualCacheKey(
   spec: CharacterSpec,

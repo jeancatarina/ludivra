@@ -2,13 +2,19 @@ import { copyFile, mkdir, readFile, readdir, writeFile } from "node:fs/promises"
 import { basename, isAbsolute, relative, resolve } from "node:path";
 import {
   compileCharacter,
+  compileRasterProduction,
   compileTexture,
+  inspectProductionGltfBytes,
   parseStyleBible,
+  productionCacheKey,
   renderCharacterPreview,
   texturePrompt,
   visualCacheKey,
   VISUAL_GENERATOR_VERSION,
   type CharacterSpec,
+  type ProductionCharacterSpec,
+  type ProductionOutput,
+  type ProductionValidationReport,
   type TextureRequest,
   type VisualStyleBible,
   type VisualValidationReport
@@ -30,6 +36,7 @@ export const VISUAL_INDEX_FILE = ".ludivra/visual-index.json";
 
 export type VisualJobState =
   | "PLANNED"
+  | "WAITING_FOR_SOURCES"
   | "WAITING_FOR_TEXTURES"
   | "TEXTURES_IMPORTED"
   | "COMPILING"
@@ -61,7 +68,16 @@ export interface RenderedVisualRecord {
   sha256: string;
   reused: boolean;
   animations: number;
-  report: VisualValidationReport;
+  outputs?: Array<{
+    id: string;
+    mode: string;
+    profile: string;
+    artifact: string;
+    preview: string;
+    sha256: string;
+    artifacts: Array<{ kind: string; path: string; sha256: string }>;
+  }>;
+  report: VisualValidationReport | ProductionValidationReport;
 }
 
 export interface VisualCompileResult {
@@ -96,9 +112,9 @@ async function collectFiles(directory: string, suffix: string): Promise<string[]
   return files;
 }
 
-function parseCharacter(source: string, path: string): CharacterSpec {
+function parseCharacter(source: string, path: string): CharacterSpec | ProductionCharacterSpec {
   try {
-    return JSON.parse(source) as CharacterSpec;
+    return JSON.parse(source) as CharacterSpec | ProductionCharacterSpec;
   } catch {
     throw new Error(`VISUAL_SPEC_INVALID: ${path} is not valid JSON`);
   }
@@ -106,21 +122,27 @@ function parseCharacter(source: string, path: string): CharacterSpec {
 
 async function createVisualValidators(engineRoot: string): Promise<{
   character: ReturnType<ReturnType<typeof createContractValidator>["compile"]>;
+  characterV2: ReturnType<ReturnType<typeof createContractValidator>["compile"]>;
   style: ReturnType<ReturnType<typeof createContractValidator>["compile"]>;
   manifest: ReturnType<ReturnType<typeof createContractValidator>["compile"]>;
+  manifestV2: ReturnType<ReturnType<typeof createContractValidator>["compile"]>;
 }> {
   const validator = createContractValidator();
-  const [textureSchema, characterSchema, styleSchema, manifestSchema] = await Promise.all([
+  const [textureSchema, characterSchema, characterSchemaV2, styleSchema, manifestSchema, manifestSchemaV2] = await Promise.all([
     readFile(resolve(engineRoot, "schemas/texture-request.schema.json"), "utf8").then(JSON.parse),
     readFile(resolve(engineRoot, "schemas/character-spec.schema.json"), "utf8").then(JSON.parse),
+    readFile(resolve(engineRoot, "schemas/character-spec-v2.schema.json"), "utf8").then(JSON.parse),
     readFile(resolve(engineRoot, "schemas/visual-style.schema.json"), "utf8").then(JSON.parse),
-    readFile(resolve(engineRoot, "schemas/visual-forge-manifest.schema.json"), "utf8").then(JSON.parse)
+    readFile(resolve(engineRoot, "schemas/visual-forge-manifest.schema.json"), "utf8").then(JSON.parse),
+    readFile(resolve(engineRoot, "schemas/visual-forge-manifest-v2.schema.json"), "utf8").then(JSON.parse)
   ]);
   validator.addSchema(textureSchema);
   return {
     character: validator.compile(characterSchema),
+    characterV2: validator.compile(characterSchemaV2),
     style: validator.compile(styleSchema),
-    manifest: validator.compile(manifestSchema)
+    manifest: validator.compile(manifestSchema),
+    manifestV2: validator.compile(manifestSchemaV2)
   };
 }
 
@@ -438,7 +460,11 @@ async function runImport(project: string, arguments_: string[]): Promise<Command
   };
 }
 
-function outputDiagnostics(id: string, recipe: string, report: VisualValidationReport): Diagnostic[] {
+function outputDiagnostics(
+  id: string,
+  recipe: string,
+  report: Pick<VisualValidationReport | ProductionValidationReport, "checks">
+): Diagnostic[] {
   return report.checks
     .filter(({ status }) => status === "failed")
     .map((check) => ({
@@ -457,13 +483,29 @@ async function writeIndex(
   const current = onlyId === undefined
     ? []
     : (JSON.parse(await readFile(resolve(project, VISUAL_INDEX_FILE), "utf8").catch(() => '{"entries":[]}')) as {
-        entries?: Array<{ id: string; recipe: string; output: string; manifest: string; preview: string; sha256: string }>;
+        entries?: Array<{
+          id: string;
+          recipe: string;
+          output: string;
+          manifest: string;
+          preview: string;
+          sha256: string;
+          outputs?: Array<{
+            id: string;
+            mode: string;
+            profile: string;
+            artifact: string;
+            preview: string;
+            sha256: string;
+            artifacts: Array<{ kind: string; path: string; sha256: string }>;
+          }>;
+        }>;
       }).entries ?? [];
   const replacementIds = new Set(entries.map(({ id }) => id));
   const merged = [
     ...current.filter(({ id }) => !replacementIds.has(id)),
-    ...entries.map(({ id, recipe, output, manifest, preview, sha256 }) => ({
-      id, recipe, output, manifest, preview, sha256
+    ...entries.map(({ id, recipe, output, manifest, preview, sha256, outputs }) => ({
+      id, recipe, output, manifest, preview, sha256, ...(outputs === undefined ? {} : { outputs })
     }))
   ].sort((left, right) => left.id.localeCompare(right.id));
   await mkdir(resolve(project, ".ludivra"), { recursive: true });
@@ -471,6 +513,265 @@ async function writeIndex(
     generatorVersion: VISUAL_GENERATOR_VERSION,
     entries: merged
   }, null, 2)}\n`, "utf8");
+}
+
+function projectSourcePath(project: string, sourcePath: string): string {
+  const path = resolve(project, sourcePath);
+  const relation = relative(project, path);
+  if (relation.startsWith("..") || isAbsolute(relation)) {
+    throw new Error(`VISUAL_SOURCE_MISSING: source escapes project: ${sourcePath}`);
+  }
+  return path;
+}
+
+async function compileProductionSpec(
+  project: string,
+  file: string,
+  displayPath: string,
+  spec: ProductionCharacterSpec,
+  loaded: { style: VisualStyleBible; path: string; source: string },
+  validateManifest: ReturnType<ReturnType<typeof createContractValidator>["compile"]>,
+  forceCompile: boolean,
+  diagnostics: Diagnostic[]
+): Promise<RenderedVisualRecord | null> {
+  const sourceInputs = new Map<string, { output: ProductionOutput; path: string; bytes: Buffer }>();
+  const sourceHashes: Record<string, string> = {};
+  try {
+    for (const output of spec.outputs) {
+      const path = projectSourcePath(project, output.source.path);
+      const bytes = await readFile(path);
+      const hash = sha256(bytes);
+      if (hash !== output.source.provenance.sha256) {
+        throw new Error(`VISUAL_SOURCE_HASH_MISMATCH: ${output.source.path}`);
+      }
+      sourceInputs.set(output.id, { output, path, bytes });
+      sourceHashes[output.id] = hash;
+    }
+  } catch (error) {
+    diagnostics.push({
+      code: error instanceof Error && error.message.startsWith("VISUAL_SOURCE_HASH_MISMATCH")
+        ? "VISUAL_SOURCE_HASH_MISMATCH" : "VISUAL_SOURCE_MISSING",
+      severity: "error",
+      message: error instanceof Error ? error.message : `${spec.id} has an unavailable source`,
+      file: displayPath
+    });
+    return null;
+  }
+
+  const cacheKey = productionCacheKey(spec, loaded.source, sourceHashes);
+  const outputDirectory = resolve(project, visualCacheDirectory, cacheKey);
+  const manifestPath = resolve(outputDirectory, "manifest.json");
+  const stored = forceCompile
+    ? null
+    : JSON.parse(await readFile(manifestPath, "utf8").catch(() => "null")) as {
+        source?: { cacheKey?: string };
+        outputs?: Array<{
+          id: string;
+          mode: string;
+          profile: string;
+          artifacts: Array<{ kind: string; path: string; sha256: string }>;
+          metrics?: Record<string, unknown>;
+        }>;
+        validation?: { report?: string };
+      } | null;
+  const reused = stored?.source?.cacheKey === cacheKey;
+  const existingJob = await readJob(project, spec.id);
+  const job: VisualJob = existingJob ?? {
+    schemaVersion: 1,
+    id: spec.id,
+    description: spec.identity.description,
+    spec: displayPath,
+    style: relative(project, loaded.path),
+    state: "PLANNED",
+    textureRequests: []
+  };
+  const preserveApproval = reused && job.state === "APPROVED";
+  job.state = preserveApproval ? "APPROVED" : "COMPILING";
+  job.cacheKey = cacheKey;
+  await writeJob(project, job);
+
+  let aggregate: ProductionValidationReport;
+  let manifestOutputs: NonNullable<typeof stored>["outputs"] = [];
+  if (!reused) {
+    await mkdir(outputDirectory, { recursive: true });
+    const reports: Array<{ id: string; report: ProductionValidationReport }> = [];
+    const outputs: Array<{
+      id: string;
+      mode: string;
+      profile: string;
+      quality: string;
+      source: { path: string; origin: string; license: string; sha256: string };
+      artifacts: Array<{ kind: string; path: string; sha256: string }>;
+      metrics: ProductionValidationReport["metrics"];
+      validation: { status: "passed" | "failed"; report: string };
+    }> = [];
+    try {
+      for (const [outputId, input] of sourceInputs) {
+        const targetDirectory = resolve(outputDirectory, "outputs", outputId);
+        await mkdir(targetDirectory, { recursive: true });
+        let report: ProductionValidationReport;
+        let artifactNames: Array<[string, string]>;
+        if (input.output.mode === "3d") {
+          report = inspectProductionGltfBytes(input.bytes, input.output);
+          const modelName = input.output.source.path.toLowerCase().endsWith(".glb") ? "model.glb" : "model.gltf";
+          await Promise.all([
+            copyFile(input.path, resolve(targetDirectory, modelName)),
+            writeFile(
+              resolve(targetDirectory, "preview.json"),
+              `${JSON.stringify({ profile: input.output.profile, metrics: report.metrics, animations: report.metrics.animations }, null, 2)}\n`,
+              "utf8"
+            )
+          ]);
+          artifactNames = [["model", modelName], ["preview", "preview.json"]];
+        } else {
+          const compiled = compileRasterProduction(input.bytes, input.output);
+          report = compiled.report;
+          await Promise.all([
+            writeFile(resolve(targetDirectory, "atlas.png"), compiled.atlas),
+            writeFile(resolve(targetDirectory, "atlas.json"), `${JSON.stringify(compiled.metadata, null, 2)}\n`, "utf8"),
+            writeFile(resolve(targetDirectory, "preview.png"), compiled.atlas)
+          ]);
+          artifactNames = [["atlas", "atlas.png"], ["atlas-metadata", "atlas.json"], ["preview", "preview.png"]];
+        }
+        await writeFile(resolve(targetDirectory, "validation.json"), `${JSON.stringify(report, null, 2)}\n`, "utf8");
+        artifactNames.push(["validation", "validation.json"]);
+        const artifacts = await Promise.all(artifactNames.map(async ([kind, name]) => ({
+          kind,
+          path: relative(outputDirectory, resolve(targetDirectory, name)),
+          sha256: await hashArtifactPath(resolve(targetDirectory, name))
+        })));
+        outputs.push({
+          id: outputId,
+          mode: input.output.mode,
+          profile: input.output.profile,
+          quality: input.output.quality,
+          source: {
+            path: input.output.source.path,
+            origin: input.output.source.provenance.origin,
+            license: input.output.source.provenance.license,
+            sha256: input.output.source.provenance.sha256
+          },
+          artifacts,
+          metrics: report.metrics,
+          validation: {
+            status: report.status,
+            report: relative(outputDirectory, resolve(targetDirectory, "validation.json"))
+          }
+        });
+        reports.push({ id: outputId, report });
+      }
+    } catch (error) {
+      diagnostics.push({
+        code: error instanceof Error && error.message.startsWith("VISUAL_3D_DEPENDENCY_MISSING")
+          ? "VISUAL_3D_DEPENDENCY_MISSING" : "VISUAL_QUALITY_PROFILE_FAILED",
+        severity: "error",
+        message: error instanceof Error ? `${spec.id}: ${error.message}` : `${spec.id}: production compilation failed`,
+        file: displayPath
+      });
+      job.state = "NEEDS_REVISION";
+      job.validation = "failed";
+      await writeJob(project, job);
+      return null;
+    }
+    const failedOutputs = reports.filter(({ report }) => report.status === "failed").length;
+    aggregate = {
+      schemaVersion: 1,
+      profile: "multi-render-production",
+      quality: "production",
+      status: failedOutputs === 0 ? "passed" : "failed",
+      checks: reports.flatMap(({ id, report }) => report.checks.map((check) => ({
+        ...check,
+        id: `${id}.${check.id}`,
+        message: `${id}: ${check.message}`
+      }))),
+      metrics: {
+        outputs: reports.length,
+        failedOutputs,
+        modes: spec.outputs.map(({ mode }) => mode)
+      }
+    };
+    await writeFile(resolve(outputDirectory, "validation.json"), `${JSON.stringify(aggregate, null, 2)}\n`, "utf8");
+    const manifest = {
+      schemaVersion: 2,
+      family: "visual",
+      id: spec.id,
+      generator: { name: "@ludivra/visual-authoring", version: VISUAL_GENERATOR_VERSION },
+      source: {
+        recipe: displayPath,
+        recipeSha256: sha256(await readFile(file)),
+        style: relative(project, loaded.path),
+        styleSha256: sha256(loaded.source),
+        seed: spec.seed,
+        cacheKey
+      },
+      outputs,
+      validation: { status: aggregate.status, report: "validation.json" },
+      regeneration: `game visual compile ${spec.id} --project .`
+    };
+    if (!validateManifest(manifest)) {
+      diagnostics.push({
+        code: "FORGE_MANIFEST_MISSING",
+        severity: "error",
+        message: validateManifest.errors?.map((error) => `${error.instancePath} ${error.message}`).join("; ") ??
+          "Visual production manifest is invalid",
+        file: relative(project, manifestPath)
+      });
+      return null;
+    }
+    await writeFile(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`, "utf8");
+    manifestOutputs = outputs;
+  } else {
+    aggregate = JSON.parse(
+      await readFile(resolve(outputDirectory, stored.validation?.report ?? "validation.json"), "utf8")
+    ) as ProductionValidationReport;
+    manifestOutputs = stored.outputs ?? [];
+  }
+
+  diagnostics.push(...outputDiagnostics(spec.id, displayPath, aggregate));
+  job.validation = aggregate.status;
+  job.state = preserveApproval && aggregate.status === "passed"
+    ? "APPROVED"
+    : aggregate.status === "passed" ? "VALIDATING" : "NEEDS_REVISION";
+  await writeJob(project, job);
+
+  const outputRecords = (manifestOutputs ?? []).map((output) => {
+    const primary = output.artifacts.find(({ kind }) => kind === "model" || kind === "atlas") ?? output.artifacts[0]!;
+    const preview = output.artifacts.find(({ kind }) => kind === "preview") ?? primary;
+    return {
+      id: output.id,
+      mode: output.mode,
+      profile: output.profile,
+      artifact: relative(project, resolve(outputDirectory, primary.path)),
+      preview: relative(project, resolve(outputDirectory, preview.path)),
+      sha256: primary.sha256,
+      artifacts: output.artifacts.map((artifact) => ({
+        ...artifact,
+        path: relative(project, resolve(outputDirectory, artifact.path))
+      }))
+    };
+  });
+  const primary = outputRecords[0];
+  if (primary === undefined) return null;
+  const animationCount = spec.outputs.reduce((sum, output) => {
+    if (output.mode !== "3d") return sum + output.animations.length;
+    const value = manifestOutputs?.find(({ id }) => id === output.id)?.metrics?.animations;
+    return sum + (Array.isArray(value) ? value.length : 0);
+  }, 0);
+  return {
+    id: spec.id,
+    recipe: displayPath,
+    style: relative(project, loaded.path),
+    output: primary.artifact,
+    manifest: relative(project, manifestPath),
+    preview: primary.preview,
+    validation: relative(project, resolve(outputDirectory, "validation.json")),
+    cacheKey,
+    sha256: primary.sha256,
+    reused,
+    animations: animationCount,
+    outputs: outputRecords,
+    report: aggregate
+  };
 }
 
 export async function ensureProjectVisuals(
@@ -485,7 +786,7 @@ export async function ensureProjectVisuals(
 
   for (const file of files) {
     const displayPath = relative(project, file);
-    let spec: CharacterSpec;
+    let spec: CharacterSpec | ProductionCharacterSpec;
     try {
       spec = parseCharacter(await readFile(file, "utf8"), displayPath);
     } catch (error) {
@@ -498,8 +799,9 @@ export async function ensureProjectVisuals(
       continue;
     }
     if (options.onlyId !== undefined && spec.id !== options.onlyId) continue;
-    if (!validators.character(spec)) {
-      diagnostics.push(schemaDiagnostic("VISUAL_SPEC_INVALID", displayPath, validators.character.errors));
+    const characterValidator = spec.schemaVersion === 2 ? validators.characterV2 : validators.character;
+    if (!characterValidator(spec)) {
+      diagnostics.push(schemaDiagnostic("VISUAL_SPEC_INVALID", displayPath, characterValidator.errors));
       continue;
     }
     let loaded: { style: VisualStyleBible; path: string; source: string };
@@ -512,6 +814,20 @@ export async function ensureProjectVisuals(
         message: error instanceof Error ? error.message : `Style ${spec.style} is unavailable`,
         file: displayPath
       });
+      continue;
+    }
+    if (spec.schemaVersion === 2) {
+      const record = await compileProductionSpec(
+        project,
+        file,
+        displayPath,
+        spec,
+        loaded,
+        validators.manifestV2,
+        options.forceCompile === true,
+        diagnostics
+      );
+      if (record !== null) rendered.push(record);
       continue;
     }
     const existingJob = await readJob(project, spec.id);
@@ -711,7 +1027,7 @@ export async function ensureProjectVisuals(
 
 async function readCompiledRecord(project: string, id: string): Promise<{
   entry: { id: string; output: string; manifest: string; preview: string; sha256: string };
-  report: VisualValidationReport;
+  report: VisualValidationReport | ProductionValidationReport;
 } | null> {
   const index = JSON.parse(await readFile(resolve(project, VISUAL_INDEX_FILE), "utf8").catch(() => '{"entries":[]}')) as {
     entries: Array<{ id: string; output: string; manifest: string; preview: string; sha256: string }>;
@@ -723,7 +1039,7 @@ async function readCompiledRecord(project: string, id: string): Promise<{
   };
   const report = JSON.parse(
     await readFile(resolve(resolve(project, entry.manifest), "..", manifest.validation.report), "utf8")
-  ) as VisualValidationReport;
+  ) as VisualValidationReport | ProductionValidationReport;
   return { entry, report };
 }
 

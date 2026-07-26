@@ -2,7 +2,7 @@
 
 - Status: provisório
 - Data: 2026-07-24
-- Revisão: ao concluir o primeiro Forge de cada família, ou antes de aceitar um Forge que dependa de serviço externo
+- Revisão: ao concluir o primeiro Forge de cada família, ou antes de tornar um serviço externo obrigatório no build
 - Complementa: [ADR 0008](0008-mandatory-scale-and-procedural-capabilities.md) e [ADR 0012](0012-feature-first-roadmap-and-proof-games.md)
 - Especializado por: [ADR 0032](0032-audio-forge-recipes-and-deterministic-renderer.md), [ADR 0033](0033-visual-forge-procedural-characters-and-generated-surfaces.md), [ADR 0034](0034-world-forge-textual-world-recipes.md), [ADR 0035](0035-construction-forge-style-grammars.md) e [ADR 0036](0036-physics-forge-collider-and-stability-recipes.md)
 - Fase: 10
@@ -17,14 +17,16 @@ O risco concreto da primeira forma é o artefato opaco: um asset sem receita, se
 
 ## Decisão
 
-### A receita textual é a fonte de verdade
+### A receita textual e as fontes declaradas são a fonte de verdade
 
-Todo Forge é um **compilador**: recebe um documento textual versionado, valida-o por schema e produz artefatos derivados. O documento é a fonte editável; o artefato binário é derivado, regenerável e nunca autorável.
+Todo Forge é um **compilador**: recebe um documento textual versionado, valida-o por schema e produz artefatos derivados. A receita é a fonte editável. Quando a qualidade exige um insumo autorado ou generativo — imagem, modelo, gravação ou fonte tipográfica — esse insumo também faz parte da fonte de verdade, de forma explícita, imutável e auditável por hash, origem, licença e termos do gerador.
 
 ```text
 intenção em linguagem natural
         ↓
 agente escreve ou edita a receita JSONC
+        ↓
+gerador/adaptador produz fonte declarada, quando necessário
         ↓
 game <familia> render
         ↓
@@ -35,9 +37,11 @@ artefato canônico + manifest + preview + análise
 agente inspeciona a evidência e ajusta a receita
 ```
 
-O agente nunca escreve amostras, vértices, pixels ou bytes de asset. Ele escreve parâmetros semânticos. Essa é a fronteira que torna o sistema operável por texto.
+O agente não edita manualmente amostras, vértices, pixels ou bytes de asset. Ele escreve parâmetros semânticos e pode operar um gerador de authoring que produza uma fonte declarada. Essa é a fronteira que torna o sistema operável por texto sem limitar a qualidade final ao que um compilador procedural consegue sintetizar.
 
 Editar o artefato derivado é proibido. Reconstruir a receita a partir do artefato é proibido.
+
+Fonte importada não pode ser confundida com artefato derivado. Ela vive em diretório de fontes, tem sidecar de proveniência e entra no manifest com hash. Substituí-la exige nova revisão da receita ou da proveniência. Um binário sem esses dados continua proibido.
 
 ### Contrato comum de saída
 
@@ -53,11 +57,11 @@ Todo Forge produz, no mínimo:
 
 Artefato sem manifest não entra no repositório. Regeneração impossível é declarada como limitação explícita no manifest, nunca omitida.
 
-### Determinismo por seed e versão
+### Determinismo do compilador e identidade da fonte
 
-Mesma receita, mesma seed, mesma versão de gerador e mesmo perfil de render produzem bytes idênticos. Divergência é defeito do Forge, verificada por fixture.
+Mesma receita, mesmos hashes de fontes, mesma versão do compilador e mesmo perfil de render produzem bytes idênticos. Divergência na compilação local é defeito do Forge, verificada por fixture.
 
-A identidade de cache de um artefato é `hash(receita) + versão do gerador + seed + perfil`. É isso que permite não versionar o binário e ainda assim reproduzir o mesmo resultado em outra máquina.
+Geradores externos e modelos generativos não prometem repetir pixels ou vértices apenas por seed. Sua saída aceita é congelada como fonte e identificada por hash; prompt, modelo, versão, seed quando disponível e termos ficam no sidecar para reexecução e auditoria. A identidade de cache é `hash(receita) + hashes(fontes) + versão do compilador + perfil`.
 
 ### Evidência que um agente consegue ler
 
@@ -77,7 +81,7 @@ Relatório de validação com falha bloqueia a promoção do artefato para fixtu
 
 Forges rodam em authoring ou build time. Nenhum Forge é dependência de execução do jogo, e nenhum jogo publicado exige um Forge instalado para rodar.
 
-Serviço externo pode ser adapter de authoring, sempre opcional, com credencial fora do repositório e com caminho local equivalente declarado. Uma família obrigatória nunca tem o serviço externo como única implementação. Modelo generativo usado em authoring é registrado com nome, versão e termos, porque isso afeta a licença do artefato produzido; a decisão de licenciamento e publicação continua sendo do usuário.
+Serviço externo pode ser adapter de authoring, sempre opcional no build e com credencial fora do repositório. O caminho local equivalente é compilar uma fonte já declarada; o build e o runtime nunca precisam chamar o serviço. Modelo generativo usado em authoring é registrado com nome, versão, prompt e termos, porque isso afeta a licença do artefato produzido; a decisão de licenciamento e publicação continua sendo do usuário.
 
 ### Uma família, um ADR
 
@@ -87,19 +91,20 @@ Códigos: `FORGE_MANIFEST_MISSING`, `FORGE_ARTIFACT_OPAQUE`, `FORGE_RECIPE_INVAL
 
 ## Consequências
 
-- geração passa a ser dirigível por prompt sem que o agente manipule bytes de asset;
-- todo artefato tem diff revisável, porque a fonte é texto;
+- geração passa a ser dirigível por prompt sem edição manual de bytes pelo agente;
+- todo artefato tem receita revisável; fontes binárias necessárias têm hash, licença e proveniência revisáveis;
 - as cinco famílias compartilham manifest, cache e relatório em vez de cinco convenções;
 - o jogo publicado nunca depende de ferramenta de geração instalada;
 - serviço externo permanece possível e opcional, com equivalente local declarado;
-- o repositório versiona receitas pequenas em vez de binários grandes;
+- o repositório prioriza receitas pequenas, mas versiona fontes binárias aprovadas quando elas são necessárias para reproduzir a qualidade;
 - cada família precisa do seu ADR antes de existir código.
 
 ## Alternativas rejeitadas
 
 - **Ferramenta interativa como caminho principal:** exclui o agente, não produz diff e transforma o asset em artefato opaco.
 - **Aceitar arquivo opaco:** impede revisão, correção e auditoria de licença, e é irreversível quando o volume cresce.
-- **Pedir ao modelo que gere amostras, vértices ou pixels finais:** desperdiça a única coisa que o modelo faz bem, que é descrever intenção, e produz saída não determinística e não revisável.
+- **Tratar uma saída generativa como determinística por seed:** cria uma promessa falsa; o hash da fonte aceita é a identidade reproduzível.
+- **Proibir fontes raster ou 3D autoradas:** limita a qualidade final à geometria e aos pixels que o compilador local consegue sintetizar.
 - **Um manifest por família:** cinco formatos para o mesmo problema, com cinco validadores divergentes.
 - **Forge como dependência de runtime:** transformaria ferramenta de authoring em requisito de execução do jogo.
 - **Exigir serviço externo em uma família obrigatória:** cria dependência comercial em um compromisso do ADR 0008.

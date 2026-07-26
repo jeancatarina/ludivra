@@ -1,0 +1,92 @@
+{
+  "schemaVersion": 2,
+  "id": "visual.goblin.shaman.production",
+  "style": "stylized",
+  "seed": 48192,
+  "identity": {
+    "description": "A short hunched goblin shaman with a carved ritual mask, layered teal and ochre robes, bone charms and an emerald crystal staff.",
+    "silhouette": "Compact triangular body, oversized ears and a crooked staff rising above the head.",
+    "paletteRoles": ["skin", "cloth", "leather", "bone", "wood", "crystal", "accent"],
+    "focalFeatures": ["angular goblin face", "wooden ritual mask", "emerald crystal staff"]
+  },
+  "outputs": [
+    {
+      "id": "gameplay-2d",
+      "mode": "2d",
+      "profile": "painted-cutout-2d",
+      "quality": "production",
+      "source": {
+        "kind": "raster",
+        "path": "sources/2d/goblin-shaman-magenta.png",
+        "matte": {
+          "color": "#ff00ff",
+          "transparentThreshold": 18,
+          "opaqueThreshold": 90
+        },
+        "provenance": {
+          "origin": "OpenAI built-in image generation, accepted 2026-07-25",
+          "license": "project-owned; publication subject to OpenAI service terms",
+          "sha256": "369a49701152e8b704b6a6b3628523906b66b8d8436c4bbbe95cb8d55bba6a22",
+          "generator": {
+            "name": "OpenAI image generation",
+            "mode": "built-in",
+            "prompt": "Production-quality full-body goblin shaman cutout for a premium stylized fantasy action RPG; teal and ochre robes, ritual mask, bone charms and emerald crystal staff; three-quarter isometric idle pose; pure magenta background; no shadow, text, UI or watermark."
+          }
+        }
+      },
+      "requirements": {
+        "minimumSourceSize": 1024,
+        "pixelsPerMeter": 320,
+        "padding": 16,
+        "edgeExtrusion": 4,
+        "pivot": [0.5, 0.96]
+      },
+      "animations": ["idle"]
+    },
+    {
+      "id": "gameplay-2.5d",
+      "mode": "2.5d",
+      "profile": "directional-impostor-2.5d",
+      "quality": "production",
+      "source": {
+        "kind": "directional-sheet",
+        "path": "sources/2.5d/goblin-shaman-directions-magenta.png",
+        "segmentation": "alpha-columns",
+        "directions": [
+          "south",
+          "south-west",
+          "west",
+          "north-west",
+          "north",
+          "north-east",
+          "east",
+          "south-east"
+        ],
+        "matte": {
+          "color": "#ff00ff",
+          "transparentThreshold": 18,
+          "opaqueThreshold": 90
+        },
+        "provenance": {
+          "origin": "OpenAI built-in image generation, accepted 2026-07-25",
+          "license": "project-owned; publication subject to OpenAI service terms",
+          "sha256": "7a28175510832b7bbbed08b735c3278ad78a81bf91c257c36b53e04b0f183609",
+          "generator": {
+            "name": "OpenAI image generation",
+            "mode": "built-in",
+            "prompt": "Production-quality eight-direction 2.5D sprite sheet of one consistent goblin shaman; identical proportions, teal and ochre costume, ritual mask, bone charms and emerald staff in all views; pure magenta background; no labels, grid, shadows, UI or watermark."
+          }
+        }
+      },
+      "requirements": {
+        "minimumSourceSize": 512,
+        "pixelsPerMeter": 192,
+        "padding": 12,
+        "edgeExtrusion": 4,
+        "pivot": [0.5, 0.96],
+        "maximumScaleVariance": 0.25
+      },
+      "animations": ["idle"]
+    }
+  ]
+}

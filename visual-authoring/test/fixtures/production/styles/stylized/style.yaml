@@ -1,0 +1,35 @@
+schemaVersion: 1
+id: stylized
+geometry:
+  style: smooth
+  silhouette: exaggerated
+  asymmetry: 0.35
+  detailFrequency: 0.72
+  triangleBudget:
+    min: 12000
+    max: 20000
+proportions:
+  heightM:
+    min: 0.9
+    max: 2.2
+  headScale:
+    min: 0.7
+    max: 1.5
+  shoulderScale:
+    min: 0.7
+    max: 1.5
+roughnessBias: 0.08
+palette:
+  skin: "#719457"
+  cloth: "#176b70"
+  leather: "#6b472d"
+  wood: "#755334"
+  bone: "#d2c7a5"
+  metal: "#82909a"
+  stone: "#72777a"
+  crystal: "#52e35f"
+  accent: "#e4a63b"
+render:
+  camera: isometric
+  outlineStrength: 0.28
+  shadowSoftness: 0.7

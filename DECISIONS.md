@@ -36,7 +36,7 @@
 | [0030](docs/adr/0030-target-hardening-signing-and-distribution.md) | provisório | Hardening de targets, assinatura e distribuição verificável | 2026-07-24 |
 | [0031](docs/adr/0031-native-diagnostic-host-trigger-and-criteria.md) | provisório | Gatilho e critérios do `NativeDiagnosticHost` | 2026-07-24 |
 | [0032](docs/adr/0032-audio-forge-recipes-and-deterministic-renderer.md) | provisório | Audio Forge: receitas textuais e renderizador determinístico | 2026-07-24 |
-| [0033](docs/adr/0033-visual-forge-procedural-characters-and-generated-surfaces.md) | provisório | Visual Forge: personagens procedurais e superfícies geradas | 2026-07-24 |
+| [0033](docs/adr/0033-visual-forge-procedural-characters-and-generated-surfaces.md) | provisório | Visual Forge: personagens finais em 2D, 2.5D e 3D | 2026-07-24 |
 | [0034](docs/adr/0034-world-forge-textual-world-recipes.md) | provisório | World Forge: receitas textuais de terreno, bioma e distribuição | 2026-07-24 |
 | [0035](docs/adr/0035-construction-forge-style-grammars.md) | provisório | Construction Forge: gramáticas de estilo arquitetônico | 2026-07-24 |
 | [0036](docs/adr/0036-physics-forge-collider-and-stability-recipes.md) | provisório | Physics Forge: receitas de collider, massa e estabilidade | 2026-07-24 |

@@ -271,13 +271,13 @@ Produzir assets e receitas convencionais, rastreáveis e regeneráveis em cinco 
 ### Entregue
 
 - Audio Forge possui receita JSONC, render determinístico, análise, cache, cooker e comandos de CLI. Capabilities: `authoring.audio-forge`. Evidência: [capabilities/authoring-audio-forge/capability.json](capabilities/authoring-audio-forge/capability.json), [audio-authoring/src](audio-authoring/src), [cli/src/audio-forge.ts](cli/src/audio-forge.ts).
-- Visual Forge possui Style Bible, CharacterSpec, gerador skeleton-first, skinning, superfícies compiladas, glTF, preview, validação e jobs de CLI. Capabilities: `authoring.visual-forge`. Evidência: [capabilities/authoring-visual-forge/capability.json](capabilities/authoring-visual-forge/capability.json), [visual-authoring/src](visual-authoring/src), [cli/src/visual-forge.ts](cli/src/visual-forge.ts).
+- Visual Forge v2 compila personagens finais 2D, 2.5D e 3D: RGBA/atlas com pivôs e bleed, vistas direcionais, glTF rigado com materiais e animações, perfis de qualidade, proveniência, previews e gates; o gerador skeleton-first v1 permanece como blockout compatível. Capabilities: `authoring.visual-forge`. Evidência: [capabilities/authoring-visual-forge/capability.json](capabilities/authoring-visual-forge/capability.json), [visual-authoring/src/production.ts](visual-authoring/src/production.ts), [visual-authoring/test/fixtures/production](visual-authoring/test/fixtures/production), [cli/src/visual-forge.ts](cli/src/visual-forge.ts).
 
 ### Falta
 
 - Completar música, stems, previews gráficos e runtime/cooker do Audio Forge.
 - Implementar World, Construction e Physics Forges.
-- Aplicar o manifest comum de Forge, origem, licença, preview e regeneração.
+- Aplicar o manifest comum de Forge às famílias World, Construction e Physics.
 
 ### Gate de saída
 

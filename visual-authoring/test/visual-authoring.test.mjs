@@ -8,8 +8,12 @@ import { Ajv2020 } from "ajv/dist/2020.js";
 import { PNG } from "pngjs";
 import {
   compileCharacter,
+  compileRasterProduction,
   compileTexture,
+  inspectProductionGltf,
+  inspectProductionGltfBytes,
   parseStyleBible,
+  productionCacheKey,
   texturePrompt,
   visualCacheKey
 } from "../dist/index.js";
@@ -22,6 +26,29 @@ const style = parseStyleBible(styleSource);
 
 function hash(value) {
   return createHash("sha256").update(value).digest("hex");
+}
+
+function gltfToGlb(source) {
+  const gltf = JSON.parse(source);
+  const binary = Buffer.from(gltf.buffers[0].uri.split(",")[1], "base64");
+  delete gltf.buffers[0].uri;
+  const jsonSource = Buffer.from(JSON.stringify(gltf), "utf8");
+  const jsonPadding = (4 - jsonSource.length % 4) % 4;
+  const binaryPadding = (4 - binary.length % 4) % 4;
+  const json = Buffer.concat([jsonSource, Buffer.alloc(jsonPadding, 0x20)]);
+  const paddedBinary = Buffer.concat([binary, Buffer.alloc(binaryPadding)]);
+  const glb = Buffer.alloc(12 + 8 + json.length + 8 + paddedBinary.length);
+  glb.writeUInt32LE(0x46546c67, 0);
+  glb.writeUInt32LE(2, 4);
+  glb.writeUInt32LE(glb.length, 8);
+  glb.writeUInt32LE(json.length, 12);
+  glb.writeUInt32LE(0x4e4f534a, 16);
+  json.copy(glb, 20);
+  const binaryHeader = 20 + json.length;
+  glb.writeUInt32LE(paddedBinary.length, binaryHeader);
+  glb.writeUInt32LE(0x004e4942, binaryHeader + 4);
+  paddedBinary.copy(glb, binaryHeader + 8);
+  return glb;
 }
 
 test("published schemas accept the Style Bible and CharacterSpec fixture", () => {
@@ -117,4 +144,56 @@ test("texture compiler derives technical maps locally and enforces tiling", () =
   assert.match(prompt, /seamless tile/);
   assert.match(prompt, /normal-map/);
   assert.match(prompt, /no transparency|transparent-background/);
+});
+
+test("production contracts compile final 2D, 2.5D and validate a rigged animated 3D source", () => {
+  const productionRoot = resolve(fixtureRoot, "production");
+  const productionSpec = JSON.parse(readFileSync(
+    resolve(productionRoot, "visuals/goblin-shaman-production.character.json"),
+    "utf8"
+  ));
+  const wizardSpec = JSON.parse(readFileSync(
+    resolve(productionRoot, "visuals/wizard-production.character.json"),
+    "utf8"
+  ));
+  const validator = new Ajv2020({ allErrors: true, strict: false });
+  const characterValidator = validator.compile(
+    JSON.parse(readFileSync(resolve(root, "schemas/character-spec-v2.schema.json"), "utf8"))
+  );
+  assert.ok(characterValidator(productionSpec), JSON.stringify(characterValidator.errors));
+  assert.ok(characterValidator(wizardSpec), JSON.stringify(characterValidator.errors));
+
+  const [cutout, directional] = productionSpec.outputs;
+  const [model] = wizardSpec.outputs;
+  const cutoutBytes = readFileSync(resolve(productionRoot, cutout.source.path));
+  const directionsBytes = readFileSync(resolve(productionRoot, directional.source.path));
+  const modelSource = readFileSync(resolve(productionRoot, model.source.path), "utf8");
+  assert.equal(hash(cutoutBytes), cutout.source.provenance.sha256);
+  assert.equal(hash(directionsBytes), directional.source.provenance.sha256);
+  assert.equal(hash(modelSource), model.source.provenance.sha256);
+
+  const compiled2d = compileRasterProduction(cutoutBytes, cutout);
+  const compiled25d = compileRasterProduction(directionsBytes, directional);
+  const compiled3d = inspectProductionGltf(modelSource, model);
+  const compiledGlb = inspectProductionGltfBytes(gltfToGlb(modelSource), model);
+  assert.equal(compiled2d.report.status, "passed", JSON.stringify(compiled2d.report.checks));
+  assert.equal(compiled2d.metadata.frames.length, 1);
+  assert.equal(PNG.sync.read(compiled2d.atlas).colorType, 6);
+  assert.equal(hash(compiled2d.atlas), "5d2a053fa2f09c36ba5570a9ae92c0b4bf8f33d641139fddd3adec03cdd58b9c");
+  assert.equal(compiled25d.report.status, "passed", JSON.stringify(compiled25d.report.checks));
+  assert.deepEqual(compiled25d.metadata.frames.map(({ direction }) => direction), directional.source.directions);
+  assert.equal(hash(compiled25d.atlas), "36d329929eeb7534e31f5cafa63bbaefc7a7d40ecc4dc85f81f86a5cd4fc641f");
+  assert.equal(compiled3d.status, "passed", JSON.stringify(compiled3d.checks));
+  assert.equal(compiledGlb.status, "passed", JSON.stringify(compiledGlb.checks));
+  assert.equal(compiledGlb.metrics.triangles, compiled3d.metrics.triangles);
+  assert.ok(compiled3d.metrics.animations.includes("Idle"));
+  assert.ok(compiled3d.metrics.triangles > 0);
+
+  const hashes = Object.fromEntries(productionSpec.outputs.map((output) => [output.id, output.source.provenance.sha256]));
+  const style = readFileSync(resolve(productionRoot, "styles/stylized/style.yaml"), "utf8");
+  assert.equal(
+    productionCacheKey(productionSpec, style, hashes),
+    productionCacheKey(productionSpec, style, Object.fromEntries(Object.entries(hashes).reverse()))
+  );
+  assert.equal(hash(compiled2d.atlas), hash(compileRasterProduction(cutoutBytes, cutout).atlas));
 });

@@ -561,6 +561,72 @@ test("game visual compiles, validates and finalizes a deterministic humanoid job
   }
 });
 
+test("game visual compiles production-ready 2D, 2.5D and 3D character profiles", () => {
+  const temporaryRoot = mkdtempSync(resolve(tmpdir(), "ludivra-visual-production-"));
+  const project = resolve(temporaryRoot, "visual-production-game");
+  const engineRoot = fileURLToPath(new URL("../..", import.meta.url));
+  const fixture = resolve(engineRoot, "visual-authoring/test/fixtures/production");
+  try {
+    assert.equal(runCli(["new", project, "--name", "Visual Production Game", "--format", "json"]).execution.status, 0);
+    for (const directory of ["sources", "styles", "profiles", "visuals"]) {
+      cpSync(resolve(fixture, directory), resolve(project, directory), { recursive: true });
+    }
+    const first = runCli([
+      "visual", "compile", "visual.goblin.shaman.production",
+      "--project", project,
+      "--format", "json"
+    ]);
+    assert.equal(first.execution.status, 0, first.execution.stdout);
+    const [rendered] = first.result.data.rendered;
+    assert.equal(rendered.validation, "passed");
+    assert.equal(rendered.reused, false);
+    const wizard = runCli([
+      "visual", "compile", "visual.wizard.production",
+      "--project", project,
+      "--format", "json"
+    ]);
+    assert.equal(wizard.execution.status, 0, wizard.execution.stdout);
+    assert.equal(wizard.result.data.rendered[0].validation, "passed");
+    const index = JSON.parse(readFileSync(resolve(project, ".ludivra/visual-index.json"), "utf8"));
+    assert.deepEqual(index.entries.flatMap(({ outputs }) => outputs.map(({ mode }) => mode)), ["2d", "2.5d", "3d"]);
+    for (const entry of index.entries) {
+      for (const output of entry.outputs) {
+        assert.ok(existsSync(resolve(project, output.artifact)), `${output.mode} artifact exists`);
+        assert.ok(existsSync(resolve(project, output.preview)), `${output.mode} preview exists`);
+      }
+    }
+    const manifest = JSON.parse(readFileSync(resolve(project, rendered.manifest), "utf8"));
+    assert.equal(manifest.schemaVersion, 2);
+    assert.equal(manifest.outputs.length, 2);
+    assert.ok(manifest.outputs.every(({ quality, validation }) =>
+      quality === "production" && validation.status === "passed"
+    ));
+
+    const second = runCli([
+      "visual", "compile", "visual.goblin.shaman.production",
+      "--project", project,
+      "--format", "json"
+    ]);
+    assert.equal(second.execution.status, 0, second.execution.stdout);
+    assert.equal(second.result.data.rendered[0].reused, true);
+    const validated = runCli([
+      "visual", "validate", "visual.goblin.shaman.production",
+      "--project", project,
+      "--format", "json"
+    ]);
+    assert.equal(validated.execution.status, 0, validated.execution.stdout);
+    const finalized = runCli([
+      "visual", "finalize", "visual.goblin.shaman.production",
+      "--project", project,
+      "--format", "json"
+    ]);
+    assert.equal(finalized.execution.status, 0, finalized.execution.stdout);
+    assert.equal(finalized.result.data.state, "APPROVED");
+  } finally {
+    rmSync(temporaryRoot, { recursive: true, force: true });
+  }
+});
+
 test("game content compiles a pack and traces a value to the line that authored it", () => {
   const temporaryRoot = mkdtempSync(resolve(tmpdir(), "ludivra-content-"));
   const project = resolve(temporaryRoot, "content-game");

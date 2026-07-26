@@ -1,5 +1,5 @@
 import { readFile } from "node:fs/promises";
-import { basename, isAbsolute, relative, resolve } from "node:path";
+import { basename, extname, isAbsolute, relative, resolve } from "node:path";
 import { parse } from "jsonc-parser";
 import { defineConfig, type Plugin } from "vite";
 
@@ -26,7 +26,22 @@ interface CookedAudioIndex {
 
 interface CookedVisualIndex {
   generatorVersion: number;
-  entries: Array<{ id: string; output: string; manifest: string; preview: string; sha256: string }>;
+  entries: Array<{
+    id: string;
+    output: string;
+    manifest: string;
+    preview: string;
+    sha256: string;
+    outputs?: Array<{
+      id: string;
+      mode: string;
+      profile: string;
+      artifact: string;
+      preview: string;
+      sha256: string;
+      artifacts: Array<{ kind: string; path: string; sha256: string }>;
+    }>;
+  }>;
 }
 
 function withinProject(projectDirectory: string, path: string): string {
@@ -93,14 +108,26 @@ function gamePlugin(projectDirectory: string): Plugin {
         audioSources.push(`${JSON.stringify(audio.eventId)}: import.meta.ROLLUP_FILE_URL_${reference}`);
       }
       // Visual recipes and compiler internals remain outside the host. The web
-      // cooker emits only approved conventional glTF artifacts from the index.
+      // cooker emits only conventional runtime artifacts from the cooked index.
       for (const visual of cookedVisuals.entries) {
-        const sourcePath = withinProject(projectDirectory, visual.output);
-        this.emitFile({
-          type: "asset",
-          name: `${visual.id.replaceAll(".", "-")}.gltf`,
-          source: await readFile(sourcePath)
-        });
+        const runtimeArtifacts = visual.outputs === undefined
+          ? [{ id: visual.id, artifacts: [{ kind: "model", path: visual.output }] }]
+          : visual.outputs.map((output) => ({
+              id: `${visual.id}-${output.id}`,
+              artifacts: output.artifacts.filter(({ kind }) =>
+                kind === "model" || kind === "atlas" || kind === "atlas-metadata"
+              )
+            }));
+        for (const output of runtimeArtifacts) {
+          for (const artifact of output.artifacts) {
+            const sourcePath = withinProject(projectDirectory, artifact.path);
+            this.emitFile({
+              type: "asset",
+              name: `${output.id.replaceAll(".", "-")}-${artifact.kind}${extname(sourcePath)}`,
+              source: await readFile(sourcePath)
+            });
+          }
+        }
       }
       // The compiled pack is embedded as bytes; the plugin never composes content
       // into the script, and it never compiles content itself.

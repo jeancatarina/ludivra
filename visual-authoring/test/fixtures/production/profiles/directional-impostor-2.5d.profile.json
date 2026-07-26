@@ -1,0 +1,13 @@
+{
+  "schemaVersion": 1,
+  "id": "directional-impostor-2.5d",
+  "mode": "2.5d",
+  "quality": "production",
+  "camera": { "projection": "orthographic", "view": "turntable" },
+  "delivery": {
+    "formats": ["png", "atlas-json"],
+    "pixelsPerMeter": 192,
+    "padding": 12,
+    "edgeExtrusion": 4
+  }
+}

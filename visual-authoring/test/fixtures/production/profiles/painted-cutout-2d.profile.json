@@ -1,0 +1,13 @@
+{
+  "schemaVersion": 1,
+  "id": "painted-cutout-2d",
+  "mode": "2d",
+  "quality": "production",
+  "camera": { "projection": "orthographic", "view": "three-quarter" },
+  "delivery": {
+    "formats": ["png", "atlas-json"],
+    "pixelsPerMeter": 320,
+    "padding": 16,
+    "edgeExtrusion": 4
+  }
+}

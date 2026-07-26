@@ -1,0 +1,231 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ludivra.dev/schemas/character-spec/v2",
+  "title": "Ludivra production multi-render CharacterSpec",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "id", "style", "seed", "identity", "outputs"],
+  "properties": {
+    "schemaVersion": { "const": 2 },
+    "id": { "$ref": "#/$defs/id" },
+    "style": { "$ref": "#/$defs/id" },
+    "seed": { "type": "integer", "minimum": 0, "maximum": 4294967295 },
+    "identity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["description", "silhouette", "paletteRoles", "focalFeatures"],
+      "properties": {
+        "description": { "type": "string", "minLength": 20 },
+        "silhouette": { "type": "string", "minLength": 10 },
+        "paletteRoles": {
+          "type": "array",
+          "minItems": 2,
+          "uniqueItems": true,
+          "items": { "$ref": "#/$defs/id" }
+        },
+        "focalFeatures": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 8,
+          "items": { "type": "string", "minLength": 3 }
+        }
+      }
+    },
+    "outputs": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 8,
+      "items": { "$ref": "#/$defs/output" }
+    }
+  },
+  "$defs": {
+    "id": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "^[a-z][a-z0-9]*([._-][a-z0-9]+)*$"
+    },
+    "hash": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+    "provenance": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["origin", "license", "sha256"],
+      "properties": {
+        "origin": { "type": "string", "minLength": 1 },
+        "license": { "type": "string", "minLength": 1 },
+        "sha256": { "$ref": "#/$defs/hash" },
+        "generator": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["name", "mode", "prompt"],
+          "properties": {
+            "name": { "type": "string", "minLength": 1 },
+            "version": { "type": "string", "minLength": 1 },
+            "mode": { "enum": ["built-in", "api", "local", "authored"] },
+            "prompt": { "type": "string", "minLength": 20 },
+            "seed": { "type": "integer", "minimum": 0 }
+          }
+        }
+      }
+    },
+    "matte": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["color", "transparentThreshold", "opaqueThreshold"],
+      "properties": {
+        "color": { "type": "string", "pattern": "^#[A-Fa-f0-9]{6}$" },
+        "transparentThreshold": { "type": "number", "minimum": 0, "maximum": 441.7 },
+        "opaqueThreshold": { "type": "number", "minimum": 0, "maximum": 441.7 }
+      }
+    },
+    "baseOutput": {
+      "type": "object",
+      "required": ["id", "mode", "profile", "quality", "source", "requirements"],
+      "properties": {
+        "id": { "$ref": "#/$defs/id" },
+        "mode": { "enum": ["2d", "2.5d", "3d"] },
+        "profile": { "$ref": "#/$defs/id" },
+        "quality": { "enum": ["blockout", "production"] }
+      }
+    },
+    "rasterRequirements": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["minimumSourceSize", "pixelsPerMeter", "padding", "edgeExtrusion", "pivot"],
+      "properties": {
+        "minimumSourceSize": { "type": "integer", "minimum": 128, "maximum": 8192 },
+        "pixelsPerMeter": { "type": "integer", "minimum": 32, "maximum": 2048 },
+        "padding": { "type": "integer", "minimum": 2, "maximum": 64 },
+        "edgeExtrusion": { "type": "integer", "minimum": 1, "maximum": 16 },
+        "maximumScaleVariance": { "type": "number", "minimum": 0, "maximum": 0.5 },
+        "pivot": {
+          "type": "array",
+          "prefixItems": [
+            { "type": "number", "minimum": 0, "maximum": 1 },
+            { "type": "number", "minimum": 0, "maximum": 1 }
+          ],
+          "minItems": 2,
+          "maxItems": 2
+        }
+      }
+    },
+    "output": {
+      "oneOf": [
+        {
+          "allOf": [
+            { "$ref": "#/$defs/baseOutput" },
+            {
+              "additionalProperties": false,
+              "properties": {
+                "id": true,
+                "mode": { "const": "2d" },
+                "profile": { "const": "painted-cutout-2d" },
+                "quality": { "const": "production" },
+                "source": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": ["kind", "path", "matte", "provenance"],
+                  "properties": {
+                    "kind": { "const": "raster" },
+                    "path": { "type": "string", "minLength": 1 },
+                    "matte": { "$ref": "#/$defs/matte" },
+                    "provenance": { "$ref": "#/$defs/provenance" }
+                  }
+                },
+                "requirements": { "$ref": "#/$defs/rasterRequirements" },
+                "animations": {
+                  "type": "array",
+                  "minItems": 1,
+                  "items": { "$ref": "#/$defs/id" }
+                }
+              }
+            }
+          ]
+        },
+        {
+          "allOf": [
+            { "$ref": "#/$defs/baseOutput" },
+            {
+              "additionalProperties": false,
+              "properties": {
+                "id": true,
+                "mode": { "const": "2.5d" },
+                "profile": { "const": "directional-impostor-2.5d" },
+                "quality": { "const": "production" },
+                "source": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": ["kind", "path", "segmentation", "directions", "matte", "provenance"],
+                  "properties": {
+                    "kind": { "const": "directional-sheet" },
+                    "path": { "type": "string", "minLength": 1 },
+                    "segmentation": { "const": "alpha-columns" },
+                    "directions": {
+                      "type": "array",
+                      "minItems": 4,
+                      "uniqueItems": true,
+                      "items": {
+                        "enum": ["south", "south-west", "west", "north-west", "north", "north-east", "east", "south-east"]
+                      }
+                    },
+                    "matte": { "$ref": "#/$defs/matte" },
+                    "provenance": { "$ref": "#/$defs/provenance" }
+                  }
+                },
+                "requirements": {
+                  "$ref": "#/$defs/rasterRequirements",
+                  "required": ["maximumScaleVariance"]
+                },
+                "animations": {
+                  "type": "array",
+                  "minItems": 1,
+                  "items": { "$ref": "#/$defs/id" }
+                }
+              }
+            }
+          ]
+        },
+        {
+          "allOf": [
+            { "$ref": "#/$defs/baseOutput" },
+            {
+              "additionalProperties": false,
+              "properties": {
+                "id": true,
+                "mode": { "const": "3d" },
+                "profile": { "const": "stylized-pbr-3d" },
+                "quality": { "const": "production" },
+                "source": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": ["kind", "path", "provenance"],
+                  "properties": {
+                    "kind": { "const": "rigged-gltf" },
+                    "path": { "type": "string", "minLength": 1 },
+                    "provenance": { "$ref": "#/$defs/provenance" }
+                  }
+                },
+                "requirements": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": ["minimumAnimations", "requiredAnimations", "maximumTriangles", "minimumTextureSize", "lods"],
+                  "properties": {
+                    "minimumAnimations": { "type": "integer", "minimum": 1 },
+                    "requiredAnimations": {
+                      "type": "array",
+                      "minItems": 1,
+                      "uniqueItems": true,
+                      "items": { "$ref": "#/$defs/id" }
+                    },
+                    "maximumTriangles": { "type": "integer", "minimum": 100 },
+                    "minimumTextureSize": { "type": "integer", "minimum": 128 },
+                    "lods": { "type": "integer", "minimum": 1, "maximum": 8 }
+                  }
+                }
+              }
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

@@ -1,0 +1,51 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ludivra.dev/schemas/visual-render-profile/v1",
+  "title": "Ludivra Visual Forge render profile",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "id", "mode", "quality", "camera", "delivery"],
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "id": {
+      "enum": ["painted-cutout-2d", "directional-impostor-2.5d", "stylized-pbr-3d", "stylized-humanoid-blockout-3d"]
+    },
+    "mode": { "enum": ["2d", "2.5d", "3d"] },
+    "quality": { "enum": ["blockout", "production"] },
+    "camera": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["projection", "view"],
+      "properties": {
+        "projection": { "enum": ["orthographic", "perspective"] },
+        "view": { "enum": ["front", "three-quarter", "isometric", "turntable"] }
+      }
+    },
+    "delivery": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["formats", "pixelsPerMeter"],
+      "properties": {
+        "formats": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": { "enum": ["png", "atlas-json", "gltf", "glb"] }
+        },
+        "pixelsPerMeter": { "type": "integer", "minimum": 32, "maximum": 2048 },
+        "padding": { "type": "integer", "minimum": 2, "maximum": 64 },
+        "edgeExtrusion": { "type": "integer", "minimum": 1, "maximum": 16 }
+      }
+    }
+  },
+  "allOf": [
+    {
+      "if": { "properties": { "quality": { "const": "production" } } },
+      "then": {
+        "properties": {
+          "id": { "not": { "const": "stylized-humanoid-blockout-3d" } }
+        }
+      }
+    }
+  ]
+}

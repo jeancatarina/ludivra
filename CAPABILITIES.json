@@ -40,7 +40,7 @@
     {
       "id": "authoring.visual-forge",
       "status": "experimental",
-      "version": "0.1.0",
+      "version": "0.2.0",
       "owner": "visual-authoring",
       "targets": [
         "native-headless",
@@ -49,13 +49,20 @@
       ],
       "contracts": [
         "schemas/character-spec.schema.json",
+        "schemas/character-spec-v2.schema.json",
         "schemas/texture-request.schema.json",
         "schemas/visual-forge-manifest.schema.json",
+        "schemas/visual-forge-manifest-v2.schema.json",
+        "schemas/visual-render-profile.schema.json",
         "schemas/visual-style.schema.json"
       ],
       "examples": [
         "visual-authoring/test/fixtures/goblin-shaman.character.json",
-        "visual-authoring/test/fixtures/stylized/style.yaml"
+        "visual-authoring/test/fixtures/stylized/style.yaml",
+        "visual-authoring/test/fixtures/production/visuals/goblin-shaman-production.character.json",
+        "visual-authoring/test/fixtures/production/visuals/wizard-production.character.json",
+        "visual-authoring/test/fixtures/production/previews",
+        "visual-authoring/test/fixtures/production/profiles"
       ],
       "dependencies": [
         "presentation.three"
@@ -66,16 +73,16 @@
       ],
       "limitations": [
         {
-          "code": "VISUAL_ARCHETYPE_HUMANOID_ONLY",
-          "message": "The first generator supports small and medium stylized humanoids only."
+          "code": "VISUAL_PROCEDURAL_BLOCKOUT_ONLY",
+          "message": "The skeleton-first procedural generator is a blockout profile; production outputs require declared raster, directional-sheet or rigged glTF sources."
         },
         {
-          "code": "VISUAL_CLOTH_PROCEDURAL_ONLY",
-          "message": "Clothing uses generated shells and semantic secondary motion; full cloth simulation is outside this capability."
+          "code": "VISUAL_GENERATIVE_SOURCE_FROZEN",
+          "message": "Generative source re-execution is not byte deterministic; the accepted source is frozen and verified by SHA-256."
         },
         {
-          "code": "VISUAL_SURFACE_IMPORT_MANUAL",
-          "message": "Generated swatches, decals, masks and concept renders may require a manual inbox import before local compilation."
+          "code": "VISUAL_2D_FIXTURE_IDLE_ONLY",
+          "message": "The production raster fixtures prove final-quality idle cutouts and directions; projects must supply additional declared frames for movement animation."
         }
       ]
     },

@@ -212,15 +212,15 @@
           "evidence": ["capabilities/authoring-audio-forge/capability.json", "audio-authoring/src", "cli/src/audio-forge.ts"]
         },
         {
-          "summary": "Visual Forge possui Style Bible, CharacterSpec, gerador skeleton-first, skinning, superfícies compiladas, glTF, preview, validação e jobs de CLI.",
+          "summary": "Visual Forge v2 compila personagens finais 2D, 2.5D e 3D: RGBA/atlas com pivôs e bleed, vistas direcionais, glTF rigado com materiais e animações, perfis de qualidade, proveniência, previews e gates; o gerador skeleton-first v1 permanece como blockout compatível.",
           "capabilities": ["authoring.visual-forge"],
-          "evidence": ["capabilities/authoring-visual-forge/capability.json", "visual-authoring/src", "cli/src/visual-forge.ts"]
+          "evidence": ["capabilities/authoring-visual-forge/capability.json", "visual-authoring/src/production.ts", "visual-authoring/test/fixtures/production", "cli/src/visual-forge.ts"]
         }
       ],
       "remaining": [
         "Completar música, stems, previews gráficos e runtime/cooker do Audio Forge.",
         "Implementar World, Construction e Physics Forges.",
-        "Aplicar o manifest comum de Forge, origem, licença, preview e regeneração."
+        "Aplicar o manifest comum de Forge às famílias World, Construction e Physics."
       ],
       "gate": "Os cinco Forges produzem artefatos rastreáveis usados nas fixtures e preparados para os jogos finais."
     },
