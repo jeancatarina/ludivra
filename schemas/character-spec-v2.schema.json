@@ -55,6 +55,7 @@
         "nose": { "type": "number", "minimum": 0, "maximum": 1 }
       }
     },
+    "features": { "$ref": "#/$defs/features" },
     "skin": { "enum": ["skin", "bone", "stone", "crystal"] },
     "clothing": { "type": "array", "maxItems": 8, "items": { "$ref": "#/$defs/wearable" } },
     "equipment": { "type": "array", "maxItems": 4, "items": { "$ref": "#/$defs/equipment" } },
@@ -95,6 +96,72 @@
   "$defs": {
     "id": { "type": "string", "minLength": 1, "pattern": "^[a-z][a-z0-9]*([._-][a-z0-9]+)*$" },
     "material": { "enum": ["skin", "cloth", "leather", "wood", "bone", "metal", "stone", "crystal"] },
+    "features": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "generationProfile": { "enum": ["hero-mascot", "stylized-hero", "compact-creature"] },
+        "presentationPose": { "enum": ["relaxed", "a-pose", "t-pose"] },
+        "headwear": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["type", "primaryRole", "secondaryRole", "badge"],
+          "properties": {
+            "type": { "enum": ["cap", "beanie", "helmet", "hood"] },
+            "primaryRole": { "$ref": "#/$defs/id" },
+            "secondaryRole": { "$ref": "#/$defs/id" },
+            "badge": { "enum": ["none", "circle", "star"] }
+          }
+        },
+        "hair": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["style", "colorRole"],
+          "properties": {
+            "style": { "enum": ["none", "short", "swept", "mohawk"] },
+            "colorRole": { "$ref": "#/$defs/id" }
+          }
+        },
+        "facialHair": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["style", "colorRole"],
+          "properties": {
+            "style": { "enum": ["none", "moustache", "beard", "goatee"] },
+            "colorRole": { "$ref": "#/$defs/id" }
+          }
+        },
+        "hands": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["style", "colorRole"],
+          "properties": {
+            "style": { "enum": ["bare", "gloves"] },
+            "colorRole": { "$ref": "#/$defs/id" }
+          }
+        },
+        "footwear": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["style", "colorRole"],
+          "properties": {
+            "style": { "enum": ["bare", "shoes", "boots"] },
+            "colorRole": { "$ref": "#/$defs/id" }
+          }
+        },
+        "outfit": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["construction", "primaryRole", "secondaryRole", "trimRole"],
+          "properties": {
+            "construction": { "enum": ["single-layer", "overalls", "robe", "armor"] },
+            "primaryRole": { "$ref": "#/$defs/id" },
+            "secondaryRole": { "$ref": "#/$defs/id" },
+            "trimRole": { "$ref": "#/$defs/id" }
+          }
+        }
+      }
+    },
     "wearable": {
       "type": "object",
       "additionalProperties": false,

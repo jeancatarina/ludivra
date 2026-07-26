@@ -506,7 +506,7 @@ test("game visual compiles, validates and finalizes a deterministic humanoid job
     const first = runCli(["visual", "compile", "visual.goblin.shaman", "--project", project, "--format", "json"]);
     assert.equal(first.execution.status, 0, first.execution.stdout);
     assert.equal(first.result.data.rendered[0].validation, "passed");
-    assert.equal(first.result.data.rendered[0].triangles, 15200);
+    assert.equal(first.result.data.rendered[0].triangles, 118669);
     assert.equal(first.result.data.rendered[0].bones, 21);
     assert.equal(first.result.data.rendered[0].reused, false);
     assert.ok(existsSync(resolve(project, first.result.data.rendered[0].output)));
@@ -543,19 +543,37 @@ test("game visual compiles, validates and finalizes a deterministic humanoid job
       "--format", "json"
     ]);
     assert.equal(planned.execution.status, 0, planned.execution.stdout);
-    assert.equal(planned.result.data.state, "WAITING_FOR_TEXTURES");
-    assert.equal(planned.result.data.textureRequests[0].expected, "surface.primary.png");
-    const inbox = resolve(project, "texture-inbox");
-    mkdirSync(inbox, { recursive: true });
-    writeFileSync(resolve(inbox, "surface.primary.png"), Buffer.from("manual generated-image placeholder"));
-    const imported = runCli([
-      "visual", "import", inbox,
-      "--id", "visual.orc.guard",
+    assert.equal(planned.result.data.state, "PLANNED");
+    assert.deepEqual(planned.result.data.textureRequests, []);
+    const plannedSpec = JSON.parse(readFileSync(
+      resolve(project, "visuals/visual-orc-guard.character.json"),
+      "utf8"
+    ));
+    assert.equal(plannedSpec.features.generationProfile, "compact-creature");
+    assert.equal(plannedSpec.features.hands.style, "bare");
+    assert.equal(plannedSpec.features.outfit.construction, "single-layer");
+    assert.deepEqual(plannedSpec.surfaces, [], "first-pass planning must never wait for external visual inputs");
+
+    const mascotPlan = runCli([
+      "visual", "plan", "mascote mecanico com bone, bigode, luvas e macacao",
+      "--id", "visual.mascot.mechanic",
+      "--style", "stylized",
       "--project", project,
       "--format", "json"
     ]);
-    assert.equal(imported.execution.status, 0, imported.execution.stdout);
-    assert.equal(imported.result.data.imported[0].state, "TEXTURES_IMPORTED");
+    assert.equal(mascotPlan.execution.status, 0, mascotPlan.execution.stdout);
+    const mascotSpec = JSON.parse(readFileSync(
+      resolve(project, "visuals/visual-mascot-mechanic.character.json"),
+      "utf8"
+    ));
+    assert.equal(mascotSpec.features.generationProfile, "hero-mascot");
+    assert.equal(mascotSpec.features.presentationPose, "t-pose");
+    assert.equal(mascotSpec.features.headwear.type, "cap");
+    assert.equal(mascotSpec.features.headwear.badge, "star");
+    assert.equal(mascotSpec.features.facialHair.style, "moustache");
+    assert.equal(mascotSpec.features.hands.style, "gloves");
+    assert.equal(mascotSpec.features.outfit.construction, "overalls");
+    assert.deepEqual(mascotSpec.surfaces, []);
   } finally {
     rmSync(temporaryRoot, { recursive: true, force: true });
   }

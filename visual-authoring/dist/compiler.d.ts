@@ -1,7 +1,7 @@
 import { type CharacterGeometry } from "./geometry.js";
 import type { CharacterSpec, VisualStyleBible } from "./spec.js";
 import { type VisualValidationReport } from "./validation.js";
-export declare const VISUAL_GENERATOR_VERSION = 3;
+export declare const VISUAL_GENERATOR_VERSION = 4;
 export declare function visualCacheKey(spec: CharacterSpec, style: VisualStyleBible, textureHashes?: Record<string, string>): string;
 export interface CompiledCharacter {
     geometry: CharacterGeometry;

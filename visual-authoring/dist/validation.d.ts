@@ -24,6 +24,12 @@ export interface VisualValidationReport {
         feetGroundErrorM: number;
         equipmentReachErrorM: number;
         intersectionRatio: number;
+        organicTriangles: number;
+        organicVertexRatio: number;
+        semanticDetails: number;
+        surfaceClasses: number;
+        profileModules: number;
+        eyeNoseClearanceM: number;
         bounds: {
             min: Vector3;
             max: Vector3;

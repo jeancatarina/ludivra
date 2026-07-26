@@ -40,7 +40,7 @@
     {
       "id": "authoring.visual-forge",
       "status": "experimental",
-      "version": "0.3.0",
+      "version": "0.4.0",
       "owner": "visual-authoring",
       "targets": [
         "native-headless",
@@ -61,6 +61,8 @@
         "visual-authoring/test/fixtures/stylized/style.yaml",
         "visual-authoring/test/fixtures/production/visuals/goblin-shaman-production.character.json",
         "visual-authoring/test/fixtures/production/styles/stylized/style.yaml",
+        "visual-authoring/test/fixtures/production/visuals/indie-mechanic-mascot.character.json",
+        "visual-authoring/test/fixtures/production/styles/mascot/style.yaml",
         "visual-authoring/test/fixtures/production/generated"
       ],
       "dependencies": [

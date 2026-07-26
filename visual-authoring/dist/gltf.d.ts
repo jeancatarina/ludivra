@@ -1,4 +1,4 @@
-import type { CharacterGeometry } from "./geometry.js";
+import { type CharacterGeometry } from "./geometry.js";
 import type { CharacterSpec, VisualStyleBible } from "./spec.js";
 export interface GltfArtifact {
     json: string;

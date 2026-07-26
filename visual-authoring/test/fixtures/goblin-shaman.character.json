@@ -21,6 +21,32 @@
     "jaw": 0.42,
     "nose": 0.73
   },
+  "features": {
+    "generationProfile": "compact-creature",
+    "presentationPose": "relaxed",
+    "hair": {
+      "style": "mohawk",
+      "colorRole": "leather"
+    },
+    "facialHair": {
+      "style": "goatee",
+      "colorRole": "leather"
+    },
+    "hands": {
+      "style": "bare",
+      "colorRole": "skin"
+    },
+    "footwear": {
+      "style": "bare",
+      "colorRole": "skin"
+    },
+    "outfit": {
+      "construction": "robe",
+      "primaryRole": "cloth",
+      "secondaryRole": "cloth",
+      "trimRole": "accent"
+    }
+  },
   "skin": "skin",
   "clothing": [
     {

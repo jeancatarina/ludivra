@@ -271,7 +271,7 @@ Produzir assets e receitas convencionais, rastreáveis e regeneráveis em cinco 
 ### Entregue
 
 - Audio Forge possui receita JSONC, render determinístico, análise, cache, cooker e comandos de CLI. Capabilities: `authoring.audio-forge`. Evidência: [capabilities/authoring-audio-forge/capability.json](capabilities/authoring-audio-forge/capability.json), [audio-authoring/src](audio-authoring/src), [cli/src/audio-forge.ts](cli/src/audio-forge.ts).
-- Visual Forge v2 gera localmente um personagem canônico e deriva dele saídas finais 2D, 2.5D e 3D: PNG/atlas, oito vistas direcionais, glTF rigado, UV, mapas PBR, animações, previews e gates, sem assets visuais externos. Capabilities: `authoring.visual-forge`. Evidência: [capabilities/authoring-visual-forge/capability.json](capabilities/authoring-visual-forge/capability.json), [visual-authoring/src/production.ts](visual-authoring/src/production.ts), [visual-authoring/test/fixtures/production](visual-authoring/test/fixtures/production), [cli/src/visual-forge.ts](cli/src/visual-forge.ts).
+- Visual Forge v2 gera localmente um personagem canônico com anatomia orgânica contínua e deriva dele saídas 2D, 2.5D e 3D: PNG/atlas, oito vistas, glTF rigado, UV, mapas PBR, animações e gates de superfície orgânica, sem assets externos. Capabilities: `authoring.visual-forge`. Evidência: [capabilities/authoring-visual-forge/capability.json](capabilities/authoring-visual-forge/capability.json), [visual-authoring/src/production.ts](visual-authoring/src/production.ts), [visual-authoring/test/fixtures/production](visual-authoring/test/fixtures/production), [cli/src/visual-forge.ts](cli/src/visual-forge.ts).
 
 ### Falta
 

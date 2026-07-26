@@ -1,3 +1,4 @@
+import { SURFACE, SURFACE_NAMES } from "./geometry.js";
 import { PNG } from "pngjs";
 class BinaryBuilder {
     chunks = [];
@@ -78,27 +79,55 @@ function animationQuaternions(kind) {
     }
     return values;
 }
-function generatedTexture(style, kind, size = 512) {
+function generatedTexture(style, kind, surface, size = 512) {
     const image = new PNG({ width: size, height: size });
     for (let y = 0; y < size; y += 1) {
         for (let x = 0; x < size; x += 1) {
             const offset = (y * size + x) * 4;
             const weave = Math.sin(x * 0.31) * Math.sin(y * 0.27);
             const grain = Math.sin((x * 17 + y * 31) * 0.071) * 0.5 + Math.sin((x * 7 - y * 13) * 0.113) * 0.5;
+            const pores = Math.sin((x * 23 + y * 19) * 0.083) * Math.sin((x * 11 - y * 29) * 0.057);
+            const strands = Math.sin(x * 0.13 + y * 0.83) * 0.65 + Math.sin(x * 0.07 + y * 1.61) * 0.35;
+            const leather = Math.sin(x * 0.073 + Math.sin(y * 0.11) * 2.2) *
+                Math.sin(y * 0.19 + Math.sin(x * 0.047));
+            const pattern = surface === SURFACE.skin ? pores * 0.32 + grain * 0.16
+                : surface === SURFACE.cloth ? weave * 0.72 + grain * 0.15
+                    : surface === SURFACE.leather ? leather * 0.58 + grain * 0.24
+                        : surface === SURFACE.hair ? strands * 0.72 + grain * 0.12
+                            : surface === SURFACE.glossy ? grain * 0.03
+                                : grain * 0.18;
+            const normalStrength = surface === SURFACE.cloth ? 18
+                : surface === SURFACE.leather ? 13
+                    : surface === SURFACE.hair ? 16
+                        : surface === SURFACE.skin ? 5
+                            : surface === SURFACE.glossy ? 1
+                                : 6;
+            const roughBase = surface === SURFACE.skin ? 132
+                : surface === SURFACE.cloth ? 218
+                    : surface === SURFACE.leather ? 158
+                        : surface === SURFACE.hair ? 184
+                            : surface === SURFACE.glossy ? 48
+                                : 112;
             if (kind === "normal") {
                 image.data.set([
-                    Math.round(128 + grain * 9),
-                    Math.round(128 + weave * 7),
-                    252,
+                    Math.round(128 + pattern * normalStrength),
+                    Math.round(128 + (pattern * 0.63 + weave * 0.18) * normalStrength),
+                    Math.round(254 - Math.abs(pattern) * 8),
                     255
                 ], offset);
             }
             else if (kind === "roughness") {
-                const rough = Math.round(166 + weave * 9 + grain * 7);
+                const rough = Math.round(roughBase + pattern * 18 + style.roughnessBias * 16);
                 image.data.set([0, rough, 0, 255], offset);
             }
             else {
-                const variation = 0.92 + weave * 0.025 + grain * 0.018;
+                const amplitude = surface === SURFACE.cloth ? 0.075
+                    : surface === SURFACE.leather ? 0.06
+                        : surface === SURFACE.hair ? 0.07
+                            : surface === SURFACE.skin ? 0.022
+                                : surface === SURFACE.glossy ? 0.004
+                                    : 0.025;
+                const variation = 0.94 + pattern * amplitude;
                 image.data.set([
                     Math.round(255 * variation),
                     Math.round(252 * variation),
@@ -144,13 +173,25 @@ export function buildGltf(spec, style, geometry) {
         count: geometry.weights.length / 4,
         type: "VEC4"
     }, 34962);
-    const indexAccessor = binary.add(geometry.indices, {
-        componentType: 5125,
-        count: geometry.indices.length,
-        type: "SCALAR",
-        min: [0],
-        max: [geometry.positions.length / 3 - 1]
-    }, 34963);
+    const indexGroups = SURFACE_NAMES.map(() => []);
+    for (let triangle = 0; triangle < geometry.indices.length / 3; triangle += 1) {
+        const surface = geometry.triangleSurfaces[triangle] ?? SURFACE.hard;
+        const group = indexGroups[surface] ?? indexGroups[SURFACE.hard];
+        group.push(geometry.indices[triangle * 3] ?? 0, geometry.indices[triangle * 3 + 1] ?? 0, geometry.indices[triangle * 3 + 2] ?? 0);
+    }
+    const activeSurfaces = indexGroups
+        .map((indices, surface) => ({ indices, surface: surface }))
+        .filter(({ indices }) => indices.length > 0)
+        .map(({ indices, surface }) => ({
+        surface,
+        accessor: binary.add(new Uint32Array(indices), {
+            componentType: 5125,
+            count: indices.length,
+            type: "SCALAR",
+            min: [indices.reduce((minimum, value) => Math.min(minimum, value), Number.POSITIVE_INFINITY)],
+            max: [indices.reduce((maximum, value) => Math.max(maximum, value), Number.NEGATIVE_INFINITY)]
+        }, 34963)
+    }));
     const inverseBindMatrices = new Float32Array(geometry.skeleton.length * 16);
     for (let index = 0; index < geometry.skeleton.length; index += 1) {
         inverseBindMatrices.set(translationMatrix(geometry.skeleton[index]?.start ?? [0, 0, 0]), index * 16);
@@ -198,11 +239,14 @@ export function buildGltf(spec, style, geometry) {
         };
     });
     const roughness = Math.min(1, Math.max(0.04, 0.62 + style.roughnessBias * 0.25));
-    const textures = {
-        albedo: generatedTexture(style, "albedo"),
-        normal: generatedTexture(style, "normal"),
-        roughness: generatedTexture(style, "roughness")
-    };
+    const materialTextureSets = activeSurfaces.map(({ surface }) => ({
+        surface,
+        albedo: generatedTexture(style, "albedo", surface),
+        normal: generatedTexture(style, "normal", surface),
+        roughness: generatedTexture(style, "roughness", surface)
+    }));
+    const representativeTextures = materialTextureSets.find(({ surface }) => surface === SURFACE.skin) ??
+        materialTextureSets[0];
     const binaryBytes = binary.bytes();
     const gltf = {
         asset: {
@@ -215,19 +259,19 @@ export function buildGltf(spec, style, geometry) {
         nodes,
         meshes: [{
                 name: spec.id,
-                primitives: [{
-                        attributes: {
-                            POSITION: positionAccessor,
-                            NORMAL: normalAccessor,
-                            COLOR_0: colorAccessor,
-                            TEXCOORD_0: texcoordAccessor,
-                            JOINTS_0: jointAccessor,
-                            WEIGHTS_0: weightAccessor
-                        },
-                        indices: indexAccessor,
-                        material: 0,
-                        mode: 4
-                    }]
+                primitives: activeSurfaces.map(({ accessor, surface }, material) => ({
+                    attributes: {
+                        POSITION: positionAccessor,
+                        NORMAL: normalAccessor,
+                        COLOR_0: colorAccessor,
+                        TEXCOORD_0: texcoordAccessor,
+                        JOINTS_0: jointAccessor,
+                        WEIGHTS_0: weightAccessor
+                    },
+                    indices: accessor,
+                    material,
+                    mode: 4
+                }))
             }],
         skins: [{
                 name: `${spec.id}.rig`,
@@ -235,37 +279,63 @@ export function buildGltf(spec, style, geometry) {
                 skeleton: 0,
                 joints: geometry.skeleton.map((_bone, index) => index)
             }],
-        materials: [{
-                name: `${spec.id}.procedural-base`,
-                pbrMetallicRoughness: {
-                    baseColorFactor: hexToFactor("#ffffff"),
-                    baseColorTexture: { index: 0 },
-                    metallicFactor: spec.skin === "metal" ? 0.8 : 0,
-                    roughnessFactor: roughness,
-                    metallicRoughnessTexture: { index: 2 }
-                },
-                normalTexture: { index: 1, scale: 0.35 },
-                doubleSided: false,
-                extras: {
-                    mapping: "triplanar",
-                    layers: ["base-color", "cellular-noise", "curvature-darkening", "joint-warmth"]
-                }
-            }],
-        images: [
-            { name: `${spec.id}.albedo`, uri: `data:image/png;base64,${textures.albedo.toString("base64")}` },
-            { name: `${spec.id}.normal`, uri: `data:image/png;base64,${textures.normal.toString("base64")}` },
-            { name: `${spec.id}.roughness`, uri: `data:image/png;base64,${textures.roughness.toString("base64")}` }
-        ],
+        materials: activeSurfaces.map(({ surface }, material) => ({
+            name: `${spec.id}.${SURFACE_NAMES[surface]}`,
+            pbrMetallicRoughness: {
+                baseColorFactor: hexToFactor("#ffffff"),
+                baseColorTexture: { index: material * 3 },
+                metallicFactor: surface === SURFACE.hard && spec.skin === "metal" ? 0.8 : 0,
+                roughnessFactor: surface === SURFACE.skin ? Math.max(0.3, roughness - 0.2)
+                    : surface === SURFACE.cloth ? Math.min(1, roughness + 0.18)
+                        : surface === SURFACE.leather ? Math.max(0.36, roughness - 0.08)
+                            : surface === SURFACE.glossy ? 0.14
+                                : surface === SURFACE.hair ? 0.64
+                                    : 0.34,
+                metallicRoughnessTexture: { index: material * 3 + 2 }
+            },
+            normalTexture: {
+                index: material * 3 + 1,
+                scale: surface === SURFACE.cloth ? 0.42 : surface === SURFACE.leather ? 0.28 : 0.12
+            },
+            doubleSided: false,
+            extras: {
+                mapping: "triplanar",
+                semanticSurface: SURFACE_NAMES[surface],
+                layers: ["base-color", "micro-normal", "curvature-darkening", "contact-occlusion"]
+            }
+        })),
+        images: materialTextureSets.flatMap(({ surface, albedo, normal, roughness: roughnessMap }) => [
+            {
+                name: `${spec.id}.${SURFACE_NAMES[surface]}.albedo`,
+                uri: `data:image/png;base64,${albedo.toString("base64")}`
+            },
+            {
+                name: `${spec.id}.${SURFACE_NAMES[surface]}.normal`,
+                uri: `data:image/png;base64,${normal.toString("base64")}`
+            },
+            {
+                name: `${spec.id}.${SURFACE_NAMES[surface]}.roughness`,
+                uri: `data:image/png;base64,${roughnessMap.toString("base64")}`
+            }
+        ]),
         samplers: [{ magFilter: 9729, minFilter: 9987, wrapS: 10497, wrapT: 10497 }],
-        textures: [
-            { name: `${spec.id}.albedo`, sampler: 0, source: 0 },
-            { name: `${spec.id}.normal`, sampler: 0, source: 1 },
-            { name: `${spec.id}.roughness`, sampler: 0, source: 2 }
-        ],
+        textures: materialTextureSets.flatMap(({ surface }, material) => [
+            { name: `${spec.id}.${SURFACE_NAMES[surface]}.albedo`, sampler: 0, source: material * 3 },
+            { name: `${spec.id}.${SURFACE_NAMES[surface]}.normal`, sampler: 0, source: material * 3 + 1 },
+            { name: `${spec.id}.${SURFACE_NAMES[surface]}.roughness`, sampler: 0, source: material * 3 + 2 }
+        ]),
         animations,
         buffers: [{ uri: `data:application/octet-stream;base64,${binaryBytes.toString("base64")}`, byteLength: binaryBytes.length }],
         bufferViews: binary.views,
         accessors: binary.accessors
     };
-    return { json: `${JSON.stringify(gltf, null, 2)}\n`, binary: binaryBytes, textures };
+    return {
+        json: `${JSON.stringify(gltf, null, 2)}\n`,
+        binary: binaryBytes,
+        textures: {
+            albedo: representativeTextures.albedo,
+            normal: representativeTextures.normal,
+            roughness: representativeTextures.roughness
+        }
+    };
 }

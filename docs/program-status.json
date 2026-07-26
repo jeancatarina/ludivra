@@ -212,7 +212,7 @@
           "evidence": ["capabilities/authoring-audio-forge/capability.json", "audio-authoring/src", "cli/src/audio-forge.ts"]
         },
         {
-          "summary": "Visual Forge v2 gera localmente um personagem canônico e deriva dele saídas finais 2D, 2.5D e 3D: PNG/atlas, oito vistas direcionais, glTF rigado, UV, mapas PBR, animações, previews e gates, sem assets visuais externos.",
+          "summary": "Visual Forge v2 gera localmente um personagem canônico com anatomia orgânica contínua e deriva dele saídas 2D, 2.5D e 3D: PNG/atlas, oito vistas, glTF rigado, UV, mapas PBR, animações e gates de superfície orgânica, sem assets externos.",
           "capabilities": ["authoring.visual-forge"],
           "evidence": ["capabilities/authoring-visual-forge/capability.json", "visual-authoring/src/production.ts", "visual-authoring/test/fixtures/production", "cli/src/visual-forge.ts"]
         }

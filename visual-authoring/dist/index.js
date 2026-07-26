@@ -1,4 +1,5 @@
 export * from "./compiler.js";
+export * from "./blueprint.js";
 export * from "./geometry.js";
 export * from "./gltf.js";
 export * from "./preview.js";

@@ -1,5 +1,6 @@
 import type { CharacterGeometry, Vector3 } from "./geometry.js";
 import type { CharacterSpec, VisualStyleBible } from "./spec.js";
+import { buildHumanoidBlueprint } from "./blueprint.js";
 
 export interface VisualValidationCheck {
   id: string;
@@ -26,6 +27,12 @@ export interface VisualValidationReport {
     feetGroundErrorM: number;
     equipmentReachErrorM: number;
     intersectionRatio: number;
+    organicTriangles: number;
+    organicVertexRatio: number;
+    semanticDetails: number;
+    surfaceClasses: number;
+    profileModules: number;
+    eyeNoseClearanceM: number;
     bounds: { min: Vector3; max: Vector3 };
   };
 }
@@ -106,11 +113,60 @@ function approximateIntersectionRatio(geometry: CharacterGeometry): number {
   return intersections / Math.max(1, candidates);
 }
 
+function eyeNoseClearance(
+  spec: CharacterSpec,
+  geometry: CharacterGeometry,
+  blueprint: ReturnType<typeof buildHumanoidBlueprint>
+): number {
+  if (spec.archetype.head !== "human") return spec.anatomy.heightM;
+  const head = geometry.skeleton.find(({ name }) => name === "head");
+  const crown = geometry.skeleton.find(({ name }) => name === "head-crown");
+  if (head === undefined || crown === undefined) return Number.NEGATIVE_INFINITY;
+
+  const height = spec.anatomy.heightM;
+  const headRadius = height * blueprint.anatomy.headRadius * spec.anatomy.headScale;
+  const headCenter: Vector3 = [
+    0,
+    head.start[1] + (crown.end[1] - head.start[1]) * 0.48,
+    head.start[2] + (crown.end[2] - head.start[2]) * 0.48
+  ];
+  const eyeCenter: Vector3 = [
+    -height * blueprint.face.eyeSpread,
+    crown.start[1] - height * 0.016,
+    crown.start[2] + height * blueprint.face.eyeFront
+  ];
+  const noseCenter: Vector3 = [
+    0,
+    headCenter[1] + headRadius * blueprint.face.noseVerticalOffset,
+    headCenter[2] + headRadius * blueprint.face.noseFront
+  ];
+  const delta: Vector3 = [
+    eyeCenter[0] - noseCenter[0],
+    eyeCenter[1] - noseCenter[1],
+    eyeCenter[2] - noseCenter[2]
+  ];
+  const centerDistance = Math.hypot(...delta);
+  if (centerDistance <= 1e-9) return Number.NEGATIVE_INFINITY;
+  const direction = delta.map((component) => component / centerDistance) as Vector3;
+  const noseAxes: Vector3 = [
+    headRadius * blueprint.face.noseRadius,
+    headRadius * blueprint.face.noseRadius * blueprint.face.noseHeight,
+    headRadius * blueprint.face.noseRadius * 0.9
+  ];
+  const noseSupport = Math.hypot(
+    noseAxes[0] * direction[0],
+    noseAxes[1] * direction[1],
+    noseAxes[2] * direction[2]
+  );
+  return centerDistance - noseSupport - height * blueprint.face.eyeRadius;
+}
+
 export function validateCharacter(
   spec: CharacterSpec,
   style: VisualStyleBible,
   geometry: CharacterGeometry
 ): VisualValidationReport {
+  const blueprint = buildHumanoidBlueprint(spec, style);
   const triangles = geometry.indices.length / 3;
   let degenerateTriangles = 0;
   for (let offset = 0; offset < geometry.indices.length; offset += 3) {
@@ -163,8 +219,64 @@ export function validateCharacter(
     return maximum;
   }, 0);
   const intersectionRatio = approximateIntersectionRatio(geometry);
+  const surfaceClasses = new Set(geometry.triangleSurfaces).size;
+  const profileModules = blueprint.gates.requiredModules.filter((module) =>
+    spec.features?.[module] !== undefined
+  ).length;
+  const eyeNoseClearanceM = eyeNoseClearance(spec, geometry, blueprint);
+  const minimumEyeNoseClearanceM = spec.anatomy.heightM * blueprint.gates.minimumEyeNoseClearance;
 
   const checks: VisualValidationCheck[] = [
+    {
+      id: "organic-surface",
+      status: geometry.qualityMetrics.organicVertexRatio >= blueprint.gates.minimumOrganicRatio ? "passed" : "failed",
+      ...(geometry.qualityMetrics.organicVertexRatio >= blueprint.gates.minimumOrganicRatio
+        ? {}
+        : { code: "VISUAL_ORGANIC_SURFACE_REQUIRED" }),
+      message: `${(geometry.qualityMetrics.organicVertexRatio * 100).toFixed(1)}% of vertices belong to continuous sculpted surfaces`,
+      value: geometry.qualityMetrics.organicVertexRatio,
+      limit: blueprint.gates.minimumOrganicRatio
+    },
+    {
+      id: "semantic-detail",
+      status: geometry.qualityMetrics.semanticDetails >= blueprint.gates.minimumSemanticDetails ? "passed" : "failed",
+      ...(geometry.qualityMetrics.semanticDetails >= blueprint.gates.minimumSemanticDetails
+        ? {}
+        : { code: "VISUAL_SEMANTIC_DETAIL_INCOMPLETE" }),
+      message: `${geometry.qualityMetrics.semanticDetails} generated facial, clothing, accessory and equipment details`,
+      value: geometry.qualityMetrics.semanticDetails,
+      limit: blueprint.gates.minimumSemanticDetails
+    },
+    {
+      id: "material-separation",
+      status: surfaceClasses >= blueprint.gates.minimumSurfaceClasses ? "passed" : "failed",
+      ...(surfaceClasses >= blueprint.gates.minimumSurfaceClasses
+        ? {}
+        : { code: "VISUAL_MATERIAL_CLASSES_INCOMPLETE" }),
+      message: `${surfaceClasses} semantic PBR surface classes`,
+      value: surfaceClasses,
+      limit: blueprint.gates.minimumSurfaceClasses
+    },
+    {
+      id: "profile-completeness",
+      status: profileModules === blueprint.gates.requiredModules.length ? "passed" : "failed",
+      ...(profileModules === blueprint.gates.requiredModules.length
+        ? {}
+        : { code: "VISUAL_PROFILE_MODULES_INCOMPLETE" }),
+      message: `${profileModules}/${blueprint.gates.requiredModules.length} required ${blueprint.profile} modules`,
+      value: profileModules,
+      limit: blueprint.gates.requiredModules.length
+    },
+    {
+      id: "facial-layout",
+      status: eyeNoseClearanceM >= minimumEyeNoseClearanceM ? "passed" : "failed",
+      ...(eyeNoseClearanceM >= minimumEyeNoseClearanceM
+        ? {}
+        : { code: "VISUAL_FACE_FEATURE_COLLISION" }),
+      message: `${eyeNoseClearanceM.toFixed(4)}m eye-to-nose surface clearance`,
+      value: eyeNoseClearanceM,
+      limit: minimumEyeNoseClearanceM
+    },
     {
       id: "triangle-budget",
       status: triangles >= style.geometry.triangleBudget.min && triangles <= style.geometry.triangleBudget.max ? "passed" : "failed",
@@ -240,6 +352,12 @@ export function validateCharacter(
       feetGroundErrorM,
       equipmentReachErrorM,
       intersectionRatio,
+      organicTriangles: geometry.qualityMetrics.organicTriangles,
+      organicVertexRatio: geometry.qualityMetrics.organicVertexRatio,
+      semanticDetails: geometry.qualityMetrics.semanticDetails,
+      surfaceClasses,
+      profileModules,
+      eyeNoseClearanceM,
       bounds: geometry.bounds
     }
   };

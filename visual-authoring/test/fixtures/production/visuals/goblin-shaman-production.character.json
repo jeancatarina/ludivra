@@ -33,6 +33,32 @@
     "jaw": 0.62,
     "nose": 0.76
   },
+  "features": {
+    "generationProfile": "compact-creature",
+    "presentationPose": "relaxed",
+    "hair": {
+      "style": "mohawk",
+      "colorRole": "leather"
+    },
+    "facialHair": {
+      "style": "goatee",
+      "colorRole": "leather"
+    },
+    "hands": {
+      "style": "bare",
+      "colorRole": "skin"
+    },
+    "footwear": {
+      "style": "bare",
+      "colorRole": "skin"
+    },
+    "outfit": {
+      "construction": "robe",
+      "primaryRole": "cloth",
+      "secondaryRole": "cloth",
+      "trimRole": "accent"
+    }
+  },
   "skin": "skin",
   "clothing": [
     {
@@ -119,7 +145,7 @@
       "requirements": {
         "minimumAnimations": 7,
         "requiredAnimations": ["idle", "walk", "run", "attack", "cast", "hit", "death"],
-        "maximumTriangles": 80000,
+        "maximumTriangles": 120000,
         "minimumTextureSize": 512,
         "lods": 1
       }

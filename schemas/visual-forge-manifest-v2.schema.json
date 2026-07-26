@@ -15,7 +15,7 @@
       "required": ["name", "version", "pipeline"],
       "properties": {
         "name": { "const": "@ludivra/visual-authoring" },
-        "version": { "type": "integer", "minimum": 3 },
+        "version": { "type": "integer", "minimum": 4 },
         "pipeline": { "const": "canonical-character-local" }
       }
     },

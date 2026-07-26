@@ -15,7 +15,6 @@ import {
   type CharacterSpec,
   type ProductionCharacterSpec,
   type ProductionValidationReport,
-  type TextureRequest,
   type VisualStyleBible,
   type VisualValidationReport
 } from "@ludivra/visual-authoring";
@@ -218,27 +217,43 @@ function planSpec(description: string, id: string, style: VisualStyleBible, seed
           : "tunic";
   const accessoryTypes = [
     ["horn", "chifre", "horns"],
-    ["bone", "osso", "bones"],
+    ["bones", "ossos", "bones"],
     ["mask", "mascara", "mask"],
     ["pouch", "bolsa", "pouch"],
     ["necklace", "colar", "necklace"],
     ["crystal", "cristal", "crystal"]
   ] as const;
-  const surfaces: TextureRequest[] = includesAny(source, ["texture", "textura", "surface", "superficie", "decal"])
-    ? [{
-        id: "surface.primary",
-        kind: includesAny(source, ["decal"]) ? "decal" : "swatch",
-        material: clothingType === "light-armor" ? "metal" : "cloth",
-        projection: includesAny(source, ["decal"]) ? "decal" : "triplanar",
-        resolution: 512,
-        origin: "generated",
-        license: "project_owned",
-        requirements: { tileable: !includesAny(source, ["decal"]) },
-        artDirection: description,
-        negative: ["normal-map", "roughness-map", "full-character-uv", "transparent-background", "photorealism"]
-      }]
-    : [];
   const small = includesAny(source, ["small", "pequeno", "goblin"]);
+  const mascot = includesAny(source, ["mascot", "mascote", "cartoon", "mecanico", "mechanic"]);
+  const generationProfile = head === "human" && mascot
+    ? "hero-mascot" as const
+    : head === "human"
+      ? "stylized-hero" as const
+      : "compact-creature" as const;
+  const overalls = includesAny(source, ["overalls", "macacao", "mecanico", "mechanic"]);
+  const outfitConstruction = overalls ? "overalls" as const
+    : clothingType === "robe" || clothingType === "cape" ? "robe" as const
+      : clothingType === "light-armor" ? "armor" as const
+        : "single-layer" as const;
+  const headwearType = includesAny(source, ["helmet", "elmo", "capacete"]) ? "helmet" as const
+    : includesAny(source, ["hood", "capuz"]) ? "hood" as const
+      : includesAny(source, ["beanie", "gorro"]) ? "beanie" as const
+        : includesAny(source, ["cap", "bone", "boné", "mascot", "mascote", "mecanico", "mechanic"]) ? "cap" as const
+          : null;
+  const hairStyle = head === "skeleton" ? "none" as const
+    : includesAny(source, ["mohawk", "moicano"]) ? "mohawk" as const
+      : includesAny(source, ["swept", "penteado"]) ? "swept" as const
+        : "short" as const;
+  const facialHairStyle = includesAny(source, ["moustache", "mustache", "bigode"]) ? "moustache" as const
+    : includesAny(source, ["goatee", "cavanhaque"]) ? "goatee" as const
+      : includesAny(source, ["beard", "barba"]) ? "beard" as const
+        : "none" as const;
+  const footwearStyle = includesAny(source, ["barefoot", "descalco"]) ? "bare" as const
+    : includesAny(source, ["boot", "bota"]) ? "boots" as const
+      : "shoes" as const;
+  const primaryRole = style.palette.primary === undefined ? "cloth" : "primary";
+  const secondaryRole = style.palette.secondary === undefined ? "accent" : "secondary";
+  const trimRole = style.palette.trim === undefined ? "accent" : "trim";
   const heightMid = (style.proportions.heightM.min + style.proportions.heightM.max) * 0.5;
   return {
     schemaVersion: 1,
@@ -248,23 +263,50 @@ function planSpec(description: string, id: string, style: VisualStyleBible, seed
     archetype: { body: small ? "small-humanoid" : "medium-humanoid", head },
     anatomy: {
       heightM: Math.min(style.proportions.heightM.max, Math.max(style.proportions.heightM.min, small ? heightMid * 0.78 : heightMid)),
-      headScale: (style.proportions.headScale.min + style.proportions.headScale.max) * 0.5,
+      headScale: generationProfile === "hero-mascot"
+        ? style.proportions.headScale.max
+        : (style.proportions.headScale.min + style.proportions.headScale.max) * 0.5,
       shoulderScale: (style.proportions.shoulderScale.min + style.proportions.shoulderScale.max) * 0.5,
       armScale: 1,
-      legScale: small ? 0.88 : 1,
+      legScale: generationProfile === "hero-mascot" ? 0.72 : small ? 0.88 : 1,
       posture: includesAny(source, ["hunched", "corcunda"]) ? 0.75 : 0
     },
     face: {
       generator: head,
-      eyes: head === "goblin" ? 0.75 : 0.5,
+      eyes: generationProfile === "hero-mascot" ? 0.9 : head === "goblin" ? 0.75 : 0.62,
       jaw: head === "orc" ? 0.82 : 0.5,
-      nose: head === "skeleton" ? 0.1 : 0.5
+      nose: head === "skeleton" ? 0.1 : generationProfile === "hero-mascot" ? 0.82 : 0.5
+    },
+    features: {
+      generationProfile,
+      presentationPose: generationProfile === "hero-mascot" ? "t-pose" : "a-pose",
+      ...(headwearType === null ? {} : {
+        headwear: {
+          type: headwearType,
+          primaryRole,
+          secondaryRole: trimRole,
+          badge: mascot ? "star" as const : "none" as const
+        }
+      }),
+      hair: { style: hairStyle, colorRole: "leather" },
+      facialHair: { style: facialHairStyle, colorRole: "leather" },
+      hands: {
+        style: mascot || includesAny(source, ["glove", "luva"]) ? "gloves" : "bare",
+        colorRole: mascot ? "bone" : "skin"
+      },
+      footwear: { style: footwearStyle, colorRole: "leather" },
+      outfit: {
+        construction: outfitConstruction,
+        primaryRole,
+        secondaryRole,
+        trimRole
+      }
     },
     skin: head === "skeleton" ? "bone" : "skin",
     clothing: [{
       type: clothingType,
       material: clothingType === "light-armor" ? "metal" : "cloth",
-      colorRole: "cloth",
+      colorRole: primaryRole,
       fit: clothingType === "robe" ? 0.35 : 0.65,
       asymmetry: style.geometry.asymmetry
     }],
@@ -286,7 +328,7 @@ function planSpec(description: string, id: string, style: VisualStyleBible, seed
     effects: includesAny(source, ["magic", "magia"])
       ? [{ id: "effect.magic", colorRole: "accent", anchor: "right-hand" }]
       : [],
-    surfaces
+    surfaces: []
   };
 }
 

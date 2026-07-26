@@ -1,5 +1,7 @@
 import { createHash } from "node:crypto";
 import { PNG } from "pngjs";
+import { buildHumanoidBlueprint } from "./blueprint.js";
+import { SURFACE } from "./geometry.js";
 const directionYaw = {
     south: 0,
     "south-west": 45,
@@ -22,6 +24,7 @@ export function productionCharacterRecipe(spec) {
         archetype: spec.archetype,
         anatomy: spec.anatomy,
         face: spec.face,
+        ...(spec.features === undefined ? {} : { features: spec.features }),
         skin: spec.skin,
         clothing: spec.clothing,
         equipment: spec.equipment,
@@ -70,7 +73,7 @@ function project(geometry, index, size, yaw, pitch, scale, centerX, floorY) {
 function edge(left, right, x, y) {
     return (x - left.x) * (right.y - left.y) - (y - left.y) * (right.x - left.x);
 }
-function drawTriangle(image, depthBuffer, a, b, c) {
+function drawTriangle(image, depthBuffer, a, b, c, surface) {
     const area = edge(a, b, c.x, c.y);
     if (Math.abs(area) < 0.01)
         return;
@@ -79,7 +82,23 @@ function drawTriangle(image, depthBuffer, a, b, c) {
     const minY = Math.max(0, Math.floor(Math.min(a.y, b.y, c.y)));
     const maxY = Math.min(image.height - 1, Math.ceil(Math.max(a.y, b.y, c.y)));
     const inverseArea = 1 / area;
-    const light = [-0.42, 0.7, 0.58];
+    const light = [-0.58, 0.72, 0.38];
+    const halfVector = [-0.383, 0.475, 0.793];
+    const roughness = surface === SURFACE.skin ? 0.42
+        : surface === SURFACE.cloth ? 0.78
+            : surface === SURFACE.leather ? 0.52
+                : surface === SURFACE.hair ? 0.64
+                    : surface === SURFACE.glossy ? 0.16
+                        : 0.34;
+    const dielectricSpecular = surface === SURFACE.glossy ? 0.34 : surface === SURFACE.skin ? 0.09 : 0.055;
+    const wrap = surface === SURFACE.skin ? 0.34 : 0.08;
+    const specularPower = Math.max(4, 2 / Math.max(0.003, roughness ** 4) - 2);
+    const toneMap = (linear) => {
+        const exposed = Math.max(0, linear * 1.28);
+        const mapped = exposed * (2.51 * exposed + 0.03) /
+            Math.max(0.0001, exposed * (2.43 * exposed + 0.59) + 0.14);
+        return Math.max(0, Math.min(1, mapped)) ** (1 / 2.2);
+    };
     for (let y = minY; y <= maxY; y += 1) {
         for (let x = minX; x <= maxX; x += 1) {
             const px = x + 0.5;
@@ -98,13 +117,40 @@ function drawTriangle(image, depthBuffer, a, b, c) {
             const ny = a.normal[1] * wa + b.normal[1] * wb + c.normal[1] * wc;
             const nz = a.normal[2] * wa + b.normal[2] * wb + c.normal[2] * wc;
             const length = Math.max(0.0001, Math.hypot(nx, ny, nz));
-            const diffuse = Math.max(0, (nx * light[0] + ny * light[1] + nz * light[2]) / length);
-            const rim = Math.pow(1 - Math.abs(nz / length), 3) * 0.22;
-            const shade = 0.38 + diffuse * 0.62 + rim;
+            const normalX = nx / length;
+            const normalY = ny / length;
+            const normalZ = nz / length;
+            const direct = Math.max(0, normalX * light[0] + normalY * light[1] + normalZ * light[2]);
+            const diffuse = Math.max(0, (direct + wrap) / (1 + wrap));
+            const hemisphere = 0.27 + Math.max(0, normalY) * 0.09 + Math.max(0, normalZ) * 0.045;
+            const rim = Math.pow(1 - Math.max(0, normalZ), 3) *
+                (surface === SURFACE.skin ? 0.13 : surface === SURFACE.cloth ? 0.055 : 0.09);
+            const broadVariation = (surface === SURFACE.skin ? 0.004 : 0.009) *
+                Math.sin(x * 0.071 + y * 0.043);
+            const materialPattern = surface === SURFACE.cloth
+                ? Math.sin(x * 0.62) * Math.sin(y * 0.57) * 0.038 +
+                    Math.cos(x * 1.24 + y * 0.08) * 0.012
+                : surface === SURFACE.leather
+                    ? Math.sin(x * 0.19 + Math.sin(y * 0.12) * 2.1) * Math.sin(y * 0.31) * 0.028
+                    : surface === SURFACE.hair
+                        ? Math.sin(x * 0.12 + y * 0.91) * 0.045 + Math.sin(y * 1.73) * 0.014
+                        : surface === SURFACE.skin
+                            ? Math.sin((x * 19 + y * 23) * 0.071) * Math.sin((x * 7 - y * 11) * 0.093) * 0.009
+                            : surface === SURFACE.hard
+                                ? Math.sin(x * 0.08 + y * 0.04) * 0.012
+                                : 0;
+            const normalHalf = Math.max(0, normalX * halfVector[0] + normalY * halfVector[1] + normalZ * halfVector[2]);
+            const specular = Math.pow(normalHalf, Math.min(160, specularPower)) * dielectricSpecular *
+                (0.35 + direct * 0.65);
+            const shade = hemisphere + diffuse * 0.72 + rim + broadVariation;
+            const textureFactor = 1 + materialPattern;
             const offset = pixel * 4;
-            image.data[offset] = Math.min(255, Math.round((a.color[0] * wa + b.color[0] * wb + c.color[0] * wc) * 255 * shade));
-            image.data[offset + 1] = Math.min(255, Math.round((a.color[1] * wa + b.color[1] * wb + c.color[1] * wc) * 255 * shade));
-            image.data[offset + 2] = Math.min(255, Math.round((a.color[2] * wa + b.color[2] * wb + c.color[2] * wc) * 255 * shade));
+            const red = (a.color[0] * wa + b.color[0] * wb + c.color[0] * wc) ** 2.2;
+            const green = (a.color[1] * wa + b.color[1] * wb + c.color[1] * wc) ** 2.2;
+            const blue = (a.color[2] * wa + b.color[2] * wb + c.color[2] * wc) ** 2.2;
+            image.data[offset] = Math.round(toneMap(red * shade * textureFactor + specular) * 255);
+            image.data[offset + 1] = Math.round(toneMap(green * shade * textureFactor + specular) * 255);
+            image.data[offset + 2] = Math.round(toneMap(blue * shade * textureFactor + specular) * 255);
             image.data[offset + 3] = 255;
         }
     }
@@ -138,6 +184,94 @@ function outline(image, radius) {
     }
     return result;
 }
+function applyScreenSpaceOcclusion(image, depth) {
+    const source = Buffer.from(image.data);
+    const scale = Math.max(1, Math.round(image.width / 384));
+    const offsets = [
+        [-2, 0], [2, 0], [0, -2], [0, 2],
+        [-2, -2], [2, -2], [-2, 2], [2, 2],
+        [-5, 0], [5, 0], [0, -5], [0, 5]
+    ];
+    for (let y = 0; y < image.height; y += 1) {
+        for (let x = 0; x < image.width; x += 1) {
+            const pixel = y * image.width + x;
+            const offset = pixel * 4;
+            if (source[offset + 3] === 0)
+                continue;
+            const centerDepth = depth[pixel];
+            let occlusion = 0;
+            let samples = 0;
+            for (const [sampleX, sampleY] of offsets) {
+                const nx = x + sampleX * scale;
+                const ny = y + sampleY * scale;
+                if (nx < 0 || ny < 0 || nx >= image.width || ny >= image.height)
+                    continue;
+                const neighborDepth = depth[ny * image.width + nx];
+                if (!Number.isFinite(neighborDepth))
+                    continue;
+                occlusion += Math.max(0, Math.min(1, (neighborDepth - centerDepth - 0.004) / 0.055));
+                samples += 1;
+            }
+            if (samples === 0 || occlusion === 0)
+                continue;
+            const shade = 1 - occlusion / samples * 0.3;
+            image.data[offset] = Math.round(source[offset] * shade);
+            image.data[offset + 1] = Math.round(source[offset + 1] * shade);
+            image.data[offset + 2] = Math.round(source[offset + 2] * shade);
+        }
+    }
+}
+function removeSubpixelLayerArtifacts(image) {
+    const source = Buffer.from(image.data);
+    const channelMedian = (values) => {
+        values.sort((left, right) => left - right);
+        return values[Math.floor(values.length / 2)] ?? 0;
+    };
+    for (let y = 2; y < image.height - 2; y += 1) {
+        for (let x = 2; x < image.width - 2; x += 1) {
+            const offset = (y * image.width + x) * 4;
+            if (source[offset + 3] < 250)
+                continue;
+            const red = [];
+            const green = [];
+            const blue = [];
+            for (let dy = -2; dy <= 2; dy += 1) {
+                for (let dx = -2; dx <= 2; dx += 1) {
+                    if (dx === 0 && dy === 0)
+                        continue;
+                    const neighbor = ((y + dy) * image.width + x + dx) * 4;
+                    if (source[neighbor + 3] < 250)
+                        continue;
+                    red.push(source[neighbor]);
+                    green.push(source[neighbor + 1]);
+                    blue.push(source[neighbor + 2]);
+                }
+            }
+            if (red.length < 20)
+                continue;
+            const median = [
+                channelMedian(red),
+                channelMedian(green),
+                channelMedian(blue)
+            ];
+            const difference = Math.max(Math.abs(source[offset] - median[0]), Math.abs(source[offset + 1] - median[1]), Math.abs(source[offset + 2] - median[2]));
+            if (difference < 58)
+                continue;
+            let consensus = 0;
+            for (let index = 0; index < red.length; index += 1) {
+                if (Math.abs(red[index] - median[0]) <= 24 &&
+                    Math.abs(green[index] - median[1]) <= 24 &&
+                    Math.abs(blue[index] - median[2]) <= 24)
+                    consensus += 1;
+            }
+            if (consensus < 17)
+                continue;
+            image.data[offset] = median[0];
+            image.data[offset + 1] = median[1];
+            image.data[offset + 2] = median[2];
+        }
+    }
+}
 function alphaBlend(target, source) {
     for (let offset = 0; offset < target.data.length; offset += 4) {
         const alpha = source.data[offset + 3] / 255;
@@ -150,10 +284,10 @@ function alphaBlend(target, source) {
         target.data[offset + 3] = Math.round((alpha + target.data[offset + 3] / 255 * inverse) * 255);
     }
 }
-function groundShadow(size) {
+function groundShadow(size, floor) {
     const shadow = new PNG({ width: size, height: size });
     const centerX = size * 0.5;
-    const centerY = size * 0.89;
+    const centerY = size * floor;
     const radiusX = size * 0.25;
     const radiusY = size * 0.045;
     for (let y = Math.floor(centerY - radiusY * 2); y <= Math.ceil(centerY + radiusY * 2); y += 1) {
@@ -169,20 +303,20 @@ function groundShadow(size) {
     }
     return shadow;
 }
-function renderView(geometry, size, yawDegrees, pitchDegrees, outlineStrength) {
+function renderView(geometry, size, yawDegrees, pitchDegrees, outlineStrength, framing) {
     const character = new PNG({ width: size, height: size });
     const depth = new Float32Array(size * size);
     depth.fill(Number.NEGATIVE_INFINITY);
     const height = geometry.bounds.max[1] - geometry.bounds.min[1];
     const width = geometry.bounds.max[0] - geometry.bounds.min[0];
-    const scale = Math.min(size * 0.76 / Math.max(height, 0.1), size * 0.82 / Math.max(width, height * 0.45));
+    const scale = Math.min(size * framing.frameHeight / Math.max(height, 0.1), size * framing.frameWidth / Math.max(width, height * 0.45));
     const yaw = yawDegrees * Math.PI / 180;
     const cache = new Map();
     const vertex = (index) => {
         const existing = cache.get(index);
         if (existing !== undefined)
             return existing;
-        const result = project(geometry, index, size, yaw, pitchDegrees, scale, size * 0.5, size * 0.89);
+        const result = project(geometry, index, size, yaw, pitchDegrees, scale, size * 0.5, size * framing.floor);
         cache.set(index, result);
         return result;
     };
@@ -192,10 +326,30 @@ function renderView(geometry, size, yawDegrees, pitchDegrees, outlineStrength) {
         const c = geometry.indices[index + 2];
         if (a === undefined || b === undefined || c === undefined)
             continue;
-        drawTriangle(character, depth, vertex(a), vertex(b), vertex(c));
+        drawTriangle(character, depth, vertex(a), vertex(b), vertex(c), (geometry.triangleSurfaces[index / 3] ?? SURFACE.hard));
     }
-    const result = groundShadow(size);
-    alphaBlend(result, outline(character, Math.max(2, Math.round(size * 0.004 * outlineStrength))));
+    applyScreenSpaceOcclusion(character, depth);
+    removeSubpixelLayerArtifacts(character);
+    const result = groundShadow(size, framing.floor);
+    alphaBlend(result, outline(character, Math.max(1, Math.round(size * 0.004 * outlineStrength))));
+    return result;
+}
+function downsample2x(source) {
+    const result = new PNG({ width: source.width / 2, height: source.height / 2 });
+    for (let y = 0; y < result.height; y += 1) {
+        for (let x = 0; x < result.width; x += 1) {
+            const target = (y * result.width + x) * 4;
+            const samples = [
+                ((y * 2) * source.width + x * 2) * 4,
+                ((y * 2) * source.width + x * 2 + 1) * 4,
+                (((y * 2) + 1) * source.width + x * 2) * 4,
+                (((y * 2) + 1) * source.width + x * 2 + 1) * 4
+            ];
+            for (let channel = 0; channel < 4; channel += 1) {
+                result.data[target + channel] = Math.round(samples.reduce((sum, sample) => sum + source.data[sample + channel], 0) / samples.length);
+            }
+        }
+    }
     return result;
 }
 function copyImage(source, target, targetX) {
@@ -234,11 +388,13 @@ function alphaCoverage(image) {
     return opaque / (image.width * image.height);
 }
 export function compileGeneratedRaster(compiled, spec, style, output) {
+    const canonicalRecipe = productionCharacterRecipe(spec);
     const directions = output.mode === "2d" ? [undefined] : output.directions;
     const size = output.mode === "2d" ? output.resolution : output.cellResolution;
     const primaryYaw = output.mode === "2d" ? output.camera.yaw : 0;
     const primaryPitch = output.mode === "2d" ? output.camera.pitch : 12;
-    const views = directions.map((direction) => renderView(compiled.geometry, size, direction === undefined ? primaryYaw : directionYaw[direction], direction === undefined ? primaryPitch : 12, style.render.outlineStrength));
+    const blueprint = buildHumanoidBlueprint(canonicalRecipe, style);
+    const views = directions.map((direction) => downsample2x(renderView(compiled.geometry, size * 2, direction === undefined ? primaryYaw : directionYaw[direction], direction === undefined ? primaryPitch : 12, style.render.outlineStrength, blueprint.render)));
     const atlas = new PNG({ width: size * views.length, height: size });
     views.forEach((view, index) => copyImage(view, atlas, index * size));
     extrudeTransparentRgb(atlas, output.edgeExtrusion);
@@ -246,7 +402,7 @@ export function compileGeneratedRaster(compiled, spec, style, output) {
         id: direction === undefined ? `${output.id}.idle` : `${output.id}.${direction}`,
         ...(direction === undefined ? {} : { direction }),
         rect: { x: index * size, y: 0, width: size, height: size },
-        pivot: [0.5, 0.89]
+        pivot: [0.5, blueprint.render.floor]
     }));
     const coverage = alphaCoverage(atlas);
     const checks = [
@@ -266,6 +422,24 @@ export function compileGeneratedRaster(compiled, spec, style, output) {
             status: spec.identity.focalFeatures.length >= 2 ? "passed" : "failed",
             code: "VISUAL_IDENTITY_INCOMPLETE",
             message: `${spec.identity.focalFeatures.length} canonical focal features across ${views.length} views`
+        },
+        {
+            id: "organic-surface",
+            status: compiled.geometry.qualityMetrics.organicVertexRatio >= blueprint.gates.minimumOrganicRatio ? "passed" : "failed",
+            code: "VISUAL_ORGANIC_SURFACE_REQUIRED",
+            message: `${(compiled.geometry.qualityMetrics.organicVertexRatio * 100).toFixed(1)}% continuous sculpted surface vertices`
+        },
+        {
+            id: "material-separation",
+            status: compiled.validation.checks.find(({ id }) => id === "material-separation")?.status ?? "failed",
+            code: "VISUAL_MATERIAL_CLASSES_INCOMPLETE",
+            message: `${new Set(compiled.geometry.triangleSurfaces).size} semantic PBR surface classes`
+        },
+        {
+            id: "profile-completeness",
+            status: compiled.validation.checks.find(({ id }) => id === "profile-completeness")?.status ?? "failed",
+            code: "VISUAL_PROFILE_MODULES_INCOMPLETE",
+            message: `${blueprint.profile} first-pass module set`
         },
         {
             id: "direction-set",
@@ -316,12 +490,17 @@ export function compileGeneratedRaster(compiled, spec, style, output) {
                 frames: frames.length,
                 alphaCoverage: coverage,
                 edgeExtrusion: output.edgeExtrusion,
-                triangles: compiled.geometry.indices.length / 3
+                triangles: compiled.geometry.indices.length / 3,
+                organicTriangles: compiled.geometry.qualityMetrics.organicTriangles,
+                organicVertexRatio: compiled.geometry.qualityMetrics.organicVertexRatio,
+                semanticDetails: compiled.geometry.qualityMetrics.semanticDetails,
+                surfaceClasses: new Set(compiled.geometry.triangleSurfaces).size
             }
         }
     };
 }
 export function validateGeneratedModel(compiled, spec, output) {
+    const blueprint = buildHumanoidBlueprint(productionCharacterRecipe(spec));
     const triangles = compiled.geometry.indices.length / 3;
     const required = output.requirements.requiredAnimations;
     const checks = [
@@ -351,7 +530,27 @@ export function validateGeneratedModel(compiled, spec, output) {
                 compiled.model.textures.roughness.length > 0 &&
                 output.requirements.minimumTextureSize <= 512 ? "passed" : "failed",
             code: "VISUAL_QUALITY_PROFILE_FAILED",
-            message: "512x512 generated albedo, normal and metallic-roughness maps"
+            message: `${new Set(compiled.geometry.triangleSurfaces).size * 3} generated 512x512 material-specific PBR maps`
+        },
+        {
+            id: "organic-surface",
+            status: compiled.geometry.qualityMetrics.organicVertexRatio >= blueprint.gates.minimumOrganicRatio ? "passed" : "failed",
+            code: "VISUAL_ORGANIC_SURFACE_REQUIRED",
+            message: `${(compiled.geometry.qualityMetrics.organicVertexRatio * 100).toFixed(1)}% continuous sculpted surface vertices`
+        },
+        {
+            id: "material-separation",
+            status: new Set(compiled.geometry.triangleSurfaces).size >= blueprint.gates.minimumSurfaceClasses
+                ? "passed"
+                : "failed",
+            code: "VISUAL_MATERIAL_CLASSES_INCOMPLETE",
+            message: `${new Set(compiled.geometry.triangleSurfaces).size} semantic PBR surface classes`
+        },
+        {
+            id: "profile-completeness",
+            status: compiled.validation.checks.find(({ id }) => id === "profile-completeness")?.status ?? "failed",
+            code: "VISUAL_PROFILE_MODULES_INCOMPLETE",
+            message: `${blueprint.profile} first-pass module set`
         },
         {
             id: "triangle-budget",
@@ -383,8 +582,12 @@ export function validateGeneratedModel(compiled, spec, output) {
             segments: compiled.geometry.segments.length,
             vertices: compiled.geometry.positions.length / 3,
             triangles,
-            materials: 1,
-            textures: 3,
+            organicTriangles: compiled.geometry.qualityMetrics.organicTriangles,
+            organicVertexRatio: compiled.geometry.qualityMetrics.organicVertexRatio,
+            semanticDetails: compiled.geometry.qualityMetrics.semanticDetails,
+            surfaceClasses: new Set(compiled.geometry.triangleSurfaces).size,
+            materials: new Set(compiled.geometry.triangleSurfaces).size,
+            textures: new Set(compiled.geometry.triangleSurfaces).size * 3,
             textureResolution: 512,
             animations: spec.animations,
             lods: output.requirements.lods
@@ -393,6 +596,6 @@ export function validateGeneratedModel(compiled, spec, output) {
 }
 export function productionCacheKey(spec, styleSource) {
     return createHash("sha256")
-        .update(`3\0${JSON.stringify(spec)}\0${styleSource}`)
+        .update(`4\0${JSON.stringify(spec)}\0${styleSource}`)
         .digest("hex");
 }

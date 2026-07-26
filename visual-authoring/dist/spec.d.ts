@@ -73,6 +73,38 @@ export interface CharacterSpec {
         jaw: number;
         nose: number;
     };
+    features?: {
+        generationProfile?: "hero-mascot" | "stylized-hero" | "compact-creature";
+        presentationPose?: "relaxed" | "a-pose" | "t-pose";
+        headwear?: {
+            type: "cap" | "beanie" | "helmet" | "hood";
+            primaryRole: string;
+            secondaryRole: string;
+            badge: "none" | "circle" | "star";
+        };
+        hair?: {
+            style: "none" | "short" | "swept" | "mohawk";
+            colorRole: string;
+        };
+        facialHair?: {
+            style: "none" | "moustache" | "beard" | "goatee";
+            colorRole: string;
+        };
+        hands?: {
+            style: "bare" | "gloves";
+            colorRole: string;
+        };
+        footwear?: {
+            style: "bare" | "shoes" | "boots";
+            colorRole: string;
+        };
+        outfit?: {
+            construction: "single-layer" | "overalls" | "robe" | "armor";
+            primaryRole: string;
+            secondaryRole: string;
+            trimRole: string;
+        };
+    };
     skin: MaterialKind;
     clothing: Array<{
         type: "tunic" | "robe" | "cape" | "light-armor" | "wraps";

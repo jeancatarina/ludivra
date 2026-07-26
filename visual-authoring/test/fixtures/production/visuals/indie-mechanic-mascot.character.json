@@ -1,0 +1,134 @@
+{
+  "schemaVersion": 2,
+  "id": "visual.mascot.mechanic.production",
+  "style": "mascot",
+  "seed": 924601,
+  "identity": {
+    "description": "An original cheerful indie-game mechanic mascot with a teal cap, warm orange shirt, blue work overalls, cream gloves and sturdy brown shoes.",
+    "silhouette": "Large expressive head, compact rounded torso, readable cap brim, gloved hands and oversized work shoes.",
+    "paletteRoles": ["skin", "primary", "secondary", "trim", "cap", "hair", "glove", "shoe"],
+    "focalFeatures": [
+      "large cyan expressive eyes",
+      "rounded mechanic cap with blank circular badge",
+      "curled dark moustache",
+      "layered work overalls with straps and buttons",
+      "cream gloves with separated fingers",
+      "oversized rounded work shoes"
+    ]
+  },
+  "archetype": {
+    "body": "small-humanoid",
+    "head": "human"
+  },
+  "anatomy": {
+    "heightM": 1.12,
+    "headScale": 1.5,
+    "shoulderScale": 1.15,
+    "armScale": 1.02,
+    "legScale": 0.72,
+    "posture": 0.08
+  },
+  "face": {
+    "generator": "human",
+    "eyes": 0.92,
+    "jaw": 0.48,
+    "nose": 0.88
+  },
+  "features": {
+    "generationProfile": "hero-mascot",
+    "presentationPose": "t-pose",
+    "headwear": {
+      "type": "cap",
+      "primaryRole": "cap",
+      "secondaryRole": "badge",
+      "badge": "star"
+    },
+    "hair": {
+      "style": "short",
+      "colorRole": "hair"
+    },
+    "facialHair": {
+      "style": "moustache",
+      "colorRole": "hair"
+    },
+    "hands": {
+      "style": "gloves",
+      "colorRole": "glove"
+    },
+    "footwear": {
+      "style": "shoes",
+      "colorRole": "shoe"
+    },
+    "outfit": {
+      "construction": "overalls",
+      "primaryRole": "primary",
+      "secondaryRole": "secondary",
+      "trimRole": "trim"
+    }
+  },
+  "skin": "skin",
+  "clothing": [
+    {
+      "type": "tunic",
+      "material": "cloth",
+      "colorRole": "secondary",
+      "fit": 0.56,
+      "asymmetry": 0.08
+    }
+  ],
+  "equipment": [],
+  "accessories": [],
+  "animations": ["idle", "walk", "run", "attack", "cast", "hit", "death"],
+  "surfaces": [],
+  "outputs": [
+    {
+      "id": "gameplay-2d",
+      "mode": "2d",
+      "profile": "illustrated-character-2d",
+      "quality": "production",
+      "resolution": 1024,
+      "camera": {
+        "yaw": 22,
+        "pitch": 8
+      },
+      "pixelsPerMeter": 576,
+      "padding": 16,
+      "edgeExtrusion": 4,
+      "animations": ["idle"]
+    },
+    {
+      "id": "gameplay-2.5d",
+      "mode": "2.5d",
+      "profile": "directional-character-2.5d",
+      "quality": "production",
+      "cellResolution": 384,
+      "directions": [
+        "south",
+        "south-west",
+        "west",
+        "north-west",
+        "north",
+        "north-east",
+        "east",
+        "south-east"
+      ],
+      "pixelsPerMeter": 288,
+      "padding": 12,
+      "edgeExtrusion": 4,
+      "animations": ["idle", "walk"]
+    },
+    {
+      "id": "gameplay-3d",
+      "mode": "3d",
+      "profile": "stylized-pbr-3d",
+      "quality": "production",
+      "requirements": {
+        "minimumAnimations": 7,
+        "requiredAnimations": ["idle", "walk", "run", "attack", "cast", "hit", "death"],
+        "maximumTriangles": 180000,
+        "minimumTextureSize": 512,
+        "lods": 1
+      }
+    }
+  ]
+}

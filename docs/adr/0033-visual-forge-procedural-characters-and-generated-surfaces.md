@@ -27,14 +27,33 @@ O Forge não lê imagem, sprite sheet, modelo ou material como entrada de produ�
 Uma compilação cria primeiro um `CanonicalCharacter` determinístico:
 
 1. esqueleto humanoide e proporções semânticas;
-2. malha fechada com perfis orgânicos, rosto, roupa, acessórios e equipamento;
+2. malha orgânica contínua extraída de volumes implícitos combinados, com cabeça, mandíbula, orelhas, nariz, pescoço, ombros, membros, mãos e pés esculpidos;
 3. skin com até quatro influências e pesos normalizados;
 4. UV cilíndrico por região;
 5. cores por papel semântico do Style Bible;
-6. albedo, normal e metallic-roughness procedurais;
+6. albedo, normal e metallic-roughness procedurais por classe semântica;
 7. clipes de animação declarados na receita.
 
 Todas as saídas vêm dessa mesma instância. Não existe reconstrução separada por modo.
+
+### Blueprint semântico e primeira geração
+
+O planejador não começa por primitivas soltas. Ele seleciona um blueprint calibrado
+antes de construir a receita:
+
+- `hero-mascot`: cabeça e mãos expressivas, pose de apresentação, roupa em camadas,
+  cabelo, calçado e headwear;
+- `stylized-hero`: proporção humanoide intermediária, mãos articuladas e roupa modular;
+- `compact-creature`: anatomia compacta para goblin, orc e demônio simples.
+
+Cada blueprint fixa relações coerentes entre quadril, ombros, cabeça, olhos, nariz,
+palmas, dedos, pés, enquadramento e gates. `game visual plan` infere o perfil,
+headwear, cabelo, barba, mãos, calçado e construção da roupa da descrição textual.
+Mesmo quando a descrição menciona textura, a receita permanece `surfaces: []`:
+microtextura, normal e roughness são produzidos pelo Forge, sem inbox ou PNG.
+
+O objetivo do blueprint é que a primeira compilação já seja um personagem completo;
+o seed varia identidade e assimetria dentro do perfil, não corrige anatomia quebrada.
 
 ```text
 receita v2 + Style Bible + seed
@@ -52,13 +71,13 @@ receita v2 + Style Bible + seed
 |---|---|---|
 | 2D | `illustrated-character-2d` | PNG RGBA de alta resolução, atlas JSON, pivô e animações |
 | 2.5D | `directional-character-2.5d` | oito vistas do modelo canônico, atlas RGBA, pivô comum e direção por célula |
-| 3D | `stylized-pbr-3d` | glTF autocontido, buffer, rig, skin, UV, três mapas PBR, animações e preview |
+| 3D | `stylized-pbr-3d` | glTF autocontido, buffer, rig, skin, UV, 18 mapas PBR (três por classe), animações e preview |
 
 O gameplay referencia apenas `visual: <id>`. O target escolhe a variante de apresentação; a simulação não conhece o modo gráfico.
 
 ### Render local 2D e 2.5D
 
-O rasterizador de authoring projeta os triângulos do personagem canônico, resolve profundidade por pixel, interpola normais e cores, aplica luz difusa, rim light, contorno e sombra de contato. A saída permanece transparente.
+O rasterizador de authoring projeta os triângulos do personagem canônico, resolve profundidade por pixel, interpola normais e cores e aplica iluminação PBR aproximada, tone mapping, rim light, oclusão de contato em screen space, contorno, sombra de chão, supersampling 2× e remoção restrita de artefatos subpixel entre camadas. Pele, tecido, couro, cabelo, superfícies brilhantes e peças rígidas têm respostas e microtexturas distintas. A saída permanece transparente.
 
 2D usa uma câmera declarada e resolução mínima de 768 px. 2.5D usa exatamente oito direções ordenadas e resolução mínima de 256 px por célula. A mesma geometria garante continuidade de rosto, roupa e equipamento entre as vistas.
 
@@ -70,8 +89,8 @@ O perfil 3D emite glTF 2.0 com:
 
 - topologia fechada e sem triângulos degenerados;
 - rig e skin gerados da mesma hierarquia semântica;
-- UVs e vertex colors;
-- albedo, normal e metallic-roughness de 512 px gerados localmente;
+- UVs, vertex colors e primitives separadas por seis classes semânticas de material;
+- albedo, normal e metallic-roughness de 512 px gerados localmente para cada uma das seis classes, totalizando 18 mapas;
 - animações `idle`, `walk`, `run`, `attack`, `cast`, `hit`, `death` ou subconjunto declarado;
 - bounds, contagem de vértices, triângulos, ossos, segmentos e texturas no relatório.
 
@@ -84,6 +103,9 @@ O manifest identifica `source.kind: forge-recipe`, `pipeline: canonical-characte
 - resolução e alpha para raster;
 - oito direções e identidade comum para 2.5D;
 - topologia, budget, rig, skin, PBR e animações para 3D;
+- proporção mínima de vértices pertencentes a superfícies orgânicas contínuas e quantidade mínima de detalhes semânticos;
+- conjunto completo de módulos exigidos pelo blueprint e quantidade mínima de classes PBR;
+- folga volumétrica mínima entre olhos e nariz e variação material distinta entre os mapas PBR;
 - regeneração byte a byte com mesma receita, Style Bible, seed e versão do Forge.
 
 Preview PNG, atlas direcional, manifest e relatório são evidência obrigatória. `game visual finalize` bloqueia qualquer saída reprovada.

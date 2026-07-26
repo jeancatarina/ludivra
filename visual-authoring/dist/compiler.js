@@ -4,7 +4,7 @@ import { buildGltf } from "./gltf.js";
 import { generateCharacterGeometry } from "./geometry.js";
 import { renderCharacterPreview } from "./preview.js";
 import { validateCharacter } from "./validation.js";
-export const VISUAL_GENERATOR_VERSION = 3;
+export const VISUAL_GENERATOR_VERSION = 4;
 export function visualCacheKey(spec, style, textureHashes = {}) {
     return createHash("sha256")
         .update(`${VISUAL_GENERATOR_VERSION}\0${spec.seed}\0${stringifyYaml({ spec, style, textureHashes }, { sortMapEntries: true })}`)
