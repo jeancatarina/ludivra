@@ -1,0 +1,65 @@
+{
+  "schemaVersion": 1,
+  "id": "visual.goblin.shaman",
+  "style": "stylized",
+  "seed": 48192,
+  "archetype": {
+    "body": "small-humanoid",
+    "head": "goblin"
+  },
+  "anatomy": {
+    "heightM": 1.24,
+    "headScale": 1.14,
+    "shoulderScale": 0.92,
+    "armScale": 1.08,
+    "legScale": 0.88,
+    "posture": 0.72
+  },
+  "face": {
+    "generator": "goblin",
+    "eyes": 0.78,
+    "jaw": 0.42,
+    "nose": 0.73
+  },
+  "skin": "skin",
+  "clothing": [
+    {
+      "type": "robe",
+      "material": "cloth",
+      "colorRole": "cloth",
+      "fit": 0.38,
+      "asymmetry": 0.55
+    }
+  ],
+  "equipment": [
+    {
+      "type": "staff",
+      "material": "wood",
+      "hand": "right",
+      "scale": 1.15
+    }
+  ],
+  "accessories": [
+    {
+      "type": "mask",
+      "material": "wood",
+      "anchor": "head",
+      "scale": 0.9
+    },
+    {
+      "type": "bones",
+      "material": "bone",
+      "anchor": "chest",
+      "scale": 0.7
+    }
+  ],
+  "animations": ["idle", "walk", "run", "attack", "cast", "hit", "death"],
+  "effects": [
+    {
+      "id": "effect.shaman.magic",
+      "colorRole": "accent",
+      "anchor": "right-hand"
+    }
+  ],
+  "surfaces": []
+}

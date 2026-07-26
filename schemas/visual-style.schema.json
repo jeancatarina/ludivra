@@ -1,0 +1,77 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ludivra.dev/schemas/visual-style/v1",
+  "title": "Ludivra visual Style Bible",
+  "description": "Project art direction applied before any Visual Forge generation.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "id", "geometry", "proportions", "roughnessBias", "palette", "render"],
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "id": { "$ref": "#/$defs/semanticId" },
+    "geometry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["style", "silhouette", "asymmetry", "detailFrequency", "triangleBudget"],
+      "properties": {
+        "style": { "enum": ["faceted", "smooth", "low-poly"] },
+        "silhouette": { "enum": ["compact", "balanced", "exaggerated"] },
+        "asymmetry": { "$ref": "#/$defs/unit" },
+        "detailFrequency": { "$ref": "#/$defs/unit" },
+        "triangleBudget": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["min", "max"],
+          "properties": {
+            "min": { "type": "integer", "minimum": 12000, "maximum": 20000 },
+            "max": { "type": "integer", "minimum": 12000, "maximum": 20000 }
+          }
+        }
+      }
+    },
+    "proportions": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["heightM", "headScale", "shoulderScale"],
+      "properties": {
+        "heightM": { "$ref": "#/$defs/range" },
+        "headScale": { "$ref": "#/$defs/range" },
+        "shoulderScale": { "$ref": "#/$defs/range" }
+      }
+    },
+    "roughnessBias": { "type": "number", "minimum": -1, "maximum": 1 },
+    "palette": {
+      "type": "object",
+      "additionalProperties": { "$ref": "#/$defs/color" },
+      "required": ["skin", "cloth", "leather", "wood", "bone", "metal", "stone", "crystal", "accent"]
+    },
+    "render": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["camera", "outlineStrength", "shadowSoftness"],
+      "properties": {
+        "camera": { "const": "isometric" },
+        "outlineStrength": { "$ref": "#/$defs/unit" },
+        "shadowSoftness": { "$ref": "#/$defs/unit" }
+      }
+    }
+  },
+  "$defs": {
+    "semanticId": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "^[a-z][a-z0-9]*([._-][a-z0-9]+)*$"
+    },
+    "unit": { "type": "number", "minimum": 0, "maximum": 1 },
+    "range": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["min", "max"],
+      "properties": {
+        "min": { "type": "number", "exclusiveMinimum": 0 },
+        "max": { "type": "number", "exclusiveMinimum": 0 }
+      }
+    },
+    "color": { "type": "string", "pattern": "^#[0-9a-fA-F]{6}$" }
+  }
+}

@@ -24,6 +24,11 @@ interface CookedAudioIndex {
   entries: Array<{ id: string; recipe: string; output: string; sha256: string }>;
 }
 
+interface CookedVisualIndex {
+  generatorVersion: number;
+  entries: Array<{ id: string; output: string; manifest: string; preview: string; sha256: string }>;
+}
+
 function withinProject(projectDirectory: string, path: string): string {
   const resolved = resolve(projectDirectory, path);
   const relation = relative(projectDirectory, resolved);
@@ -60,6 +65,9 @@ function gamePlugin(projectDirectory: string): Plugin {
       const cookedIndex = JSON.parse(
         await readFile(resolve(projectDirectory, ".ludivra/audio-index.json"), "utf8").catch(() => "null")
       ) as CookedAudioIndex | null;
+      const cookedVisuals = JSON.parse(
+        await readFile(resolve(projectDirectory, ".ludivra/visual-index.json"), "utf8").catch(() => '{"entries":[]}')
+      ) as CookedVisualIndex;
 
       const audioSources: string[] = [];
       for (const audio of manifest.audio ?? []) {
@@ -83,6 +91,16 @@ function gamePlugin(projectDirectory: string): Plugin {
           source: await readFile(sourcePath)
         });
         audioSources.push(`${JSON.stringify(audio.eventId)}: import.meta.ROLLUP_FILE_URL_${reference}`);
+      }
+      // Visual recipes and compiler internals remain outside the host. The web
+      // cooker emits only approved conventional glTF artifacts from the index.
+      for (const visual of cookedVisuals.entries) {
+        const sourcePath = withinProject(projectDirectory, visual.output);
+        this.emitFile({
+          type: "asset",
+          name: `${visual.id.replaceAll(".", "-")}.gltf`,
+          source: await readFile(sourcePath)
+        });
       }
       // The compiled pack is embedded as bytes; the plugin never composes content
       // into the script, and it never compiles content itself.

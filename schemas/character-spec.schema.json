@@ -1,0 +1,131 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ludivra.dev/schemas/character-spec/v1",
+  "title": "Ludivra Visual Forge CharacterSpec",
+  "description": "Semantic source of truth for a skeleton-first stylized humanoid.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "id", "style", "seed", "archetype", "anatomy", "face", "skin", "clothing", "equipment", "accessories", "animations", "surfaces"],
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "id": { "$ref": "#/$defs/semanticId" },
+    "style": { "$ref": "#/$defs/semanticId" },
+    "seed": { "type": "integer", "minimum": 0, "maximum": 4294967295 },
+    "archetype": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["body", "head"],
+      "properties": {
+        "body": { "enum": ["small-humanoid", "medium-humanoid"] },
+        "head": { "enum": ["human", "goblin", "orc", "skeleton", "simple-demon"] }
+      }
+    },
+    "anatomy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["heightM", "headScale", "shoulderScale", "armScale", "legScale", "posture"],
+      "properties": {
+        "heightM": { "type": "number", "minimum": 0.9, "maximum": 2.2 },
+        "headScale": { "type": "number", "minimum": 0.7, "maximum": 1.5 },
+        "shoulderScale": { "type": "number", "minimum": 0.7, "maximum": 1.5 },
+        "armScale": { "type": "number", "minimum": 0.7, "maximum": 1.4 },
+        "legScale": { "type": "number", "minimum": 0.7, "maximum": 1.4 },
+        "posture": { "type": "number", "minimum": -1, "maximum": 1 }
+      }
+    },
+    "face": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["generator", "eyes", "jaw", "nose"],
+      "properties": {
+        "generator": { "enum": ["human", "goblin", "orc", "skeleton", "simple-demon"] },
+        "eyes": { "type": "number", "minimum": 0, "maximum": 1 },
+        "jaw": { "type": "number", "minimum": 0, "maximum": 1 },
+        "nose": { "type": "number", "minimum": 0, "maximum": 1 }
+      }
+    },
+    "skin": { "enum": ["skin", "bone", "stone", "crystal"] },
+    "clothing": {
+      "type": "array",
+      "maxItems": 8,
+      "items": { "$ref": "#/$defs/wearable" }
+    },
+    "equipment": {
+      "type": "array",
+      "maxItems": 4,
+      "items": { "$ref": "#/$defs/equipment" }
+    },
+    "accessories": {
+      "type": "array",
+      "maxItems": 12,
+      "items": { "$ref": "#/$defs/accessory" }
+    },
+    "animations": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": { "enum": ["idle", "walk", "run", "attack", "cast", "hit", "death", "interact"] }
+    },
+    "effects": {
+      "type": "array",
+      "maxItems": 8,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "colorRole", "anchor"],
+        "properties": {
+          "id": { "$ref": "#/$defs/semanticId" },
+          "colorRole": { "$ref": "#/$defs/semanticId" },
+          "anchor": { "enum": ["head", "left-hand", "right-hand", "chest", "feet"] }
+        }
+      }
+    },
+    "surfaces": {
+      "type": "array",
+      "maxItems": 16,
+      "items": { "$ref": "https://ludivra.dev/schemas/texture-request/v1" }
+    }
+  },
+  "$defs": {
+    "semanticId": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "^[a-z][a-z0-9]*([._-][a-z0-9]+)*$"
+    },
+    "material": { "enum": ["skin", "cloth", "leather", "wood", "bone", "metal", "stone", "crystal"] },
+    "wearable": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "material", "colorRole", "fit", "asymmetry"],
+      "properties": {
+        "type": { "enum": ["tunic", "robe", "cape", "light-armor", "wraps"] },
+        "material": { "$ref": "#/$defs/material" },
+        "colorRole": { "$ref": "#/$defs/semanticId" },
+        "fit": { "type": "number", "minimum": 0, "maximum": 1 },
+        "asymmetry": { "type": "number", "minimum": 0, "maximum": 1 }
+      }
+    },
+    "equipment": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "material", "hand", "scale"],
+      "properties": {
+        "type": { "enum": ["sword", "axe", "staff", "shield", "bow"] },
+        "material": { "$ref": "#/$defs/material" },
+        "hand": { "enum": ["left", "right", "both"] },
+        "scale": { "type": "number", "minimum": 0.5, "maximum": 1.8 }
+      }
+    },
+    "accessory": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "material", "anchor", "scale"],
+      "properties": {
+        "type": { "enum": ["horns", "bones", "mask", "pouch", "necklace", "crystal"] },
+        "material": { "$ref": "#/$defs/material" },
+        "anchor": { "enum": ["head", "chest", "waist", "left-hand", "right-hand"] },
+        "scale": { "type": "number", "minimum": 0.25, "maximum": 2 }
+      }
+    }
+  }
+}

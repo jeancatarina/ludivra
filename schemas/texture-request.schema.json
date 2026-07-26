@@ -1,0 +1,44 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ludivra.dev/schemas/texture-request/v1",
+  "title": "Ludivra Visual Forge texture request",
+  "description": "A constrained request for generated color information. Technical maps are deliberately forbidden.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["id", "kind", "material", "projection", "resolution", "origin", "license", "artDirection", "negative"],
+  "properties": {
+    "id": { "type": "string", "pattern": "^[a-z][a-z0-9]*([._-][a-z0-9]+)*$" },
+    "kind": { "enum": ["swatch", "decal", "mask", "concept"] },
+    "material": { "enum": ["skin", "cloth", "leather", "wood", "bone", "metal", "stone", "crystal"] },
+    "projection": { "enum": ["triplanar", "semantic-region", "decal", "reference-only"] },
+    "resolution": { "enum": [512, 1024] },
+    "origin": { "type": "string", "minLength": 1 },
+    "license": { "type": "string", "minLength": 1 },
+    "requirements": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "tileable": { "type": "boolean" },
+        "monochrome": { "type": "boolean" }
+      }
+    },
+    "artDirection": { "type": "string", "minLength": 1, "maxLength": 2000 },
+    "negative": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "enum": ["normal-map", "roughness-map", "full-character-uv", "transparent-background", "text", "photorealism"]
+      }
+    }
+  },
+  "allOf": [
+    {
+      "if": { "properties": { "kind": { "const": "decal" } }, "required": ["kind"] },
+      "then": { "properties": { "projection": { "const": "decal" } } }
+    },
+    {
+      "if": { "properties": { "kind": { "const": "concept" } }, "required": ["kind"] },
+      "then": { "properties": { "projection": { "const": "reference-only" } } }
+    }
+  ]
+}

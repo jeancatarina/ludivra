@@ -86,6 +86,9 @@ const families: FamilyDefinition[] = [
       "audio-authoring/src",
       "audio-authoring/package.json",
       "audio-authoring/tsconfig.json",
+      "visual-authoring/src",
+      "visual-authoring/package.json",
+      "visual-authoring/tsconfig.json",
       "content-compiler/src",
       "content-compiler/package.json",
       "content-compiler/tsconfig.json",
@@ -102,6 +105,7 @@ const families: FamilyDefinition[] = [
       "presentation-protocol/dist",
       "platform-contracts/dist",
       "audio-authoring/dist",
+      "visual-authoring/dist",
       "runtime-web/dist",
       "renderer-three/dist"
     ],
@@ -254,7 +258,17 @@ export async function ensureFamily(
   for (const name of family.environment) environment[name] = options.environment[name] ?? "";
   const projectInputs: Record<string, string> = {};
   if (family.usesProject === true && options.project !== undefined) {
-    for (const entry of ["game.jsonc", "scripts", "presentation", "content", "audio", ".ludivra/audio-index.json"]) {
+    for (const entry of [
+      "game.jsonc",
+      "scripts",
+      "presentation",
+      "content",
+      "audio",
+      "visuals",
+      "styles",
+      ".ludivra/audio-index.json",
+      ".ludivra/visual-index.json"
+    ]) {
       projectInputs[entry] = await hashArtifactPath(resolve(options.project, entry)).catch(() => "absent");
     }
   }

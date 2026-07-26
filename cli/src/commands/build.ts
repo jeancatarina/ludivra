@@ -2,6 +2,7 @@ import { resolve } from "node:path";
 import type { CacheFamilyId } from "../artifact-cache.js";
 import { ensureProjectAudio } from "../audio-forge.js";
 import { ensureContentPack } from "../content-forge.js";
+import { ensureProjectVisuals } from "../visual-forge.js";
 import { optionValue } from "../arguments.js";
 import { parseBuildOptions, runFamilies, summarizeDecisions } from "../build-runner.js";
 import { resolveProjectDirectory } from "../project.js";
@@ -25,6 +26,7 @@ export async function runBuild(context: CommandContext, arguments_: string[]): P
   // Recipes are cooked before the bundle: the host consumes the index, never a recipe.
   const content = await ensureContentPack(project);
   const audio = await ensureProjectAudio(root, project);
+  const visual = await ensureProjectVisuals(root, project);
   const result = await runFamilies({
     runId: context.runId,
     root,
@@ -38,7 +40,7 @@ export async function runBuild(context: CommandContext, arguments_: string[]): P
     },
     ...options
   });
-  const diagnostics = [...content.diagnostics, ...audio.diagnostics, ...result.diagnostics];
+  const diagnostics = [...content.diagnostics, ...audio.diagnostics, ...visual.diagnostics, ...result.diagnostics];
   const failed = diagnostics.some(({ severity }) => severity === "error");
   return {
     diagnostics,
@@ -51,6 +53,12 @@ export async function runBuild(context: CommandContext, arguments_: string[]): P
       watch: options.watch,
       rebuilds: result.rebuilds,
       audio: audio.rendered.map(({ id, output, reused }) => ({ id, output, reused })),
+      visuals: visual.rendered.map(({ id, output, reused, report }) => ({
+        id,
+        output,
+        reused,
+        triangles: report.metrics.triangles
+      })),
       content: { pack: content.path, sha256: content.sha256, reused: content.reused },
       cache: summarizeDecisions(result.decisions)
     },

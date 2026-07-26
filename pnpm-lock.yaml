@@ -38,6 +38,9 @@ importers:
       '@ludivra/runtime-web':
         specifier: workspace:*
         version: link:../runtime-web
+      '@ludivra/visual-authoring':
+        specifier: workspace:*
+        version: link:../visual-authoring
     devDependencies:
       '@types/node':
         specifier: 22.15.3
@@ -91,7 +94,7 @@ importers:
         version: 5.9.3
       vite:
         specifier: 8.1.5
-        version: 8.1.5(@types/node@22.15.3)
+        version: 8.1.5(@types/node@22.15.3)(yaml@2.9.0)
 
   hosts/electron:
     dependencies:
@@ -136,6 +139,28 @@ importers:
 
   runtime-web:
     devDependencies:
+      typescript:
+        specifier: 5.9.3
+        version: 5.9.3
+
+  visual-authoring:
+    dependencies:
+      pngjs:
+        specifier: 7.0.0
+        version: 7.0.0
+      yaml:
+        specifier: 2.9.0
+        version: 2.9.0
+    devDependencies:
+      '@types/node':
+        specifier: 22.15.3
+        version: 22.15.3
+      '@types/pngjs':
+        specifier: 6.0.5
+        version: 6.0.5
+      ajv:
+        specifier: 8.20.0
+        version: 8.20.0
       typescript:
         specifier: 5.9.3
         version: 5.9.3
@@ -312,6 +337,9 @@ packages:
 
   '@types/node@24.13.3':
     resolution: {integrity: sha512-Dh8vAsV36ig5wa9OX4pXvMc9D3Veibfw2wix0CUwYODLD8nkj9UsLjASr49nPg+2eKzxhBV+v7L8pXvT4e639Q==}
+
+  '@types/pngjs@6.0.5':
+    resolution: {integrity: sha512-0k5eKfrA83JOZPppLtS2C7OUtyNAl2wKNxfyYl9Q5g9lPkgBl/9hNyAu6HuEH2J4XmIv2znEpkDd0SaZVxW6iQ==}
 
   '@types/stats.js@0.17.4':
     resolution: {integrity: sha512-jIBvWWShCvlBqBNIZt0KAshWpvSjhkwkEu4ZUcASoAvhmrgAUI2t1dXrjSL4xXVLB4FznPrIsX3nKXFl/Dt4vA==}
@@ -560,6 +588,10 @@ packages:
     resolution: {integrity: sha512-ZIfcLJC+7E7FBFnDxm9MPmt7D+DidyQ26lewieO75AdhA2ayMtsJSES0iWzqJQbcVRSrTufQoy0DR94xHue0oA==}
     engines: {node: '>=10.4.0'}
 
+  pngjs@7.0.0:
+    resolution: {integrity: sha512-LKWqWJRhstyYo9pGvgor/ivk2w94eSjE3RGVuzLGlr3NmD8bf7RcYGze1mNdEHRP6TRP6rMuDHk5t44hnTRyow==}
+    engines: {node: '>=14.19.0'}
+
   postcss@8.5.19:
     resolution: {integrity: sha512-Mz8SaolMd8nB+G13WkORcxQKHZ/NE4xXevtkJHVuG+guo9/wYKlIMTKAqGdEmYOXR2ijPjTYNHssizdaVSUNdQ==}
     engines: {node: ^10 || ^12 || >=14}
@@ -695,6 +727,11 @@ packages:
   xmlbuilder@15.1.1:
     resolution: {integrity: sha512-yMqGBqtXyeN1e3TGYvgNgDVZ3j84W4cwkOXQswghol6APgZWaff9lnbvN7MHYJOiXsvGPXtjTYJEiC9J2wv9Eg==}
     engines: {node: '>=8.0'}
+
+  yaml@2.9.0:
+    resolution: {integrity: sha512-2AvhNX3mb8zd6Zy7INTtSpl1F15HW6Wnqj0srWlkKLcpYl/gMIMJiyuGq2KeI2YFxUPjdlB+3Lc10seMLtL4cA==}
+    engines: {node: '>= 14.6'}
+    hasBin: true
 
   yargs-parser@22.0.0:
     resolution: {integrity: sha512-rwu/ClNdSMpkSrUb+d6BRsSkLUq1fmfsY6TOpYzTwvwkg1/NRG85KBy3kq++A8LKQwX6lsu+aWad+2khvuXrqw==}
@@ -873,6 +910,10 @@ snapshots:
   '@types/node@24.13.3':
     dependencies:
       undici-types: 7.18.2
+
+  '@types/pngjs@6.0.5':
+    dependencies:
+      '@types/node': 22.15.3
 
   '@types/stats.js@0.17.4': {}
 
@@ -1064,6 +1105,8 @@ snapshots:
       base64-js: 1.5.1
       xmlbuilder: 15.1.1
 
+  pngjs@7.0.0: {}
+
   postcss@8.5.19:
     dependencies:
       nanoid: 3.3.16
@@ -1149,7 +1192,7 @@ snapshots:
   undici@7.28.0:
     optional: true
 
-  vite@8.1.5(@types/node@22.15.3):
+  vite@8.1.5(@types/node@22.15.3)(yaml@2.9.0):
     dependencies:
       lightningcss: 1.32.0
       picomatch: 4.0.5
@@ -1159,11 +1202,14 @@ snapshots:
     optionalDependencies:
       '@types/node': 22.15.3
       fsevents: 2.3.3
+      yaml: 2.9.0
 
   which@2.0.2:
     dependencies:
       isexe: 2.0.0
 
   xmlbuilder@15.1.1: {}
+
+  yaml@2.9.0: {}
 
   yargs-parser@22.0.0: {}

@@ -12,7 +12,6 @@ Foco atual: **Fase 3 — Fechar os códigos específicos de renderer e shader e 
 | SDK-001 | alta | planejado | 4 | Fechar o contrato versionado da camada 1 do SDK Lua, queries e projectors. | [ADR 0016](docs/adr/0016-public-lua-sdk-layers-and-escape-hatches.md) |
 | WORLD-001 | alta | planejado | 5 | Adicionar jobs assíncronos, Simulation LOD e inspeção espacial após o gate da Fase 4. | [ADR 0019](docs/adr/0019-spatial-model-chunk-lifecycle-and-job-commit.md), [ADR 0045](docs/adr/0045-wasm-threads-and-shared-memory.md) |
 | AUD-001 | alta | planejado | 10 | Completar música, stems, previews e integração final do Audio Forge. | [ADR 0032](docs/adr/0032-audio-forge-recipes-and-deterministic-renderer.md) |
-| VIS-001 | média | planejado | 10 | Implementar o Visual Forge para humanoides estilizados. | [ADR 0033](docs/adr/0033-visual-forge-procedural-characters-and-generated-surfaces.md) |
 | ENG-009 | média | planejado | 11 | Validar pacotes Windows e Linux em runners nativos. | [ADR 0030](docs/adr/0030-target-hardening-signing-and-distribution.md) |
 | ENG-013 | média | bloqueado | 11 | Assinar e notarizar o pacote macOS após autorização e credenciais explícitas. | [ADR 0030](docs/adr/0030-target-hardening-signing-and-distribution.md) |
 

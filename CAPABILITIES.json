@@ -38,6 +38,48 @@
       ]
     },
     {
+      "id": "authoring.visual-forge",
+      "status": "experimental",
+      "version": "0.1.0",
+      "owner": "visual-authoring",
+      "targets": [
+        "native-headless",
+        "browser",
+        "electron"
+      ],
+      "contracts": [
+        "schemas/character-spec.schema.json",
+        "schemas/texture-request.schema.json",
+        "schemas/visual-forge-manifest.schema.json",
+        "schemas/visual-style.schema.json"
+      ],
+      "examples": [
+        "visual-authoring/test/fixtures/goblin-shaman.character.json",
+        "visual-authoring/test/fixtures/stylized/style.yaml"
+      ],
+      "dependencies": [
+        "presentation.three"
+      ],
+      "verification": [
+        "pnpm test:visual",
+        "pnpm test:cli"
+      ],
+      "limitations": [
+        {
+          "code": "VISUAL_ARCHETYPE_HUMANOID_ONLY",
+          "message": "The first generator supports small and medium stylized humanoids only."
+        },
+        {
+          "code": "VISUAL_CLOTH_PROCEDURAL_ONLY",
+          "message": "Clothing uses generated shells and semantic secondary motion; full cloth simulation is outside this capability."
+        },
+        {
+          "code": "VISUAL_SURFACE_IMPORT_MANUAL",
+          "message": "Generated swatches, decals, masks and concept renders may require a manual inbox import before local compilation."
+        }
+      ]
+    },
+    {
       "id": "feedback.audio-effects",
       "status": "experimental",
       "version": "0.1.0",

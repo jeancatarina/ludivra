@@ -14,7 +14,8 @@
     "@ludivra/audio-authoring": "workspace:*",
     "@ludivra/content-compiler": "workspace:*",
     "@ludivra/presentation-protocol": "workspace:*",
-    "@ludivra/runtime-web": "workspace:*"
+    "@ludivra/runtime-web": "workspace:*",
+    "@ludivra/visual-authoring": "workspace:*"
   },
   "devDependencies": {
     "@types/node": "22.15.3",

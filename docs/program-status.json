@@ -210,11 +210,16 @@
           "summary": "Audio Forge possui receita JSONC, render determinístico, análise, cache, cooker e comandos de CLI.",
           "capabilities": ["authoring.audio-forge"],
           "evidence": ["capabilities/authoring-audio-forge/capability.json", "audio-authoring/src", "cli/src/audio-forge.ts"]
+        },
+        {
+          "summary": "Visual Forge possui Style Bible, CharacterSpec, gerador skeleton-first, skinning, superfícies compiladas, glTF, preview, validação e jobs de CLI.",
+          "capabilities": ["authoring.visual-forge"],
+          "evidence": ["capabilities/authoring-visual-forge/capability.json", "visual-authoring/src", "cli/src/visual-forge.ts"]
         }
       ],
       "remaining": [
         "Completar música, stems, previews gráficos e runtime/cooker do Audio Forge.",
-        "Implementar Visual, World, Construction e Physics Forges.",
+        "Implementar World, Construction e Physics Forges.",
         "Aplicar o manifest comum de Forge, origem, licença, preview e regeneração."
       ],
       "gate": "Os cinco Forges produzem artefatos rastreáveis usados nas fixtures e preparados para os jogos finais."
@@ -305,14 +310,6 @@
       "phase": 10,
       "work": "Completar música, stems, previews e integração final do Audio Forge.",
       "adrs": ["0032"]
-    },
-    {
-      "id": "VIS-001",
-      "priority": "medium",
-      "status": "planned",
-      "phase": 10,
-      "work": "Implementar o Visual Forge para humanoides estilizados.",
-      "adrs": ["0033"]
     },
     {
       "id": "ENG-009",

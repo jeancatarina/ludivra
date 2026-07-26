@@ -39,3 +39,7 @@ Electron packages also contain Chromium and other notices under `LICENSES.chromi
 Copyright © steamworks.js contributors. Licensed under the MIT License.
 
 The packaged Steam adapter also contains Valve Steamworks redistributable binaries. Their use and distribution are governed by the Steamworks SDK Access Agreement and apply only to authorized Steamworks partners and applications.
+
+## Authoring-only dependencies
+
+The Visual Forge uses `yaml` 2.9.0 under the ISC License and `pngjs` 7.0.0 under the MIT License. These packages run only in the authoring/build toolchain and are not dependencies of a published game runtime.

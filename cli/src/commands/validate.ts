@@ -32,7 +32,11 @@ const requiredFiles = [
   "contracts/run-manifest.schema.json",
   "docs/program-status.json",
   "schemas/card-roguelite.schema.json",
+  "schemas/character-spec.schema.json",
   "schemas/scenario.schema.json",
+  "schemas/texture-request.schema.json",
+  "schemas/visual-forge-manifest.schema.json",
+  "schemas/visual-style.schema.json",
   "runtime-c-api/include/ludivra/runtime.h",
   "toolchain.lock"
 ] as const;
@@ -53,8 +57,12 @@ const jsonFiles = [
   "contracts/run-manifest.schema.json",
   "docs/program-status.json",
   "schemas/card-roguelite.schema.json",
+  "schemas/character-spec.schema.json",
   "schemas/game.schema.json",
   "schemas/scenario.schema.json",
+  "schemas/texture-request.schema.json",
+  "schemas/visual-forge-manifest.schema.json",
+  "schemas/visual-style.schema.json",
   "toolchain.lock"
 ] as const;
 
@@ -69,8 +77,12 @@ const contractSchemaFiles = [
   "contracts/program-status.schema.json",
   "contracts/run-manifest.schema.json",
   "schemas/card-roguelite.schema.json",
+  "schemas/texture-request.schema.json",
+  "schemas/character-spec.schema.json",
   "schemas/game.schema.json",
-  "schemas/scenario.schema.json"
+  "schemas/scenario.schema.json",
+  "schemas/visual-forge-manifest.schema.json",
+  "schemas/visual-style.schema.json"
 ] as const;
 
 const kernelForbiddenPatterns = [

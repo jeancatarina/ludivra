@@ -486,6 +486,81 @@ test("game audio renders a recipe, reuses it by key and reports its analysis", (
   }
 });
 
+test("game visual compiles, validates and finalizes a deterministic humanoid job", () => {
+  const temporaryRoot = mkdtempSync(resolve(tmpdir(), "ludivra-visual-"));
+  const project = resolve(temporaryRoot, "visual-game");
+  const engineRoot = fileURLToPath(new URL("../..", import.meta.url));
+  try {
+    assert.equal(runCli(["new", project, "--name", "Visual Game", "--format", "json"]).execution.status, 0);
+    mkdirSync(resolve(project, "visuals"), { recursive: true });
+    mkdirSync(resolve(project, "styles/stylized"), { recursive: true });
+    cpSync(
+      resolve(engineRoot, "visual-authoring/test/fixtures/goblin-shaman.character.json"),
+      resolve(project, "visuals/goblin-shaman.character.json")
+    );
+    cpSync(
+      resolve(engineRoot, "visual-authoring/test/fixtures/stylized/style.yaml"),
+      resolve(project, "styles/stylized/style.yaml")
+    );
+
+    const first = runCli(["visual", "compile", "visual.goblin.shaman", "--project", project, "--format", "json"]);
+    assert.equal(first.execution.status, 0, first.execution.stdout);
+    assert.equal(first.result.data.rendered[0].validation, "passed");
+    assert.equal(first.result.data.rendered[0].triangles, 15200);
+    assert.equal(first.result.data.rendered[0].bones, 21);
+    assert.equal(first.result.data.rendered[0].reused, false);
+    assert.ok(existsSync(resolve(project, first.result.data.rendered[0].output)));
+    assert.ok(existsSync(resolve(project, first.result.data.rendered[0].manifest)));
+    assert.ok(existsSync(resolve(project, first.result.data.rendered[0].preview)));
+
+    const second = runCli(["visual", "compile", "visual.goblin.shaman", "--project", project, "--format", "json"]);
+    assert.equal(second.execution.status, 0, second.execution.stdout);
+    assert.equal(second.result.data.rendered[0].reused, true);
+    assert.equal(second.result.data.rendered[0].sha256, first.result.data.rendered[0].sha256);
+
+    const validated = runCli(["visual", "validate", "visual.goblin.shaman", "--project", project, "--format", "json"]);
+    assert.equal(validated.execution.status, 0, validated.execution.stdout);
+    assert.equal(validated.result.data.validation, "passed");
+    assert.equal(validated.result.data.state, "VALIDATING");
+
+    const finalized = runCli(["visual", "finalize", "visual.goblin.shaman", "--project", project, "--format", "json"]);
+    assert.equal(finalized.execution.status, 0, finalized.execution.stdout);
+    assert.equal(finalized.result.data.state, "APPROVED");
+    const cookedAgain = runCli(["visual", "compile", "visual.goblin.shaman", "--project", project, "--format", "json"]);
+    assert.equal(cookedAgain.execution.status, 0, cookedAgain.execution.stdout);
+    assert.equal(cookedAgain.result.data.rendered[0].reused, true);
+    const approvedJob = JSON.parse(readFileSync(
+      resolve(project, ".ludivra/visual-jobs/visual.goblin.shaman/job.json"),
+      "utf8"
+    ));
+    assert.equal(approvedJob.state, "APPROVED", "an unchanged build must preserve approval");
+
+    const planned = runCli([
+      "visual", "plan", "orc guard with a cloth texture",
+      "--id", "visual.orc.guard",
+      "--style", "stylized",
+      "--project", project,
+      "--format", "json"
+    ]);
+    assert.equal(planned.execution.status, 0, planned.execution.stdout);
+    assert.equal(planned.result.data.state, "WAITING_FOR_TEXTURES");
+    assert.equal(planned.result.data.textureRequests[0].expected, "surface.primary.png");
+    const inbox = resolve(project, "texture-inbox");
+    mkdirSync(inbox, { recursive: true });
+    writeFileSync(resolve(inbox, "surface.primary.png"), Buffer.from("manual generated-image placeholder"));
+    const imported = runCli([
+      "visual", "import", inbox,
+      "--id", "visual.orc.guard",
+      "--project", project,
+      "--format", "json"
+    ]);
+    assert.equal(imported.execution.status, 0, imported.execution.stdout);
+    assert.equal(imported.result.data.imported[0].state, "TEXTURES_IMPORTED");
+  } finally {
+    rmSync(temporaryRoot, { recursive: true, force: true });
+  }
+});
+
 test("game content compiles a pack and traces a value to the line that authored it", () => {
   const temporaryRoot = mkdtempSync(resolve(tmpdir(), "ludivra-content-"));
   const project = resolve(temporaryRoot, "content-game");

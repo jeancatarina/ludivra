@@ -1,5 +1,6 @@
 packages:
   - audio-authoring
+  - visual-authoring
   - cli
   - content-compiler
   - presentation-protocol
