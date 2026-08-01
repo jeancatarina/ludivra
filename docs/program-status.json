@@ -3,8 +3,8 @@
   "release": "0.7.0",
   "currentFocus": {
     "phase": 4,
-    "summary": "Implementar statecharts determinísticas de gameplay com save, hash, replay e diagnóstico.",
-    "next": "Definir o schema de statecharts, registrar guards/actions e validar save, hash e replay determinísticos."
+    "summary": "Fechar o gate integrado de UI, localização, navegação, foco, touch targets e breakpoints.",
+    "next": "Implementar e validar o gate de UI por teclado, controle e touch em todos os breakpoints declarados."
   },
   "phases": [
     {
@@ -100,10 +100,14 @@
           "summary": "Grafo text-first de scenes, prefabs e recursos compilado por IDs explícitos, com ciclos, overrides e slots rejeitados antes do build e inspeção rastreável pelo CLI.",
           "capabilities": ["authoring.scene-graph"],
           "evidence": ["schemas/scene.schema.json", "schemas/prefab.schema.json", "content-compiler/src/scene-graph.ts", "examples/card-roguelite/scenes/ember-vault.scene.jsonc"]
+        },
+        {
+          "summary": "Statecharts textuais de uma região com hierarquia, history shallow, guards Lua read-only, actions via command buffer, afterTicks lógicos, save/replay/hash e trace causal no control harness.",
+          "capabilities": ["runtime.statecharts"],
+          "evidence": ["schemas/statechart.schema.json", "kernel/src/statechart_runtime.cpp", "runtime-c-api/include/ludivra/runtime.h", "cli/src/control-worker.ts", "tests/runtime/runtime_test.cpp"]
         }
       ],
       "remaining": [
-        "Statecharts determinísticas com guards/actions registrados, save, hash e replay.",
         "Gate integrado de UI, localização, navegação, foco, touch targets e breakpoints."
       ],
       "gate": "Uma sessão nova cria regra, conteúdo, tela, apresentação e cenário usando apenas APIs públicas."
@@ -285,12 +289,12 @@
   ],
   "tasks": [
     {
-      "id": "FSM-001",
+      "id": "OBS-002",
       "priority": "high",
       "status": "in_progress",
       "phase": 4,
-      "work": "Implementar statecharts determinísticas de gameplay com save, hash, replay e diagnóstico.",
-      "adrs": ["0053"]
+      "work": "Implementar o gate integrado de UI, localização, navegação, foco, touch targets e breakpoints.",
+      "adrs": ["0014", "0015"]
     },
     {
       "id": "WORLD-001",

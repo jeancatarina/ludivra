@@ -445,9 +445,9 @@ void check_streaming(TestContext& context) {
 
 void check_statechart_runtime(TestContext& context) {
   StatechartRuntime chart;
-  context.expect(chart.install({{1U, std::nullopt, false}, {2U, 1U, true}, {3U, 2U, false}}, {
-      {10U, 3U, 7U, 1U, 0U, StatechartTransitionKind::external},
-      {11U, 2U, 7U, 3U, 1U, StatechartTransitionKind::external}}, 3U) == StatechartError::none,
+  context.expect(chart.install({{1U, std::nullopt, false, {}, {}}, {2U, 1U, true, {}, {}}, {3U, 2U, false, {}, {}}}, {
+      {10U, 3U, 7U, std::nullopt, 1U, 0U, StatechartTransitionKind::external, std::nullopt, {}},
+      {11U, 2U, 7U, std::nullopt, 3U, 1U, StatechartTransitionKind::external, std::nullopt, {}}}, 3U) == StatechartError::none,
       "statechart installs with explicit precedence");
   const auto transition = chart.dispatch(7U);
   context.expect(transition.error == StatechartError::none && transition.chosen->id == 10U,
@@ -456,15 +456,26 @@ void check_statechart_runtime(TestContext& context) {
   context.expect(chart.dispatch(99U).error == StatechartError::event_unhandled, "unhandled events stay explicit");
 
   StatechartRuntime restored;
-  context.expect(restored.install({{1U, std::nullopt, false}, {2U, 1U, true}, {3U, 2U, false}}, {}, 1U) == StatechartError::none,
+  context.expect(restored.install({{1U, std::nullopt, false, {}, {}}, {2U, 1U, true, {}, {}}, {3U, 2U, false, {}, {}}}, {}, 1U) == StatechartError::none,
       "the restore chart installs");
   context.expect(restored.restore(chart.snapshot()) == StatechartError::none && restored.active() == 1U,
       "snapshot restores active state and shallow history");
   StatechartRuntime ambiguous;
-  context.expect(ambiguous.install({{1U, std::nullopt, false}}, {
-      {1U, 1U, 1U, 1U, 0U, StatechartTransitionKind::external},
-      {2U, 1U, 1U, 1U, 0U, StatechartTransitionKind::external}}, 1U) == StatechartError::transition_ambiguous,
+  context.expect(ambiguous.install({{1U, std::nullopt, false, {}, {}}}, {
+      {1U, 1U, 1U, std::nullopt, 1U, 0U, StatechartTransitionKind::external, std::nullopt, {}},
+      {2U, 1U, 1U, std::nullopt, 1U, 0U, StatechartTransitionKind::external, std::nullopt, {}}}, 1U) == StatechartError::transition_ambiguous,
       "equal precedence is rejected at installation");
+
+  StatechartRuntime guarded;
+  context.expect(guarded.install({{1U, std::nullopt, false, {}, {}}, {2U, std::nullopt, false, {}, {}}, {3U, std::nullopt, false, {}, {}}}, {
+      {10U, 1U, 4U, std::nullopt, 2U, 0U, StatechartTransitionKind::external, 1U, {}},
+      {11U, 1U, 4U, std::nullopt, 3U, 1U, StatechartTransitionKind::external, std::nullopt, {}}}, 1U) == StatechartError::none,
+      "guarded precedence chart installs");
+  const auto guarded_result = guarded.dispatch(4U, [](const std::uint32_t id, const StatechartTransition&) {
+    return std::optional<bool>{id != 1U};
+  });
+  context.expect(guarded_result.chosen.has_value() && guarded_result.chosen->id == 11U && guarded_result.guards.size() == 1U && !guarded_result.guards[0].passed,
+      "guards evaluate in priority order and fall through deterministically");
 }
 
 }  // namespace

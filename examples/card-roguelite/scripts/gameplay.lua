@@ -143,6 +143,16 @@ local function choose_reward(ctx)
 end
 
 return {
+  on_statechart_guard = function(ctx, event)
+    return event.id == "guard.can-start" and get_value(ctx, S.phase) == P.idle
+  end,
+  on_statechart_action = function(_ctx, event)
+    -- The graph owns lifecycle observability while on_input remains the rule
+    -- owner. This explicit hook is also where a game can enqueue entry effects.
+    if event.id == "action.begin-combat" and event.phase == "entry" then
+      return
+    end
+  end,
   on_input = function(ctx, event)
     if event.value_milli <= 0 then
       return

@@ -8,7 +8,7 @@
 extern "C" {
 #endif
 
-#define LUDIVRA_RUNTIME_ABI_VERSION 4U
+#define LUDIVRA_RUNTIME_ABI_VERSION 5U
 
 typedef struct ludivra_runtime ludivra_runtime;
 
@@ -67,8 +67,30 @@ typedef struct ludivra_statechart_transition {
   uint32_t event_action_id;
   uint32_t to_state;
   uint32_t priority;
+  /* Zero means no guard. Guard handlers are registered separately by semantic name. */
+  uint32_t guard_id;
+  /* Zero means event-triggered. A positive value is a logical afterTicks trigger. */
+  uint32_t after_ticks;
   uint8_t kind; /* 0 external, 1 internal */
 } ludivra_statechart_transition;
+
+typedef enum ludivra_statechart_action_phase {
+  LUDIVRA_STATECHART_ACTION_ENTRY = 0,
+  LUDIVRA_STATECHART_ACTION_EXIT = 1,
+  LUDIVRA_STATECHART_ACTION_TRANSITION = 2
+} ludivra_statechart_action_phase;
+
+typedef struct ludivra_statechart_action {
+  /* State id for entry/exit, transition id for transition actions. */
+  uint32_t owner_id;
+  uint32_t action_id;
+  ludivra_statechart_action_phase phase;
+} ludivra_statechart_action;
+
+typedef enum ludivra_statechart_handler_kind {
+  LUDIVRA_STATECHART_HANDLER_GUARD = 0,
+  LUDIVRA_STATECHART_HANDLER_ACTION = 1
+} ludivra_statechart_handler_kind;
 
 uint32_t ludivra_runtime_abi_version(void);
 const char* ludivra_result_message(ludivra_result result);
@@ -89,19 +111,65 @@ ludivra_result ludivra_runtime_step(
     ludivra_runtime* runtime,
     uint32_t tick_count);
 
-/* Installs one deterministic gameplay statechart. Its event ids are logical
-   input action ids, so transitions are included in the existing replay stream. */
+/* Binds a compiled semantic handler name to the compact ID used by a chart.
+   Guards invoke on_statechart_guard(ctx, event); actions invoke
+   on_statechart_action(ctx, event). */
+ludivra_result ludivra_runtime_declare_statechart_handler(
+    ludivra_runtime* runtime,
+    ludivra_statechart_handler_kind kind,
+    const char* name,
+    uint32_t name_size,
+    uint32_t id);
+
+/* Installs one deterministic gameplay statechart. Event ids are logical input
+   action ids; after_ticks is logical time; actions run through the Lua command
+   buffer in exit, transition, entry order. */
 ludivra_result ludivra_runtime_install_statechart(
     ludivra_runtime* runtime,
     const ludivra_statechart_state* states,
     uint32_t state_count,
     const ludivra_statechart_transition* transitions,
     uint32_t transition_count,
+    const ludivra_statechart_action* actions,
+    uint32_t action_count,
     uint32_t initial_state);
 
 ludivra_result ludivra_runtime_statechart_active(
     const ludivra_runtime* runtime,
     uint32_t* out_state);
+
+typedef enum ludivra_statechart_trace_kind {
+  LUDIVRA_STATECHART_TRACE_EVENT = 0,
+  LUDIVRA_STATECHART_TRACE_GUARD = 1,
+  LUDIVRA_STATECHART_TRACE_ACTION = 2
+} ludivra_statechart_trace_kind;
+
+typedef struct ludivra_statechart_trace {
+  uint64_t tick;
+  uint32_t event_action_id;
+  uint32_t transition_id;
+  uint32_t guard_id;
+  uint32_t action_id;
+  uint32_t previous_state;
+  uint32_t active_state;
+  uint8_t kind;
+  uint8_t guard_passed;
+  /* 0 exit, 1 transition, 2 entry, 255 when the record has no action. */
+  uint8_t action_phase;
+  uint8_t error;
+} ludivra_statechart_trace;
+
+/* Ordered causal records are transient like presentation events. */
+ludivra_result ludivra_runtime_statechart_trace_count(
+    const ludivra_runtime* runtime,
+    uint32_t* out_count);
+ludivra_result ludivra_runtime_statechart_traces_write(
+    const ludivra_runtime* runtime,
+    ludivra_statechart_trace* buffer,
+    uint32_t capacity,
+    uint32_t* out_count);
+ludivra_result ludivra_runtime_statechart_traces_clear(
+    ludivra_runtime* runtime);
 
 /* Inspection functions never mutate the runtime. */
 ludivra_result ludivra_runtime_tick(

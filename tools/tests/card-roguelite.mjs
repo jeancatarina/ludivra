@@ -43,6 +43,19 @@ for (const [scenario, state] of expected) {
   assert.equal(projector.uiNodes, 17);
   assert.ok(projector.executions >= 1);
   assert.ok(result.artifacts.some(({ kind, sha256 }) => kind === "replay" && /^[a-f0-9]{64}$/.test(sha256)));
+  if (scenario === "scenarios/run-victory.jsonc") {
+    const traceArtifact = result.artifacts.find(({ kind }) => kind === "causal-trace");
+    const trace = JSON.parse(readFileSync(traceArtifact.path, "utf8"));
+    assert.ok(trace.some(({ kind, data }) =>
+      kind === "statechart-event" && data.transition === "start-run" && data.previous === "idle" && data.active === "combat"
+    ), "the control trace names the statechart transition");
+    assert.ok(trace.some(({ kind, data }) =>
+      kind === "statechart-guard" && data.guard === "guard.can-start" && data.passed === true
+    ), "the control trace records the evaluated guard");
+    assert.ok(trace.some(({ kind, data }) =>
+      kind === "statechart-action" && data.action === "action.begin-combat" && data.phase === "entry"
+    ), "the control trace records the lifecycle action");
+  }
 }
 
 // Content reaches the game through the compiled pack, not through the script.

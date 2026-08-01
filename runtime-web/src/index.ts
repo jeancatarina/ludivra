@@ -42,13 +42,48 @@ export interface LogicalInput {
 }
 
 export interface StatechartState { id: number; parentId?: number; shallowHistory?: boolean; }
-export interface StatechartTransition { id: number; fromState: number; eventActionId: number; toState: number; priority: number; kind: "external" | "internal"; }
+export interface StatechartTransition {
+  id: number;
+  fromState: number;
+  eventActionId?: number;
+  afterTicks?: number;
+  toState: number;
+  priority: number;
+  kind: "external" | "internal";
+  guardId?: number;
+}
+export interface StatechartHandler { id: number; name: string; }
+export interface StatechartActionBinding {
+  ownerId: number;
+  actionId: number;
+  phase: "entry" | "exit" | "transition";
+}
+export interface StatechartInstallOptions {
+  guards?: readonly StatechartHandler[];
+  actions?: readonly StatechartHandler[];
+  bindings?: readonly StatechartActionBinding[];
+}
+export interface StatechartTrace {
+  kind: "event" | "guard" | "action";
+  tick: bigint;
+  eventActionId: number;
+  transitionId: number;
+  guardId: number;
+  actionId: number;
+  previousState: number;
+  activeState: number;
+  guardPassed: boolean;
+  actionPhase?: "exit" | "transition" | "entry";
+  error: number;
+}
 
 const ok = 0;
 const configSize = 24;
 const inputSize = 24;
 const statechartStateSize = 12;
-const statechartTransitionSize = 24;
+const statechartTransitionSize = 32;
+const statechartActionSize = 12;
+const statechartTraceSize = 36;
 
 function call(
   module: RuntimeModule,
@@ -211,10 +246,30 @@ export class LudivraRuntime {
     );
   }
 
-  installStatechart(states: readonly StatechartState[], transitions: readonly StatechartTransition[], initialState: number): void {
+  private declareStatechartHandler(kind: "guard" | "action", handler: StatechartHandler): void {
+    const bytes = new TextEncoder().encode(handler.name);
+    const pointer = this.module._malloc(bytes.length);
+    try {
+      this.module.HEAPU8.set(bytes, pointer);
+      requireOk(this.module, "statechart handler declaration", call(this.module, "ludivra_runtime_declare_statechart_handler", [
+        this.liveHandle(), kind === "guard" ? 0 : 1, pointer, bytes.length, handler.id
+      ]), this.handle);
+    } finally { this.module._free(pointer); }
+  }
+
+  installStatechart(
+    states: readonly StatechartState[],
+    transitions: readonly StatechartTransition[],
+    initialState: number,
+    options: StatechartInstallOptions = {}
+  ): void {
     if (states.length === 0) throw new Error("statechart requires at least one state");
+    for (const handler of options.guards ?? []) this.declareStatechartHandler("guard", handler);
+    for (const handler of options.actions ?? []) this.declareStatechartHandler("action", handler);
     const statesPointer = this.module._malloc(states.length * statechartStateSize);
     const transitionsPointer = transitions.length === 0 ? 0 : this.module._malloc(transitions.length * statechartTransitionSize);
+    const bindings = options.bindings ?? [];
+    const actionsPointer = bindings.length === 0 ? 0 : this.module._malloc(bindings.length * statechartActionSize);
     try {
       const view = new DataView(this.module.HEAPU8.buffer);
       states.forEach((state, index) => {
@@ -223,19 +278,73 @@ export class LudivraRuntime {
         view.setUint8(offset + 8, state.parentId === undefined ? 0 : 1); view.setUint8(offset + 9, state.shallowHistory === true ? 1 : 0);
       });
       transitions.forEach((transition, index) => {
+        if ((transition.eventActionId === undefined) === (transition.afterTicks === undefined)) {
+          throw new Error("statechart transition requires exactly one trigger");
+        }
         const offset = transitionsPointer + index * statechartTransitionSize;
         view.setUint32(offset, transition.id, true); view.setUint32(offset + 4, transition.fromState, true);
-        view.setUint32(offset + 8, transition.eventActionId, true); view.setUint32(offset + 12, transition.toState, true);
-        view.setUint32(offset + 16, transition.priority, true); view.setUint8(offset + 20, transition.kind === "external" ? 0 : 1);
+        view.setUint32(offset + 8, transition.eventActionId ?? 0, true); view.setUint32(offset + 12, transition.toState, true);
+        view.setUint32(offset + 16, transition.priority, true); view.setUint32(offset + 20, transition.guardId ?? 0, true);
+        view.setUint32(offset + 24, transition.afterTicks ?? 0, true); view.setUint8(offset + 28, transition.kind === "external" ? 0 : 1);
       });
-      requireOk(this.module, "statechart installation", call(this.module, "ludivra_runtime_install_statechart", [this.liveHandle(), statesPointer, states.length, transitionsPointer, transitions.length, initialState]), this.handle);
-    } finally { if (transitionsPointer !== 0) this.module._free(transitionsPointer); this.module._free(statesPointer); }
+      bindings.forEach((binding, index) => {
+        const offset = actionsPointer + index * statechartActionSize;
+        view.setUint32(offset, binding.ownerId, true); view.setUint32(offset + 4, binding.actionId, true);
+        view.setUint8(offset + 8, binding.phase === "entry" ? 0 : binding.phase === "exit" ? 1 : 2);
+      });
+      requireOk(this.module, "statechart installation", call(this.module, "ludivra_runtime_install_statechart", [
+        this.liveHandle(), statesPointer, states.length, transitionsPointer, transitions.length, actionsPointer, bindings.length, initialState
+      ]), this.handle);
+    } finally {
+      if (actionsPointer !== 0) this.module._free(actionsPointer);
+      if (transitionsPointer !== 0) this.module._free(transitionsPointer);
+      this.module._free(statesPointer);
+    }
   }
 
   statechartActive(): number {
     const pointer = this.module._malloc(4);
     try { requireOk(this.module, "statechart inspection", call(this.module, "ludivra_runtime_statechart_active", [this.liveHandle(), pointer]), this.handle); return new DataView(this.module.HEAPU8.buffer).getUint32(pointer, true); }
     finally { this.module._free(pointer); }
+  }
+
+  drainStatechartTraces(): StatechartTrace[] {
+    const countPointer = this.module._malloc(4);
+    try {
+      requireOk(this.module, "statechart trace count", call(this.module, "ludivra_runtime_statechart_trace_count", [this.liveHandle(), countPointer]), this.handle);
+      const count = new DataView(this.module.HEAPU8.buffer).getUint32(countPointer, true);
+      if (count === 0) return [];
+      const bufferPointer = this.module._malloc(count * statechartTraceSize);
+      try {
+        requireOk(this.module, "statechart trace read", call(this.module, "ludivra_runtime_statechart_traces_write", [
+          this.liveHandle(), bufferPointer, count, countPointer
+        ]), this.handle);
+        const written = new DataView(this.module.HEAPU8.buffer).getUint32(countPointer, true);
+        const view = new DataView(this.module.HEAPU8.buffer);
+        const traces: StatechartTrace[] = [];
+        for (let index = 0; index < written; index += 1) {
+          const offset = bufferPointer + index * statechartTraceSize;
+          const kind = view.getUint8(offset + 32);
+          const actionPhase = view.getUint8(offset + 34);
+          if (kind > 2 || (actionPhase > 2 && actionPhase !== 255)) throw new Error("statechart trace record is invalid");
+          traces.push({
+            kind: kind === 0 ? "event" : kind === 1 ? "guard" : "action",
+            tick: view.getBigUint64(offset, true),
+            eventActionId: view.getUint32(offset + 8, true),
+            transitionId: view.getUint32(offset + 12, true),
+            guardId: view.getUint32(offset + 16, true),
+            actionId: view.getUint32(offset + 20, true),
+            previousState: view.getUint32(offset + 24, true),
+            activeState: view.getUint32(offset + 28, true),
+            guardPassed: view.getUint8(offset + 33) !== 0,
+            ...(actionPhase === 255 ? {} : { actionPhase: actionPhase === 0 ? "exit" : actionPhase === 1 ? "transition" : "entry" }),
+            error: view.getUint8(offset + 35)
+          });
+        }
+        requireOk(this.module, "statechart trace clear", call(this.module, "ludivra_runtime_statechart_traces_clear", [this.liveHandle()]), this.handle);
+        return traces;
+      } finally { this.module._free(bufferPointer); }
+    } finally { this.module._free(countPointer); }
   }
 
   tick(): bigint {

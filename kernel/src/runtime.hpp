@@ -6,6 +6,7 @@
 #include "statechart_runtime.hpp"
 
 #include <cstdint>
+#include <map>
 #include <span>
 #include <string>
 #include <string_view>
@@ -23,6 +24,23 @@ struct LogicalInput final {
   std::uint32_t action_id;
   std::int32_t value_milli;
   std::uint64_t sequence;
+};
+
+enum class StatechartHandlerKind : std::uint8_t { guard, action };
+enum class StatechartTraceKind : std::uint8_t { event, guard, action };
+
+struct StatechartTrace final {
+  StatechartTraceKind kind;
+  std::uint64_t tick;
+  std::uint32_t event;
+  std::uint32_t transition;
+  std::uint32_t guard;
+  std::uint32_t action;
+  std::uint32_t previous;
+  std::uint32_t active;
+  bool guard_passed;
+  std::optional<StatechartActionPhase> action_phase;
+  StatechartError error;
 };
 
 enum class PresentationEventKind : std::uint8_t {
@@ -71,6 +89,7 @@ class Runtime final {
   /// the numeric keys the manifest already owns. Declaring twice with different
   /// keys is a defect, not a redefinition.
   [[nodiscard]] RuntimeError declare_symbol(SymbolKind kind, std::string_view name, std::uint32_t key);
+  [[nodiscard]] RuntimeError declare_statechart_handler(StatechartHandlerKind kind, std::string_view name, std::uint32_t id);
   [[nodiscard]] RuntimeError install_statechart(std::vector<StatechartState> states, std::vector<StatechartTransition> transitions, std::uint32_t initial);
   [[nodiscard]] std::uint32_t statechart_active() const noexcept;
   [[nodiscard]] std::int64_t integer_state(std::uint32_t key) const noexcept;
@@ -80,6 +99,8 @@ class Runtime final {
   [[nodiscard]] RuntimeError verify_replay(std::span<const std::uint8_t> bytes) const;
   [[nodiscard]] const std::vector<PresentationEvent>& presentation_events() const noexcept;
   void clear_presentation_events() noexcept;
+  [[nodiscard]] const std::vector<StatechartTrace>& statechart_traces() const noexcept;
+  void clear_statechart_traces() noexcept;
   [[nodiscard]] const std::string& last_error() const noexcept;
   [[nodiscard]] const std::string& last_error_code() const noexcept;
 
@@ -89,6 +110,9 @@ class Runtime final {
   static void mix_u64(std::uint64_t& hash, std::uint64_t value) noexcept;
   [[nodiscard]] RuntimeError commit_tick();
   [[nodiscard]] RuntimeError fire_expired_timers();
+  [[nodiscard]] RuntimeError execute_statechart_result(const StatechartResult& result);
+  void record_statechart_result(std::uint32_t event, const StatechartResult& result);
+  [[nodiscard]] std::optional<bool> evaluate_statechart_guard(std::uint32_t guard, const StatechartTransition& transition);
   [[nodiscard]] std::string timer_name(std::uint32_t key) const;
   [[nodiscard]] RuntimeError apply_commands();
 
@@ -106,12 +130,15 @@ class Runtime final {
   std::vector<StatechartState> statechart_states_;
   std::vector<StatechartTransition> statechart_transitions_;
   std::uint32_t statechart_initial_{0};
+  std::map<std::uint32_t, std::string> statechart_guards_;
+  std::map<std::uint32_t, std::string> statechart_actions_;
   LuaSandbox lua_;
   std::string gameplay_source_;
   std::string content_pack_source_;
   SavedState replay_initial_state_;
   std::vector<ReplayFrame> replay_frames_;
   std::vector<PresentationEvent> presentation_events_;
+  std::vector<StatechartTrace> statechart_traces_;
   std::uint64_t next_presentation_sequence_{1};
 };
 

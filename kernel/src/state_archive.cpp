@@ -11,7 +11,9 @@ namespace {
 
 constexpr std::array<std::uint8_t, 4> save_magic{'L', 'D', 'S', 'V'};
 constexpr std::array<std::uint8_t, 4> replay_magic{'L', 'D', 'R', 'P'};
-constexpr std::uint32_t archive_version = 4;
+constexpr std::uint32_t archive_version = 5;
+/// Version 4 saved the active state and history but not elapsed statechart time.
+constexpr std::uint32_t archive_version_without_statechart_ticks = 4;
 constexpr std::uint32_t archive_version_without_statechart = 3;
 /// Version 2 predates logical timers and migrates to an empty timer set.
 constexpr std::uint32_t archive_version_without_timers = 2;
@@ -146,7 +148,7 @@ class ArchiveReader final {
 
 bool read_header(ArchiveReader& reader, const std::array<std::uint8_t, 4>& magic, std::uint32_t& version) {
   return reader.verify_checksum() && reader.magic(magic) && reader.u32(version) &&
-      (version == archive_version || version == archive_version_without_statechart || version == archive_version_without_timers ||
+      (version == archive_version || version == archive_version_without_statechart_ticks || version == archive_version_without_statechart || version == archive_version_without_timers ||
        version == archive_version_without_streams);
 }
 
@@ -174,6 +176,7 @@ void write_statechart(ArchiveWriter& writer, const std::optional<StatechartSnaps
   writer.u32(statechart.has_value() ? 1U : 0U);
   if (!statechart.has_value()) return;
   writer.u32(statechart->active);
+  writer.u64(statechart->active_ticks);
   writer.u32(static_cast<std::uint32_t>(statechart->shallow_history.size()));
   for (const auto& [parent, child] : statechart->shallow_history) { writer.u32(parent); writer.u32(child); }
 }
@@ -185,7 +188,9 @@ bool read_statechart(ArchiveReader& reader, const std::uint32_t version, std::op
   if (present == 0U) return true;
   StatechartSnapshot snapshot{};
   std::uint32_t count = 0;
-  if (!reader.u32(snapshot.active) || !reader.u32(count) || count > maximum_archive_entries) return false;
+  if (!reader.u32(snapshot.active) ||
+      (version >= archive_version && !reader.u64(snapshot.active_ticks)) ||
+      !reader.u32(count) || count > maximum_archive_entries) return false;
   snapshot.shallow_history.reserve(count);
   for (std::uint32_t index = 0; index < count; ++index) { std::uint32_t parent = 0; std::uint32_t child = 0; if (!reader.u32(parent) || !reader.u32(child)) return false; snapshot.shallow_history.emplace_back(parent, child); }
   statechart = std::move(snapshot);

@@ -438,6 +438,45 @@
       ]
     },
     {
+      "id": "runtime.statecharts",
+      "status": "experimental",
+      "version": "0.1.0",
+      "owner": "kernel",
+      "targets": [
+        "native-headless",
+        "browser",
+        "electron"
+      ],
+      "contracts": [
+        "schemas/statechart.schema.json",
+        "runtime-c-api/include/ludivra/runtime.h"
+      ],
+      "examples": [
+        "examples/card-roguelite"
+      ],
+      "dependencies": [
+        "runtime.lua-gameplay",
+        "runtime.save-replay",
+        "runtime.content-binding",
+        "operability.control-harness"
+      ],
+      "verification": [
+        "pnpm test:native",
+        "pnpm test:wasm-equivalence",
+        "pnpm test:card-roguelite"
+      ],
+      "limitations": [
+        {
+          "code": "STATECHART_SINGLE_REGION",
+          "message": "Only one active region is supported; parallel regions remain outside the public contract."
+        },
+        {
+          "code": "STATECHART_AFTER_TICKS_U32",
+          "message": "The public host boundary accepts afterTicks from 1 through 4294967295 logical ticks."
+        }
+      ]
+    },
+    {
       "id": "spatial.runtime-foundation",
       "status": "experimental",
       "version": "0.1.0",

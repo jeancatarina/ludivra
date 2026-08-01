@@ -35,6 +35,7 @@ struct ExecutionContext final {
   const LogicalTimerStore* timers;
   RandomStreamRegistry* random_streams;
   CommandBuffer* commands;
+  bool commands_allowed;
 };
 
 struct ModuleLoadContext final {
@@ -139,7 +140,9 @@ int commands_add_i64(lua_State* state) {
   const auto key = checked_key(state, 2);
   const auto delta = static_cast<std::int64_t>(luaL_checkinteger(state, 3));
   try {
-    context(state).commands->add_integer(key, delta);
+    auto& execution = context(state);
+    if (!execution.commands_allowed) return luaL_error(state, "STATECHART_GUARD_MUTATION_FORBIDDEN: guards are read-only");
+    execution.commands->add_integer(key, delta);
   } catch (...) {
     return luaL_error(state, "unable to allocate gameplay command");
   }
@@ -153,7 +156,9 @@ int commands_play_audio(lua_State* state) {
     return luaL_argerror(state, 3, "volume must be between 0 and 1000");
   }
   try {
-    context(state).commands->play_audio(id, volume);
+    auto& execution = context(state);
+    if (!execution.commands_allowed) return luaL_error(state, "STATECHART_GUARD_MUTATION_FORBIDDEN: guards are read-only");
+    execution.commands->play_audio(id, volume);
   } catch (...) {
     return luaL_error(state, "unable to allocate audio command");
   }
@@ -162,7 +167,9 @@ int commands_play_audio(lua_State* state) {
 
 int commands_stop_audio(lua_State* state) {
   try {
-    context(state).commands->stop_audio(checked_key(state, 2));
+    auto& execution = context(state);
+    if (!execution.commands_allowed) return luaL_error(state, "STATECHART_GUARD_MUTATION_FORBIDDEN: guards are read-only");
+    execution.commands->stop_audio(checked_key(state, 2));
   } catch (...) {
     return luaL_error(state, "unable to allocate audio command");
   }
@@ -179,7 +186,9 @@ int commands_spawn_effect(lua_State* state) {
   const auto y = checked_milli(state, 5, "y must be a signed 32-bit fixed-point value");
   const auto z = checked_milli(state, 6, "z must be a signed 32-bit fixed-point value");
   try {
-    context(state).commands->spawn_effect(id, intensity, x, y, z);
+    auto& execution = context(state);
+    if (!execution.commands_allowed) return luaL_error(state, "STATECHART_GUARD_MUTATION_FORBIDDEN: guards are read-only");
+    execution.commands->spawn_effect(id, intensity, x, y, z);
   } catch (...) {
     return luaL_error(state, "unable to allocate effect command");
   }
@@ -276,7 +285,9 @@ int commands_add(lua_State* state) {
   if (symbol == nullptr) return 0;
   const auto value = luaL_checkinteger(state, 3);
   try {
-    context(state).commands->add_integer(symbol->key, value);
+    auto& execution = context(state);
+    if (!execution.commands_allowed) return luaL_error(state, "STATECHART_GUARD_MUTATION_FORBIDDEN: guards are read-only");
+    execution.commands->add_integer(symbol->key, value);
   } catch (...) {
     return luaL_error(state, "unable to allocate state command");
   }
@@ -293,7 +304,9 @@ int timers_start(lua_State* state) {
     return luaL_argerror(state, 3, "timer ticks must be positive");
   }
   try {
-    context(state).commands->start_timer(symbol->key, static_cast<std::uint64_t>(ticks));
+    auto& execution = context(state);
+    if (!execution.commands_allowed) return luaL_error(state, "STATECHART_GUARD_MUTATION_FORBIDDEN: guards are read-only");
+    execution.commands->start_timer(symbol->key, static_cast<std::uint64_t>(ticks));
   } catch (...) {
     return luaL_error(state, "unable to allocate timer command");
   }
@@ -304,7 +317,9 @@ int timers_cancel(lua_State* state) {
   const auto* symbol = checked_symbol_ref(state, 2, SymbolKind::timer);
   if (symbol == nullptr) return 0;
   try {
-    context(state).commands->cancel_timer(symbol->key);
+    auto& execution = context(state);
+    if (!execution.commands_allowed) return luaL_error(state, "STATECHART_GUARD_MUTATION_FORBIDDEN: guards are read-only");
+    execution.commands->cancel_timer(symbol->key);
   } catch (...) {
     return luaL_error(state, "unable to allocate timer command");
   }
@@ -502,6 +517,47 @@ void push_timer_event_table(lua_State* state, const std::string_view timer_name)
   lua_setfield(state, -2, "timer");
 }
 
+void push_statechart_guard_event_table(
+    lua_State* state,
+    const std::string_view guard_name,
+    const StatechartTransition& transition) {
+  lua_createtable(state, 0, 4);
+  lua_pushlstring(state, guard_name.data(), guard_name.size());
+  lua_setfield(state, -2, "id");
+  lua_pushinteger(state, transition.id);
+  lua_setfield(state, -2, "transition_id");
+  lua_pushinteger(state, transition.from);
+  lua_setfield(state, -2, "from_state");
+  lua_pushinteger(state, transition.to);
+  lua_setfield(state, -2, "to_state");
+}
+
+const char* statechart_phase_name(const StatechartActionPhase phase) {
+  switch (phase) {
+    case StatechartActionPhase::exit: return "exit";
+    case StatechartActionPhase::transition: return "transition";
+    case StatechartActionPhase::entry: return "entry";
+  }
+  return "unknown";
+}
+
+void push_statechart_action_event_table(
+    lua_State* state,
+    const std::string_view action_name,
+    const StatechartActionInvocation& invocation) {
+  lua_createtable(state, 0, 5);
+  lua_pushlstring(state, action_name.data(), action_name.size());
+  lua_setfield(state, -2, "id");
+  lua_pushstring(state, statechart_phase_name(invocation.phase));
+  lua_setfield(state, -2, "phase");
+  lua_pushinteger(state, invocation.transition);
+  lua_setfield(state, -2, "transition_id");
+  lua_pushinteger(state, invocation.previous);
+  lua_setfield(state, -2, "previous_state");
+  lua_pushinteger(state, invocation.active);
+  lua_setfield(state, -2, "active_state");
+}
+
 void install_sdk_metatables(lua_State* state) {
   if (luaL_newmetatable(state, symbol_ref_metatable) != 0) {
     lua_pushboolean(state, 0);
@@ -630,7 +686,7 @@ bool LuaSandbox::on_input(
   if (behavior_reference_ == LUA_NOREF) {
     return true;
   }
-  ExecutionContext execution_context{logical_tick, &state, &symbols, &timers, &random_streams, &commands};
+  ExecutionContext execution_context{logical_tick, &state, &symbols, &timers, &random_streams, &commands, true};
   set_context(state_, &execution_context);
   lua_rawgeti(state_, LUA_REGISTRYINDEX, behavior_reference_);
   lua_getfield(state_, -1, "on_input");
@@ -669,7 +725,7 @@ bool LuaSandbox::on_timer(
   if (behavior_reference_ == LUA_NOREF) {
     return true;
   }
-  ExecutionContext execution_context{logical_tick, &state, &symbols, &timers, &random_streams, &commands};
+  ExecutionContext execution_context{logical_tick, &state, &symbols, &timers, &random_streams, &commands, true};
   set_context(state_, &execution_context);
   lua_rawgeti(state_, LUA_REGISTRYINDEX, behavior_reference_);
   lua_getfield(state_, -1, "on_timer");
@@ -682,6 +738,90 @@ bool LuaSandbox::on_timer(
   lua_remove(state_, -2);
   push_context_table(state_);
   push_timer_event_table(state_, timer_name);
+  lua_sethook(state_, budget_hook, LUA_MASKCOUNT, instruction_budget);
+  const int result = lua_pcall(state_, 2, 0, 0);
+  lua_sethook(state_, nullptr, 0, 0);
+  set_context(state_, nullptr);
+  if (result != LUA_OK) {
+    record_error(lua_tostring(state_, -1));
+    lua_pop(state_, 1);
+    return false;
+  }
+  return true;
+}
+
+bool LuaSandbox::statechart_guard(
+    const std::string_view guard_name,
+    const StatechartTransition& transition,
+    const std::uint64_t logical_tick,
+    const IntegerState& state,
+    const SymbolTables& symbols,
+    const LogicalTimerStore& timers,
+    RandomStreamRegistry& random_streams,
+    CommandBuffer& commands,
+    bool& passed) {
+  if (behavior_reference_ == LUA_NOREF) {
+    record_error("STATECHART_GUARD_HANDLER_MISSING: gameplay is not loaded");
+    return false;
+  }
+  ExecutionContext execution_context{logical_tick, &state, &symbols, &timers, &random_streams, &commands, false};
+  set_context(state_, &execution_context);
+  lua_rawgeti(state_, LUA_REGISTRYINDEX, behavior_reference_);
+  lua_getfield(state_, -1, "on_statechart_guard");
+  if (lua_isnil(state_, -1)) {
+    lua_pop(state_, 2);
+    set_context(state_, nullptr);
+    record_error("STATECHART_GUARD_HANDLER_MISSING: gameplay module must define on_statechart_guard(ctx, event)");
+    return false;
+  }
+  lua_remove(state_, -2);
+  push_context_table(state_);
+  push_statechart_guard_event_table(state_, guard_name, transition);
+  lua_sethook(state_, budget_hook, LUA_MASKCOUNT, instruction_budget);
+  const int result = lua_pcall(state_, 2, 1, 0);
+  lua_sethook(state_, nullptr, 0, 0);
+  set_context(state_, nullptr);
+  if (result != LUA_OK) {
+    record_error(lua_tostring(state_, -1));
+    lua_pop(state_, 1);
+    return false;
+  }
+  if (!lua_isboolean(state_, -1)) {
+    lua_pop(state_, 1);
+    record_error("STATECHART_GUARD_RESULT_INVALID: on_statechart_guard must return a boolean");
+    return false;
+  }
+  passed = lua_toboolean(state_, -1) != 0;
+  lua_pop(state_, 1);
+  return true;
+}
+
+bool LuaSandbox::statechart_action(
+    const std::string_view action_name,
+    const StatechartActionInvocation& invocation,
+    const std::uint64_t logical_tick,
+    const IntegerState& state,
+    const SymbolTables& symbols,
+    const LogicalTimerStore& timers,
+    RandomStreamRegistry& random_streams,
+    CommandBuffer& commands) {
+  if (behavior_reference_ == LUA_NOREF) {
+    record_error("STATECHART_ACTION_HANDLER_MISSING: gameplay is not loaded");
+    return false;
+  }
+  ExecutionContext execution_context{logical_tick, &state, &symbols, &timers, &random_streams, &commands, true};
+  set_context(state_, &execution_context);
+  lua_rawgeti(state_, LUA_REGISTRYINDEX, behavior_reference_);
+  lua_getfield(state_, -1, "on_statechart_action");
+  if (lua_isnil(state_, -1)) {
+    lua_pop(state_, 2);
+    set_context(state_, nullptr);
+    record_error("STATECHART_ACTION_HANDLER_MISSING: gameplay module must define on_statechart_action(ctx, event)");
+    return false;
+  }
+  lua_remove(state_, -2);
+  push_context_table(state_);
+  push_statechart_action_event_table(state_, action_name, invocation);
   lua_sethook(state_, budget_hook, LUA_MASKCOUNT, instruction_budget);
   const int result = lua_pcall(state_, 2, 0, 0);
   lua_sethook(state_, nullptr, 0, 0);

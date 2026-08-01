@@ -4,6 +4,7 @@
 #include "logical_timers.hpp"
 #include "random_streams.hpp"
 #include "state_archive.hpp"
+#include "statechart_runtime.hpp"
 
 #include <cstdint>
 #include <string>
@@ -66,6 +67,29 @@ class LuaSandbox final {
   /// simply ignores expirations; a module with it receives the timer name.
   [[nodiscard]] bool on_timer(
       std::string_view timer_name,
+      std::uint64_t logical_tick,
+      const IntegerState& state,
+      const SymbolTables& symbols,
+      const LogicalTimerStore& timers,
+      RandomStreamRegistry& random_streams,
+      CommandBuffer& commands);
+  /// Registered statechart guards run through the ordinary Lua SDK context, but
+  /// the command buffer is withheld so they remain read-only queries.
+  [[nodiscard]] bool statechart_guard(
+      std::string_view guard_name,
+      const StatechartTransition& transition,
+      std::uint64_t logical_tick,
+      const IntegerState& state,
+      const SymbolTables& symbols,
+      const LogicalTimerStore& timers,
+      RandomStreamRegistry& random_streams,
+      CommandBuffer& commands,
+      bool& passed);
+  /// Statechart actions use the same buffered command path as on_input and
+  /// receive the transition context that selected them.
+  [[nodiscard]] bool statechart_action(
+      std::string_view action_name,
+      const StatechartActionInvocation& invocation,
       std::uint64_t logical_tick,
       const IntegerState& state,
       const SymbolTables& symbols,

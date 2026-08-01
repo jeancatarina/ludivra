@@ -95,6 +95,10 @@ std::string time_gameplay() {
   return fixture("time.lua");
 }
 
+std::string statechart_gameplay() {
+  return fixture("statechart.lua");
+}
+
 std::vector<uint8_t> save_archive(TestContext& context, ludivra_runtime* runtime) {
   uint32_t size = 0;
   context.expect(ludivra_runtime_save_size(runtime, &size) == LUDIVRA_OK, "save size is available");
@@ -124,7 +128,7 @@ int main() {
   context.expect(
       ludivra::kernel::LuaSandbox::sdk_contract_boundary_valid(),
       "the reachable Lua SDK surface matches its versioned contract");
-  context.expect(ludivra_runtime_abi_version() == 4U, "ABI version is stable");
+  context.expect(ludivra_runtime_abi_version() == 5U, "ABI version is stable");
   context.expect(
       ludivra_runtime_create(nullptr, nullptr) == LUDIVRA_ERROR_INVALID_ARGUMENT,
       "invalid creation arguments are rejected");
@@ -158,8 +162,8 @@ int main() {
   {
     auto* charted = create_runtime(context);
     const ludivra_statechart_state states[] = {{1U, 0U, 0U, 0U}, {2U, 1U, 1U, 1U}};
-    const ludivra_statechart_transition transitions[] = {{9U, 1U, 7U, 2U, 0U, 0U}};
-    context.expect(ludivra_runtime_install_statechart(charted, states, 2U, transitions, 1U, 1U) == LUDIVRA_OK,
+    const ludivra_statechart_transition transitions[] = {{9U, 1U, 7U, 2U, 0U, 0U, 0U, 0U}};
+    context.expect(ludivra_runtime_install_statechart(charted, states, 2U, transitions, 1U, nullptr, 0U, 1U) == LUDIVRA_OK,
         "statechart installs through the public runtime API");
     submit(context, charted, 7U, 0, 1U);
     context.expect(ludivra_runtime_step(charted, 1U) == LUDIVRA_OK, "statechart event commits with its logical input");
@@ -168,7 +172,7 @@ int main() {
         "statechart exposes the committed active state");
     const auto saved_chart = save_archive(context, charted);
     auto* restored_chart = create_runtime(context);
-    context.expect(ludivra_runtime_install_statechart(restored_chart, states, 2U, transitions, 1U, 1U) == LUDIVRA_OK,
+    context.expect(ludivra_runtime_install_statechart(restored_chart, states, 2U, transitions, 1U, nullptr, 0U, 1U) == LUDIVRA_OK,
         "restored runtime installs the same statechart definition");
     context.expect(ludivra_runtime_load_save(restored_chart, saved_chart.data(), static_cast<uint32_t>(saved_chart.size())) == LUDIVRA_OK,
         "save restores the statechart snapshot");
@@ -179,6 +183,60 @@ int main() {
         "replay re-executes statechart transitions deterministically");
     ludivra_runtime_destroy(restored_chart);
     ludivra_runtime_destroy(charted);
+  }
+
+  {
+    // Guards are read-only Lua queries and lifecycle actions use the ordinary
+    // command buffer in deterministic transition, entry order.
+    auto* charted = create_runtime(context);
+    const ludivra_statechart_state states[] = {{1U, 0U, 0U, 0U}, {2U, 0U, 0U, 0U}};
+    const ludivra_statechart_transition transitions[] = {{9U, 1U, 7U, 2U, 0U, 1U, 0U, 0U}};
+    const ludivra_statechart_action actions[] = {
+        {9U, 1U, LUDIVRA_STATECHART_ACTION_TRANSITION},
+        {2U, 2U, LUDIVRA_STATECHART_ACTION_ENTRY}};
+    context.expect(ludivra_runtime_declare_statechart_handler(charted, LUDIVRA_STATECHART_HANDLER_GUARD, "guard.ready", 11U, 1U) == LUDIVRA_OK,
+        "statechart guard is bound by semantic id");
+    context.expect(ludivra_runtime_declare_statechart_handler(charted, LUDIVRA_STATECHART_HANDLER_ACTION, "action.transition", 17U, 1U) == LUDIVRA_OK,
+        "statechart transition action is bound by semantic id");
+    context.expect(ludivra_runtime_declare_statechart_handler(charted, LUDIVRA_STATECHART_HANDLER_ACTION, "action.enter", 12U, 2U) == LUDIVRA_OK,
+        "statechart entry action is bound by semantic id");
+    context.expect(ludivra_runtime_install_statechart(charted, states, 2U, transitions, 1U, actions, 2U, 1U) == LUDIVRA_OK,
+        "statechart accepts guards and lifecycle action bindings");
+    const auto source = statechart_gameplay();
+    context.expect(ludivra_runtime_load_gameplay(charted, source.data(), static_cast<uint32_t>(source.size())) == LUDIVRA_OK,
+        "statechart gameplay callbacks load");
+    submit(context, charted, 7U, 0, 1U);
+    context.expect(ludivra_runtime_step(charted, 1U) == LUDIVRA_OK, "guarded statechart transition commits");
+    context.expect(integer_state(context, charted, 30U) == 11, "transition and entry actions commit through Lua commands");
+    const auto replay = replay_archive(context, charted);
+    context.expect(ludivra_runtime_verify_replay(charted, replay.data(), static_cast<uint32_t>(replay.size())) == LUDIVRA_OK,
+        "guarded actions are replayed deterministically");
+    ludivra_runtime_destroy(charted);
+  }
+
+  {
+    // after_ticks advances with authoritative commits, never a presentation
+    // clock, and the elapsed value travels in the save snapshot.
+    auto* timed_chart = create_runtime(context);
+    const ludivra_statechart_state states[] = {{1U, 0U, 0U, 0U}, {2U, 0U, 0U, 0U}};
+    const ludivra_statechart_transition transitions[] = {{3U, 1U, 0U, 2U, 0U, 0U, 2U, 0U}};
+    context.expect(ludivra_runtime_install_statechart(timed_chart, states, 2U, transitions, 1U, nullptr, 0U, 1U) == LUDIVRA_OK,
+        "logical afterTicks transition installs");
+    context.expect(ludivra_runtime_step(timed_chart, 1U) == LUDIVRA_OK, "first elapsed statechart tick commits");
+    uint32_t active_state = 0;
+    context.expect(ludivra_runtime_statechart_active(timed_chart, &active_state) == LUDIVRA_OK && active_state == 1U,
+        "afterTicks does not fire early");
+    const auto mid_save = save_archive(context, timed_chart);
+    auto* restored = create_runtime(context);
+    context.expect(ludivra_runtime_install_statechart(restored, states, 2U, transitions, 1U, nullptr, 0U, 1U) == LUDIVRA_OK,
+        "restore runtime installs the elapsed chart definition");
+    context.expect(ludivra_runtime_load_save(restored, mid_save.data(), static_cast<uint32_t>(mid_save.size())) == LUDIVRA_OK,
+        "save restores elapsed statechart time");
+    context.expect(ludivra_runtime_step(restored, 1U) == LUDIVRA_OK, "restored elapsed statechart advances");
+    context.expect(ludivra_runtime_statechart_active(restored, &active_state) == LUDIVRA_OK && active_state == 2U,
+        "afterTicks fires at the declared logical tick after restore");
+    ludivra_runtime_destroy(restored);
+    ludivra_runtime_destroy(timed_chart);
   }
 
   auto* scripted = create_runtime(context);

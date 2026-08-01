@@ -84,13 +84,34 @@ RuntimeError Runtime::declare_symbol(
   return RuntimeError::none;
 }
 
+RuntimeError Runtime::declare_statechart_handler(
+    const StatechartHandlerKind kind,
+    const std::string_view name,
+    const std::uint32_t id) {
+  if (id == 0U || name.empty()) return RuntimeError::statechart_invalid;
+  auto& handlers = kind == StatechartHandlerKind::guard ? statechart_guards_ : statechart_actions_;
+  const auto existing = handlers.find(id);
+  if (existing != handlers.end() && existing->second != name) return RuntimeError::statechart_invalid;
+  handlers.emplace(id, name);
+  return RuntimeError::none;
+}
+
 RuntimeError Runtime::install_statechart(
     std::vector<StatechartState> states, std::vector<StatechartTransition> transitions, const std::uint32_t initial) {
+  for (const auto& state : states) {
+    for (const auto action : state.entry_actions) if (!statechart_actions_.contains(action)) return RuntimeError::statechart_invalid;
+    for (const auto action : state.exit_actions) if (!statechart_actions_.contains(action)) return RuntimeError::statechart_invalid;
+  }
+  for (const auto& transition : transitions) {
+    if (transition.guard.has_value() && !statechart_guards_.contains(*transition.guard)) return RuntimeError::statechart_invalid;
+    for (const auto action : transition.actions) if (!statechart_actions_.contains(action)) return RuntimeError::statechart_invalid;
+  }
   const auto result = statechart_.install(states, transitions, initial);
   if (result == StatechartError::transition_ambiguous || result == StatechartError::invalid_definition) return RuntimeError::statechart_invalid;
   statechart_states_ = std::move(states);
   statechart_transitions_ = std::move(transitions);
   statechart_initial_ = initial;
+  replay_initial_state_.statechart = statechart_.snapshot();
   return RuntimeError::none;
 }
 
@@ -124,6 +145,14 @@ void Runtime::clear_presentation_events() noexcept {
   presentation_events_.clear();
 }
 
+const std::vector<StatechartTrace>& Runtime::statechart_traces() const noexcept {
+  return statechart_traces_;
+}
+
+void Runtime::clear_statechart_traces() noexcept {
+  statechart_traces_.clear();
+}
+
 std::vector<std::uint8_t> Runtime::save() const {
   return encode_save({tick_, state_hash_, integer_state_, random_streams_.snapshot(), timers_.snapshot(),
       statechart_initial_ == 0U ? std::nullopt : std::optional{statechart_.snapshot()}});
@@ -155,6 +184,7 @@ RuntimeError Runtime::load_save(const std::span<const std::uint8_t> bytes) {
   replay_frames_.clear();
   commands_.clear();
   presentation_events_.clear();
+  statechart_traces_.clear();
   return RuntimeError::none;
 }
 
@@ -170,6 +200,8 @@ RuntimeError Runtime::verify_replay(const std::span<const std::uint8_t> bytes) c
   }
   Runtime verification({decoded.tick_rate_hz, decoded.max_pending_inputs, decoded.seed});
   verification.symbols_ = symbols_;
+  verification.statechart_guards_ = statechart_guards_;
+  verification.statechart_actions_ = statechart_actions_;
   if (statechart_initial_ != 0U && verification.install_statechart(statechart_states_, statechart_transitions_, statechart_initial_) != RuntimeError::none) return RuntimeError::statechart_invalid;
   if (!content_pack_source_.empty() &&
       verification.load_content_pack(content_pack_source_) != RuntimeError::none) {
@@ -238,6 +270,65 @@ RuntimeError Runtime::fire_expired_timers() {
   return result;
 }
 
+std::optional<bool> Runtime::evaluate_statechart_guard(
+    const std::uint32_t guard,
+    const StatechartTransition& transition) {
+  const auto found = statechart_guards_.find(guard);
+  if (found == statechart_guards_.end()) return std::nullopt;
+  bool passed = false;
+  if (!lua_.statechart_guard(found->second, transition, tick_ + 1U, integer_state_, symbols_, timers_, random_streams_, commands_, passed)) {
+    return std::nullopt;
+  }
+  return passed;
+}
+
+RuntimeError Runtime::execute_statechart_result(const StatechartResult& result) {
+  if (result.error == StatechartError::guard_evaluation_failed) return RuntimeError::script_failure;
+  if (result.error != StatechartError::none) return RuntimeError::statechart_invalid;
+  for (const auto& invocation : result.actions) {
+    const auto found = statechart_actions_.find(invocation.id);
+    if (found == statechart_actions_.end() ||
+        !lua_.statechart_action(found->second, invocation, tick_ + 1U, integer_state_, symbols_, timers_, random_streams_, commands_)) {
+      return RuntimeError::script_failure;
+    }
+  }
+  if (result.chosen.has_value()) {
+    mix_byte(state_hash_, 0xF1U);
+    mix_u32(state_hash_, result.chosen->id);
+    mix_u32(state_hash_, result.previous);
+    mix_u32(state_hash_, result.active);
+    for (const auto& guard : result.guards) {
+      mix_byte(state_hash_, 0xF2U);
+      mix_u32(state_hash_, guard.id);
+      mix_byte(state_hash_, guard.passed ? 1U : 0U);
+    }
+    for (const auto& action : result.actions) {
+      mix_byte(state_hash_, 0xF3U);
+      mix_u32(state_hash_, action.id);
+      mix_byte(state_hash_, static_cast<std::uint8_t>(action.phase));
+    }
+  }
+  return RuntimeError::none;
+}
+
+void Runtime::record_statechart_result(const std::uint32_t event, const StatechartResult& result) {
+  if (!result.chosen.has_value() && result.guards.empty()) return;
+  statechart_traces_.push_back({
+      StatechartTraceKind::event, tick_ + 1U, event,
+      result.chosen.has_value() ? result.chosen->id : 0U, 0U, 0U,
+      result.previous, result.active, false, std::nullopt, result.error});
+  for (const auto& guard : result.guards) {
+    statechart_traces_.push_back({StatechartTraceKind::guard, tick_ + 1U, event,
+        result.chosen.has_value() ? result.chosen->id : 0U, guard.id, 0U,
+        result.previous, result.active, guard.passed, std::nullopt, result.error});
+  }
+  for (const auto& action : result.actions) {
+    statechart_traces_.push_back({StatechartTraceKind::action, tick_ + 1U, event,
+        action.transition, 0U, action.id, action.previous, action.active, false,
+        action.phase, result.error});
+  }
+}
+
 RuntimeError Runtime::commit_tick() {
   // Timers expire before the inputs of the tick they land on, so a script that
   // both receives an expiry and an input sees them in a declared order.
@@ -249,19 +340,37 @@ RuntimeError Runtime::commit_tick() {
            std::tie(right.sequence, right.action_id, right.value_milli);
   });
 
+  const StatechartRuntime initial_statechart = statechart_;
+  const auto initial_trace_count = statechart_traces_.size();
   commands_.clear();
+  if (statechart_initial_ != 0U) {
+    const auto elapsed = statechart_.advance([this](const auto guard, const auto& transition) {
+      return evaluate_statechart_guard(guard, transition);
+    });
+    if (const auto result = execute_statechart_result(elapsed); result != RuntimeError::none) {
+      statechart_ = initial_statechart;
+      statechart_traces_.resize(initial_trace_count);
+      commands_.clear();
+      return result;
+    }
+    record_statechart_result(0U, elapsed);
+  }
   for (const auto& input : pending_inputs_) {
     if (statechart_initial_ != 0U) {
-      const auto transition = statechart_.dispatch(input.action_id);
+      const auto transition = statechart_.dispatch(input.action_id, [this](const auto guard, const auto& definition) {
+        return evaluate_statechart_guard(guard, definition);
+      });
       // Inputs outside this chart's declared event vocabulary remain available to
       // gameplay; an explicit chart dispatch still reports event_unhandled.
       if (transition.error != StatechartError::event_unhandled) {
-        if (transition.error != StatechartError::none || !transition.chosen.has_value()) { commands_.clear(); return RuntimeError::statechart_invalid; }
-        mix_byte(state_hash_, 0xF1U);
-        mix_u32(state_hash_, transition.chosen->id);
-        mix_u32(state_hash_, transition.previous);
-        mix_u32(state_hash_, transition.active);
+        if (const auto result = execute_statechart_result(transition); result != RuntimeError::none) {
+          statechart_ = initial_statechart;
+          statechart_traces_.resize(initial_trace_count);
+          commands_.clear();
+          return result;
+        }
       }
+      record_statechart_result(input.action_id, transition);
     }
     if (!lua_.on_input(
             {input.action_id, input.value_milli, input.sequence},
@@ -272,6 +381,8 @@ RuntimeError Runtime::commit_tick() {
             random_streams_,
             commands_)) {
       commands_.clear();
+      statechart_ = initial_statechart;
+      statechart_traces_.resize(initial_trace_count);
       return RuntimeError::script_failure;
     }
   }
@@ -288,11 +399,15 @@ RuntimeError Runtime::commit_tick() {
   } catch (...) {
     replay_frames_.pop_back();
     commands_.clear();
+    statechart_ = initial_statechart;
+    statechart_traces_.resize(initial_trace_count);
     throw;
   }
   if (command_result != RuntimeError::none) {
     replay_frames_.pop_back();
     commands_.clear();
+    statechart_ = initial_statechart;
+    statechart_traces_.resize(initial_trace_count);
     return command_result;
   }
 
@@ -316,6 +431,17 @@ RuntimeError Runtime::commit_tick() {
     mix_u64(state_hash_, random_domain_hash(stream.domain));
     mix_u64(state_hash_, stream.instance);
     mix_u64(state_hash_, stream.state.draws);
+  }
+  if (statechart_initial_ != 0U) {
+    const auto snapshot = statechart_.snapshot();
+    mix_byte(state_hash_, 0xF4U);
+    mix_u32(state_hash_, snapshot.active);
+    mix_u64(state_hash_, snapshot.active_ticks);
+    for (const auto& [parent, child] : snapshot.shallow_history) {
+      mix_byte(state_hash_, 0xF5U);
+      mix_u32(state_hash_, parent);
+      mix_u32(state_hash_, child);
+    }
   }
   pending_inputs_.clear();
   return RuntimeError::none;

@@ -5,8 +5,8 @@
 | Campo | Valor |
 |---|---|
 | Release atual | 0.7.0 |
-| Foco atual | Fase 4 — Implementar statecharts determinísticas de gameplay com save, hash, replay e diagnóstico. |
-| Próxima entrega | Definir o schema de statecharts, registrar guards/actions e validar save, hash e replay determinísticos. |
+| Foco atual | Fase 4 — Fechar o gate integrado de UI, localização, navegação, foco, touch targets e breakpoints. |
+| Próxima entrega | Implementar e validar o gate de UI por teclado, controle e touch em todos os breakpoints declarados. |
 | Fonte editável de progresso | [docs/program-status.json](docs/program-status.json) |
 | Decisão do modelo documental | [ADR 0046](docs/adr/0046-generated-program-documentation.md) |
 
@@ -26,7 +26,7 @@
 | 1 | Estado canônico e catálogo de capacidades | `CONCLUÍDA` | nenhuma no gate atual |
 | 2 | Context Engine, CLI e Development Runner | `CONCLUÍDA` | nenhuma no gate atual |
 | 3 | AI Control Plane e observabilidade causal | `CONCLUÍDA` | nenhuma no gate atual |
-| 4 | Autoria text-first de gameplay, UI e conteúdo | `EM ANDAMENTO` | Statecharts determinísticas com guards/actions registrados, save, hash e replay. |
+| 4 | Autoria text-first de gameplay, UI e conteúdo | `EM ANDAMENTO` | Gate integrado de UI, localização, navegação, foco, touch targets e breakpoints. |
 | 5 | Runtime espacial e mundo procedural | `PARCIAL` | Jobs assíncronos reais sem alterar a ordem de commit. |
 | 6 | Motion, física e Mass Simulation | `PLANEJADA` | Motion por tempo declarado e comandos semânticos. |
 | 7 | Persistência, replays e multiplayer player-hosted | `PARCIAL` | Region storage atômico com journal, compactação, recovery e migrations. |
@@ -125,10 +125,10 @@ Permitir que jogos sejam criados por APIs públicas textuais sem alterar interna
 - Content pack versionado, determinístico, rastreável e carregado pelo kernel em todos os hosts. Capabilities: `runtime.content-binding`. Evidência: [content-compiler/src/pack.ts](content-compiler/src/pack.ts), [kernel/src/content_pack.cpp](kernel/src/content_pack.cpp), [tools/tests/card-roguelite.mjs](tools/tests/card-roguelite.mjs).
 - Migrations de conteúdo ordenadas, idempotentes e registradas no pack v2, com fixture de entrada/saída e recusa de container legado no kernel. Capabilities: `runtime.content-binding`. Evidência: [contracts/content-migrations-v1.json](contracts/content-migrations-v1.json), [content-compiler/src/migrations.ts](content-compiler/src/migrations.ts), [content-compiler/test/fixtures/migrations/card-roguelite-v1.input.json](content-compiler/test/fixtures/migrations/card-roguelite-v1.input.json).
 - Grafo text-first de scenes, prefabs e recursos compilado por IDs explícitos, com ciclos, overrides e slots rejeitados antes do build e inspeção rastreável pelo CLI. Capabilities: `authoring.scene-graph`. Evidência: [schemas/scene.schema.json](schemas/scene.schema.json), [schemas/prefab.schema.json](schemas/prefab.schema.json), [content-compiler/src/scene-graph.ts](content-compiler/src/scene-graph.ts), [examples/card-roguelite/scenes/ember-vault.scene.jsonc](examples/card-roguelite/scenes/ember-vault.scene.jsonc).
+- Statecharts textuais de uma região com hierarquia, history shallow, guards Lua read-only, actions via command buffer, afterTicks lógicos, save/replay/hash e trace causal no control harness. Capabilities: `runtime.statecharts`. Evidência: [schemas/statechart.schema.json](schemas/statechart.schema.json), [kernel/src/statechart_runtime.cpp](kernel/src/statechart_runtime.cpp), [runtime-c-api/include/ludivra/runtime.h](runtime-c-api/include/ludivra/runtime.h), [cli/src/control-worker.ts](cli/src/control-worker.ts), [tests/runtime/runtime_test.cpp](tests/runtime/runtime_test.cpp).
 
 ### Falta
 
-- Statecharts determinísticas com guards/actions registrados, save, hash e replay.
 - Gate integrado de UI, localização, navegação, foco, touch targets e breakpoints.
 
 ### Gate de saída

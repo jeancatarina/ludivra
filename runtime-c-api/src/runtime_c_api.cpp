@@ -2,6 +2,7 @@
 
 #include "runtime.hpp"
 
+#include <algorithm>
 #include <cstddef>
 #include <cstring>
 #include <limits>
@@ -215,18 +216,61 @@ ludivra_result ludivra_runtime_install_statechart(
     const uint32_t state_count,
     const ludivra_statechart_transition* transitions,
     const uint32_t transition_count,
+    const ludivra_statechart_action* actions,
+    const uint32_t action_count,
     const uint32_t initial_state) {
-  if (runtime == nullptr || states == nullptr || state_count == 0U || (transition_count > 0U && transitions == nullptr)) return LUDIVRA_ERROR_INVALID_ARGUMENT;
+  if (runtime == nullptr || states == nullptr || state_count == 0U ||
+      (transition_count > 0U && transitions == nullptr) || (action_count > 0U && actions == nullptr)) return LUDIVRA_ERROR_INVALID_ARGUMENT;
   try {
     std::vector<ludivra::kernel::StatechartState> native_states;
     std::vector<ludivra::kernel::StatechartTransition> native_transitions;
     native_states.reserve(state_count); native_transitions.reserve(transition_count);
-    for (uint32_t index = 0; index < state_count; ++index) native_states.push_back({states[index].id, states[index].has_parent == 0U ? std::nullopt : std::optional{states[index].parent_id}, states[index].shallow_history != 0U});
+    for (uint32_t index = 0; index < state_count; ++index) native_states.push_back({states[index].id, states[index].has_parent == 0U ? std::nullopt : std::optional{states[index].parent_id}, states[index].shallow_history != 0U, {}, {}});
     for (uint32_t index = 0; index < transition_count; ++index) {
       if (transitions[index].kind > 1U) return LUDIVRA_ERROR_INVALID_ARGUMENT;
-      native_transitions.push_back({transitions[index].id, transitions[index].from_state, transitions[index].event_action_id, transitions[index].to_state, transitions[index].priority, transitions[index].kind == 0U ? ludivra::kernel::StatechartTransitionKind::external : ludivra::kernel::StatechartTransitionKind::internal});
+      native_transitions.push_back({
+          transitions[index].id,
+          transitions[index].from_state,
+          transitions[index].event_action_id == 0U ? std::nullopt : std::optional{transitions[index].event_action_id},
+          transitions[index].after_ticks == 0U ? std::nullopt : std::optional{static_cast<std::uint64_t>(transitions[index].after_ticks)},
+          transitions[index].to_state,
+          transitions[index].priority,
+          transitions[index].kind == 0U ? ludivra::kernel::StatechartTransitionKind::external : ludivra::kernel::StatechartTransitionKind::internal,
+          transitions[index].guard_id == 0U ? std::nullopt : std::optional{transitions[index].guard_id},
+          {}});
+    }
+    for (uint32_t index = 0; index < action_count; ++index) {
+      const auto& action = actions[index];
+      if (action.action_id == 0U) return LUDIVRA_ERROR_INVALID_ARGUMENT;
+      if (action.phase == LUDIVRA_STATECHART_ACTION_ENTRY || action.phase == LUDIVRA_STATECHART_ACTION_EXIT) {
+        const auto state = std::find_if(native_states.begin(), native_states.end(), [&action](const auto& value) { return value.id == action.owner_id; });
+        if (state == native_states.end()) return LUDIVRA_ERROR_INVALID_ARGUMENT;
+        (action.phase == LUDIVRA_STATECHART_ACTION_ENTRY ? state->entry_actions : state->exit_actions).push_back(action.action_id);
+      } else if (action.phase == LUDIVRA_STATECHART_ACTION_TRANSITION) {
+        const auto transition = std::find_if(native_transitions.begin(), native_transitions.end(), [&action](const auto& value) { return value.id == action.owner_id; });
+        if (transition == native_transitions.end()) return LUDIVRA_ERROR_INVALID_ARGUMENT;
+        transition->actions.push_back(action.action_id);
+      } else {
+        return LUDIVRA_ERROR_INVALID_ARGUMENT;
+      }
     }
     return to_public_result(runtime->value.install_statechart(std::move(native_states), std::move(native_transitions), initial_state));
+  } catch (const std::bad_alloc&) { return LUDIVRA_ERROR_ALLOCATION; }
+  catch (...) { return LUDIVRA_ERROR_INTERNAL; }
+}
+
+ludivra_result ludivra_runtime_declare_statechart_handler(
+    ludivra_runtime* runtime,
+    const ludivra_statechart_handler_kind kind,
+    const char* name,
+    const uint32_t name_size,
+    const uint32_t id) {
+  if (runtime == nullptr || name == nullptr || name_size == 0U || name_size > 128U || id == 0U ||
+      (kind != LUDIVRA_STATECHART_HANDLER_GUARD && kind != LUDIVRA_STATECHART_HANDLER_ACTION)) return LUDIVRA_ERROR_INVALID_ARGUMENT;
+  try {
+    return to_public_result(runtime->value.declare_statechart_handler(
+        kind == LUDIVRA_STATECHART_HANDLER_GUARD ? ludivra::kernel::StatechartHandlerKind::guard : ludivra::kernel::StatechartHandlerKind::action,
+        {name, name_size}, id));
   } catch (const std::bad_alloc&) { return LUDIVRA_ERROR_ALLOCATION; }
   catch (...) { return LUDIVRA_ERROR_INTERNAL; }
 }
@@ -234,6 +278,41 @@ ludivra_result ludivra_runtime_install_statechart(
 ludivra_result ludivra_runtime_statechart_active(const ludivra_runtime* runtime, uint32_t* out_state) {
   if (runtime == nullptr || out_state == nullptr) return LUDIVRA_ERROR_INVALID_ARGUMENT;
   *out_state = runtime->value.statechart_active();
+  return LUDIVRA_OK;
+}
+
+ludivra_result ludivra_runtime_statechart_trace_count(const ludivra_runtime* runtime, uint32_t* out_count) {
+  if (runtime == nullptr || out_count == nullptr) return LUDIVRA_ERROR_INVALID_ARGUMENT;
+  const auto& traces = runtime->value.statechart_traces();
+  if (traces.size() > std::numeric_limits<uint32_t>::max()) return LUDIVRA_ERROR_INTERNAL;
+  *out_count = static_cast<uint32_t>(traces.size());
+  return LUDIVRA_OK;
+}
+
+ludivra_result ludivra_runtime_statechart_traces_write(
+    const ludivra_runtime* runtime,
+    ludivra_statechart_trace* buffer,
+    const uint32_t capacity,
+    uint32_t* out_count) {
+  if (runtime == nullptr || out_count == nullptr || (capacity > 0U && buffer == nullptr)) return LUDIVRA_ERROR_INVALID_ARGUMENT;
+  const auto& traces = runtime->value.statechart_traces();
+  if (traces.size() > capacity) return LUDIVRA_ERROR_BUFFER_TOO_SMALL;
+  for (std::size_t index = 0; index < traces.size(); ++index) {
+    const auto& trace = traces[index];
+    buffer[index] = {
+        trace.tick, trace.event, trace.transition, trace.guard, trace.action,
+        trace.previous, trace.active, static_cast<uint8_t>(trace.kind),
+        static_cast<uint8_t>(trace.guard_passed ? 1U : 0U),
+        trace.action_phase.has_value() ? static_cast<uint8_t>(*trace.action_phase) : static_cast<uint8_t>(255U),
+        static_cast<uint8_t>(trace.error)};
+  }
+  *out_count = static_cast<uint32_t>(traces.size());
+  return LUDIVRA_OK;
+}
+
+ludivra_result ludivra_runtime_statechart_traces_clear(ludivra_runtime* runtime) {
+  if (runtime == nullptr) return LUDIVRA_ERROR_INVALID_ARGUMENT;
+  runtime->value.clear_statechart_traces();
   return LUDIVRA_OK;
 }
 

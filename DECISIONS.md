@@ -56,6 +56,6 @@
 | [0050](docs/adr/0050-material-shader-environment-and-render-feature-tiers.md) | provisório | Materiais, shaders, ambiente e tiers de renderização | 2026-07-26 |
 | [0051](docs/adr/0051-animation-graph-and-skeletal-runtime.md) | provisório | Animation Graph e runtime esquelético | 2026-07-26 |
 | [0052](docs/adr/0052-textual-vfx-and-particle-runtime.md) | provisório | VFX text-first e runtime de partículas | 2026-07-26 |
-| [0053](docs/adr/0053-deterministic-gameplay-statecharts.md) | provisório | Statecharts determinísticos de gameplay | 2026-07-26 |
+| [0053](docs/adr/0053-deterministic-gameplay-statecharts.md) | aceito | Statecharts determinísticos de gameplay | 2026-07-26 |
 | [0054](docs/adr/0054-navigation-regions-pathfinding-and-avoidance.md) | provisório | Regiões de navegação, pathfinding e avoidance | 2026-07-26 |
 | [0055](docs/adr/0055-upstream-first-and-external-source-incorporation.md) | provisório | Reuso upstream-first e incorporação excepcional de código externo | 2026-07-26 |

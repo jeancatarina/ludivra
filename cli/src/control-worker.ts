@@ -90,6 +90,9 @@ let uiProjectors: UiInspectionProjector[] = [];
 let latestUiProjections = new Map<string, UiInspectionProjection>();
 let gameProjectorId: string | undefined;
 let statechartStateNames = new Map<number, string>();
+let statechartTransitionNames = new Map<number, string>();
+let statechartGuardNames = new Map<number, string>();
+let statechartActionNames = new Map<number, string>();
 
 function installDeclaredStatechart(target: LudivraRuntime): void {
   const declaration = manifest.statecharts;
@@ -97,21 +100,51 @@ function installDeclaredStatechart(target: LudivraRuntime): void {
   const graph = compiledDocuments["ludivra.statecharts"] as { charts?: Array<Record<string, unknown>> } | undefined;
   const chart = graph?.charts?.[0];
   if (graph?.charts?.length !== 1 || chart === undefined) throw new Error("STATECHART_SCHEMA_INVALID");
-  const states = chart.states as Array<{ id: string; parent?: string; history: boolean }>;
-  const transitions = chart.transitions as Array<{ id: string; from: string; to: string; event?: string; priority: number; kind: "external" | "internal" }>;
+  const states = chart.states as Array<{ id: string; parent?: string; history: boolean; entryActions: string[]; exitActions: string[] }>;
+  const transitions = chart.transitions as Array<{
+    id: string; from: string; to: string; event?: string; afterTicks?: number; priority: number;
+    kind: "external" | "internal"; guard?: string; actions: string[];
+  }>;
   const stateIds = new Map(states.map(({ id }, index) => [id, index + 1]));
   statechartStateNames = new Map([...stateIds.entries()].map(([id, numeric]) => [numeric, id]));
+  statechartTransitionNames = new Map(transitions.map(({ id }, index) => [index + 1, id]));
   const eventIds = new Map(declaration.events.map(({ id, actionId }) => [id, actionId]));
+  const guardIds = new Map([...declaration.guards].sort((left, right) => left.id.localeCompare(right.id)).map(({ id }, index) => [id, index + 1]));
+  const actionIds = new Map([...declaration.actions].sort((left, right) => left.id.localeCompare(right.id)).map(({ id }, index) => [id, index + 1]));
+  statechartGuardNames = new Map([...guardIds.entries()].map(([id, numeric]) => [numeric, id]));
+  statechartActionNames = new Map([...actionIds.entries()].map(([id, numeric]) => [numeric, id]));
+  const actionBindings = [
+    ...states.flatMap((state) => state.entryActions.map((action) => ({ ownerId: stateIds.get(state.id)!, actionId: actionIds.get(action), phase: "entry" as const }))),
+    ...states.flatMap((state) => state.exitActions.map((action) => ({ ownerId: stateIds.get(state.id)!, actionId: actionIds.get(action), phase: "exit" as const }))),
+    ...transitions.flatMap((transition, index) => transition.actions.map((action) => ({ ownerId: index + 1, actionId: actionIds.get(action), phase: "transition" as const })))
+  ];
+  if (actionBindings.some(({ actionId }) => actionId === undefined)) throw new Error("STATECHART_ACTION_UNREGISTERED");
   target.installStatechart(
     states.map((state) => state.parent === undefined
       ? { id: stateIds.get(state.id)!, shallowHistory: state.history }
       : { id: stateIds.get(state.id)!, parentId: stateIds.get(state.parent)!, shallowHistory: state.history }),
     transitions.map((transition, index) => {
       const eventActionId = transition.event === undefined ? undefined : eventIds.get(transition.event);
-      if (eventActionId === undefined || stateIds.get(transition.from) === undefined || stateIds.get(transition.to) === undefined) throw new Error("STATECHART_SCHEMA_INVALID");
-      return { id: index + 1, fromState: stateIds.get(transition.from)!, eventActionId, toState: stateIds.get(transition.to)!, priority: transition.priority, kind: transition.kind };
+      const guardId = transition.guard === undefined ? undefined : guardIds.get(transition.guard);
+      if ((eventActionId === undefined) === (transition.afterTicks === undefined) || guardId === undefined && transition.guard !== undefined ||
+          stateIds.get(transition.from) === undefined || stateIds.get(transition.to) === undefined) throw new Error("STATECHART_SCHEMA_INVALID");
+      return {
+        id: index + 1,
+        fromState: stateIds.get(transition.from)!,
+        ...(eventActionId === undefined ? {} : { eventActionId }),
+        ...(transition.afterTicks === undefined ? {} : { afterTicks: transition.afterTicks }),
+        toState: stateIds.get(transition.to)!,
+        priority: transition.priority,
+        kind: transition.kind,
+        ...(guardId === undefined ? {} : { guardId })
+      };
     }),
-    stateIds.get(chart.initial as string)!
+    stateIds.get(chart.initial as string)!,
+    {
+      guards: [...guardIds.entries()].map(([name, id]) => ({ id, name })),
+      actions: [...actionIds.entries()].map(([name, id]) => ({ id, name })),
+      bindings: actionBindings as Array<{ ownerId: number; actionId: number; phase: "entry" | "exit" | "transition" }>
+    }
   );
 }
 
@@ -206,17 +239,37 @@ function step(count = 1): void {
   if (runtime === undefined) throw new Error("CONTROL_SCENARIO_NOT_LOADED");
   for (let index = 0; index < count; index += 1) {
     const before = logicalState();
-    const beforeStatechart = runtime.statechartActive();
     runtime.step(1);
     steppedTicks += 1;
     const after = logicalState();
-    const afterStatechart = runtime.statechartActive();
-    if (beforeStatechart !== afterStatechart) {
-      append("command", "statechart-transition", {
+    for (const trace of runtime.drainStatechartTraces()) {
+      const common = {
         chart: manifest.statecharts?.charts[0]?.id ?? "unknown",
-        previous: statechartStateNames.get(beforeStatechart) ?? String(beforeStatechart),
-        active: statechartStateNames.get(afterStatechart) ?? String(afterStatechart)
-      });
+        transition: statechartTransitionNames.get(trace.transitionId) ?? String(trace.transitionId),
+        previous: statechartStateNames.get(trace.previousState) ?? String(trace.previousState),
+        active: statechartStateNames.get(trace.activeState) ?? String(trace.activeState)
+      };
+      if (trace.kind === "event") {
+        append("command", "statechart-event", {
+          ...common,
+          trigger: trace.eventActionId === 0 ? "afterTicks" : manifest.inputs.find(({ actionId }) => actionId === trace.eventActionId)?.id ?? String(trace.eventActionId),
+          error: trace.error
+        });
+      } else if (trace.kind === "guard") {
+        append("command", "statechart-guard", {
+          ...common,
+          guard: statechartGuardNames.get(trace.guardId) ?? String(trace.guardId),
+          passed: trace.guardPassed,
+          error: trace.error
+        });
+      } else {
+        append("command", "statechart-action", {
+          ...common,
+          action: statechartActionNames.get(trace.actionId) ?? String(trace.actionId),
+          phase: trace.actionPhase ?? "unknown",
+          error: trace.error
+        });
+      }
     }
     for (const next of after.integers) {
       const previous = before.integers.find(({ key }) => key === next.key);
