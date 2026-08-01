@@ -3,8 +3,8 @@
   "release": "0.7.0",
   "currentFocus": {
     "phase": 5,
-    "summary": "Implementar navegação por regiões, pathfinding, links, obstacles, agents e avoidance sobre a fundação espacial.",
-    "next": "Implementar NAV-001 com fixture de benchmark e inspeção determinística de navegação."
+    "summary": "Expor a fundação espacial a um consumidor com posição regional e partitioning interno comprovado.",
+    "next": "Implementar SPATIAL-002 com fixture de consumidor e inspeção de posição regional."
   },
   "phases": [
     {
@@ -137,11 +137,15 @@
           "summary": "Runtime cooperativo de geração e meshing com orçamento por tick, commit ordenado, Simulation LOD com catch-up lógico e snapshot de chunks, jobs e LOD.",
           "capabilities": ["spatial.runtime-foundation"],
           "evidence": ["kernel/src/world_runtime.hpp", "kernel/src/world_runtime.cpp", "tests/kernel/kernel_test.cpp"]
+        },
+        {
+          "summary": "Adapter de navegação por grid determinístico com regiões, perfis, layers, A* limitado por budget, links, obstacles, intenção de avoidance e fixture compilada no content pack.",
+          "capabilities": ["navigation.reference-adapter"],
+          "evidence": ["schemas/navigation-map.schema.json", "kernel/src/navigation_reference.cpp", "examples/card-roguelite/navigation/ember-vault.navigation.jsonc", "tests/kernel/kernel_test.cpp"]
         }
       ],
       "remaining": [
         "Posição com região e partitioning interno comprovado pelo consumidor.",
-        "Regiões de navegação, pathfinding, links, obstacles, agents e avoidance por adapter.",
         "Superfície pública apenas quando um jogo declarar a capability."
       ],
       "gate": "O runtime gera, carrega, descarta e regenera chunks determinísticos com memória estabilizada em viagens longas."
@@ -295,12 +299,12 @@
   ],
   "tasks": [
     {
-      "id": "NAV-001",
+      "id": "SPATIAL-002",
       "priority": "high",
       "status": "planned",
       "phase": 5,
-      "work": "Implementar contratos de regiões, pathfinding, links, obstacles, agents e avoidance com fixture de benchmark.",
-      "adrs": ["0054"]
+      "work": "Expor posição regional e partitioning interno a um jogo consumidor com fixture e inspeção determinística.",
+      "adrs": ["0019"]
     },
     {
       "id": "DESK-001",

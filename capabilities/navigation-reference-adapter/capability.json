@@ -1,0 +1,31 @@
+{
+  "id": "navigation.reference-adapter",
+  "status": "experimental",
+  "version": "0.1.0",
+  "owner": "kernel",
+  "targets": ["native-headless", "browser", "electron"],
+  "contracts": [
+    "schemas/navigation-map.schema.json",
+    "kernel/src/navigation_reference.hpp"
+  ],
+  "examples": [
+    "examples/card-roguelite/navigation/ember-vault.navigation.jsonc",
+    "tests/kernel/kernel_test.cpp"
+  ],
+  "dependencies": ["spatial.runtime-foundation"],
+  "verification": [
+    "pnpm test:native",
+    "pnpm game validate --project examples/card-roguelite --format json",
+    "pnpm test:card-roguelite"
+  ],
+  "limitations": [
+    {
+      "code": "NAVIGATION_BACKEND_NOT_AVAILABLE",
+      "message": "O adapter em grid é uma referência determinística para mapas fechados; navmesh de produção, baking e rebake continuam dependentes de benchmark e revisão do ADR 0054."
+    },
+    {
+      "code": "NAVIGATION_NOT_EXPOSED_TO_LUA",
+      "message": "A navegação continua kernel-internal até que um jogo declare uma superfície pública versionada."
+    }
+  ]
+}

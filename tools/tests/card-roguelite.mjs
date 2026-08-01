@@ -19,7 +19,7 @@ function game(arguments_) {
 game(["status", "--project", project]);
 const validated = game(["validate", "--project", project]);
 assert.equal(validated.status, "passed");
-assert.equal(validated.data.contentFilesChecked, 1);
+assert.equal(validated.data.contentFilesChecked, 2);
 
 const expected = new Map([
   ["scenarios/run-victory.jsonc", { phase: "3", health: "15", enemy: "0" }],
@@ -66,6 +66,8 @@ assert.equal(pack.packFormatVersion, 2);
 const documents = pack.sections.documents.value;
 assert.ok(documents["ember-vault.run"].cards.length >= 3, "the run document travels in the pack");
 assert.ok(documents["ludivra.game"].inputs.length >= 1, "the manifest binding travels in the pack");
+assert.equal(documents["navigation.ember-vault"].profiles[0].maxExpandedNodes, 64,
+  "the declared navigation fixture travels in the pack");
 assert.ok(
   !readFileSync(resolve(project, "scripts/gameplay.lua"), "utf8").includes("CONTENT ="),
   "the script does not carry content"

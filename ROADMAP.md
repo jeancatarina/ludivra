@@ -5,8 +5,8 @@
 | Campo | Valor |
 |---|---|
 | Release atual | 0.7.0 |
-| Foco atual | Fase 5 — Implementar navegação por regiões, pathfinding, links, obstacles, agents e avoidance sobre a fundação espacial. |
-| Próxima entrega | Implementar NAV-001 com fixture de benchmark e inspeção determinística de navegação. |
+| Foco atual | Fase 5 — Expor a fundação espacial a um consumidor com posição regional e partitioning interno comprovado. |
+| Próxima entrega | Implementar SPATIAL-002 com fixture de consumidor e inspeção de posição regional. |
 | Fonte editável de progresso | [docs/program-status.json](docs/program-status.json) |
 | Decisão do modelo documental | [ADR 0046](docs/adr/0046-generated-program-documentation.md) |
 
@@ -148,11 +148,11 @@ Criar uma fundação opt-in para mapas pequenos, mundos extensos e sandboxes vir
 - Posição composta, identidade e lifecycle de chunk, commit determinístico de jobs e geração pura sem seams. Capabilities: `spatial.runtime-foundation`. Evidência: [kernel/src/world_position.cpp](kernel/src/world_position.cpp), [kernel/src/world_chunks.cpp](kernel/src/world_chunks.cpp), [tests/kernel/kernel_test.cpp](tests/kernel/kernel_test.cpp).
 - Janela de streaming com residência estável e regeneração idêntica ao revisitar. Evidência: [kernel/src/world_streaming.cpp](kernel/src/world_streaming.cpp), [capabilities/spatial-runtime-foundation/capability.json](capabilities/spatial-runtime-foundation/capability.json).
 - Runtime cooperativo de geração e meshing com orçamento por tick, commit ordenado, Simulation LOD com catch-up lógico e snapshot de chunks, jobs e LOD. Capabilities: `spatial.runtime-foundation`. Evidência: [kernel/src/world_runtime.hpp](kernel/src/world_runtime.hpp), [kernel/src/world_runtime.cpp](kernel/src/world_runtime.cpp), [tests/kernel/kernel_test.cpp](tests/kernel/kernel_test.cpp).
+- Adapter de navegação por grid determinístico com regiões, perfis, layers, A* limitado por budget, links, obstacles, intenção de avoidance e fixture compilada no content pack. Capabilities: `navigation.reference-adapter`. Evidência: [schemas/navigation-map.schema.json](schemas/navigation-map.schema.json), [kernel/src/navigation_reference.cpp](kernel/src/navigation_reference.cpp), [examples/card-roguelite/navigation/ember-vault.navigation.jsonc](examples/card-roguelite/navigation/ember-vault.navigation.jsonc), [tests/kernel/kernel_test.cpp](tests/kernel/kernel_test.cpp).
 
 ### Falta
 
 - Posição com região e partitioning interno comprovado pelo consumidor.
-- Regiões de navegação, pathfinding, links, obstacles, agents e avoidance por adapter.
 - Superfície pública apenas quando um jogo declarar a capability.
 
 ### Gate de saída

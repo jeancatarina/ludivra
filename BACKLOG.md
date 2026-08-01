@@ -2,11 +2,11 @@
 
 > Gerado de `docs/program-status.json` por `tools/program-status/generate.mjs`. Não edite manualmente.
 
-Foco atual: **Fase 5 — Implementar navegação por regiões, pathfinding, links, obstacles, agents e avoidance sobre a fundação espacial.**
+Foco atual: **Fase 5 — Expor a fundação espacial a um consumidor com posição regional e partitioning interno comprovado.**
 
 | ID | Prioridade | Estado | Fase | Trabalho | ADRs |
 |---|---|---|---:|---|---|
-| NAV-001 | alta | planejado | 5 | Implementar contratos de regiões, pathfinding, links, obstacles, agents e avoidance com fixture de benchmark. | [ADR 0054](docs/adr/0054-navigation-regions-pathfinding-and-avoidance.md) |
+| SPATIAL-002 | alta | planejado | 5 | Expor posição regional e partitioning interno a um jogo consumidor com fixture e inspeção determinística. | [ADR 0019](docs/adr/0019-spatial-model-chunk-lifecycle-and-job-commit.md) |
 | ANM-001 | alta | planejado | 8 | Implementar grafo de animação, retarget, IK, layers, masks e root motion controlado. | [ADR 0051](docs/adr/0051-animation-graph-and-skeletal-runtime.md) |
 | AST-001 | alta | planejado | 8 | Implementar ingestão, cooking, variantes, residência e streaming de assets por target. | [ADR 0049](docs/adr/0049-asset-ingest-cooking-and-residency.md) |
 | DESK-001 | alta | planejado | 8 | Implementar perfis gráficos desktop-compatible e desktop-high, seleção de backend e fallback observável. | [ADR 0047](docs/adr/0047-desktop-rendering-profiles-and-backend-policy.md) |

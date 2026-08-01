@@ -2,6 +2,7 @@
 
 - Status: provisório
 - Data: 2026-07-26
+- Revisado: 2026-08-01 — adapter de referência determinístico implementado
 - Revisão: antes de adicionar o primeiro backend de navmesh ou liberar rebake em runtime
 - Complementa: [ADR 0019](0019-spatial-model-chunk-lifecycle-and-job-commit.md), [ADR 0022](0022-mass-runtime-storage-levels-and-budgets.md), [ADR 0048](0048-textual-scene-prefab-and-resource-graph.md) e [ADR 0055](0055-upstream-first-and-external-source-incorporation.md)
 - Fases: 5 e 6
@@ -35,6 +36,12 @@ Avoidance produz intenção de velocidade, não transform final. Para autoridade
 A primeira dependência concreta exige benchmark com o mapa e os perfis do consumidor, licença compatível, CMake, native/WASM e inspeção de queries. Recast/Detour ou outra candidata será avaliada diretamente em seu upstream; `NavigationServer`, adapters e forks mantidos pela Godot não serão copiados. Até essa revisão, fixtures usam um adapter de referência pequeno em mapas fechados; ele não autoriza alegar navmesh de produção.
 
 Códigos: `NAVIGATION_MAP_UNAVAILABLE`, `NAVIGATION_REGION_INVALID`, `NAVIGATION_PROFILE_UNDECLARED`, `NAVIGATION_PATH_NOT_FOUND`, `NAVIGATION_QUERY_BUDGET_EXCEEDED`, `NAVIGATION_REGION_NOT_SYNCHRONIZED`, `NAVIGATION_BACKEND_NOT_AVAILABLE`.
+
+### Adapter de referência implementado
+
+`ReferenceNavigation` concretiza o contrato para fixtures fechadas: mapa de grid, regiões, perfis com orçamento de expansão, layers, links off-mesh e obstacles dinâmicos. A* usa ordem canônica de score, custo e célula, e devolve células quantizadas, regiões, links e contagem de nós expandidos para inspeção. O avoidance recebe agentes quantizados e emite apenas intenções de velocidade com desempate por ID.
+
+O adapter não é navmesh de produção e não executa baking ou rebake. Sua fixture é validada pelo content pack e seus casos de caminho direto, detour, link, budget, erros e avoidance determinístico vivem no teste nativo.
 
 ## Consequências
 

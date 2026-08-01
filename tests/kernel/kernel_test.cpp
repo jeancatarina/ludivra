@@ -1,4 +1,5 @@
 #include "fixed_point.hpp"
+#include "navigation_reference.hpp"
 #include "random_streams.hpp"
 #include "statechart_runtime.hpp"
 #include "world_chunks.hpp"
@@ -57,6 +58,15 @@ using ludivra::kernel::WorldRuntime;
 using ludivra::kernel::WorldRuntimeConfig;
 using ludivra::kernel::WorldRuntimeError;
 using ludivra::kernel::SimulationLod;
+using ludivra::kernel::AvoidanceAgent;
+using ludivra::kernel::NavigationAgentProfile;
+using ludivra::kernel::NavigationCell;
+using ludivra::kernel::NavigationError;
+using ludivra::kernel::NavigationLink;
+using ludivra::kernel::NavigationObstacle;
+using ludivra::kernel::NavigationPathQuery;
+using ludivra::kernel::NavigationRegion;
+using ludivra::kernel::ReferenceNavigation;
 
 struct TestContext final {
   void expect(const bool condition, const char* message) {
@@ -385,6 +395,49 @@ void check_cooperative_world_runtime(TestContext& context) {
   context.expect(first.advance().simulation_updates.empty(), "unloaded simulation does not consume catch-up work");
 }
 
+void check_reference_navigation(TestContext& context) {
+  ReferenceNavigation navigation(5, 3, std::vector<bool>(15U, true));
+  context.expect(navigation.add_region({1U, 0, 0, 4, 2, 1U}) == NavigationError::none,
+      "a closed reference map declares a semantic navigation region");
+  context.expect(navigation.add_profile({1U, 1U, 64U}) == NavigationError::none,
+      "a declared agent profile owns layers and query budget");
+  const NavigationPathQuery query{1U, 1U, {0, 1}, {4, 1}};
+  const auto direct = navigation.find_path(query);
+  context.expect(direct.error == NavigationError::none && direct.cells.size() == 5U && direct.region_ids == std::vector<std::uint32_t>{1U},
+      "reference A* returns a quantized path and visited region IDs");
+
+  context.expect(navigation.set_obstacle({1U, {2, 1}, 1U}) == NavigationError::none,
+      "a dynamic obstacle is addressed by a stable semantic ID");
+  const auto detour = navigation.find_path(query);
+  context.expect(detour.error == NavigationError::none && detour.cells.size() == 7U &&
+      std::none_of(detour.cells.begin(), detour.cells.end(), [](const auto cell) { return cell == NavigationCell{2, 1}; }),
+      "an obstacle changes the path without mutating the navigation region");
+  context.expect(navigation.set_obstacle({2U, {2, 0}, 1U}) == NavigationError::none &&
+      navigation.set_obstacle({3U, {2, 2}, 1U}) == NavigationError::none,
+      "a full wall can be authored as independent dynamic obstacles");
+  context.expect(navigation.find_path(query).error == NavigationError::path_not_found,
+      "a closed map reports a stable not-found result");
+  context.expect(navigation.add_link({7U, {1, 1}, {3, 1}, 1U, 1U, true}) == NavigationError::none,
+      "an off-mesh link is a declared navigation resource");
+  const auto linked = navigation.find_path(query);
+  context.expect(linked.error == NavigationError::none && linked.link_ids == std::vector<std::uint32_t>{7U},
+      "the path reports the semantic link it traversed");
+
+  context.expect(navigation.add_profile({2U, 1U, 1U}) == NavigationError::none,
+      "a low-budget profile may be declared independently");
+  context.expect(navigation.find_path({2U, 1U, {0, 1}, {4, 1}}).error == NavigationError::query_budget_exceeded,
+      "query expansion budget rejects work before it can consume an unbounded tick");
+  context.expect(navigation.find_path({99U, 1U, {0, 1}, {4, 1}}).error == NavigationError::profile_undeclared,
+      "queries cannot use an undeclared agent profile");
+
+  const std::vector<AvoidanceAgent> agents{{2U, 100, 0, 1000, 0, 200U, 1U}, {1U, 0, 0, 1000, 0, 200U, 1U}};
+  const auto forward = navigation.avoid(agents);
+  const auto reverse = navigation.avoid({agents[1], agents[0]});
+  context.expect(forward == reverse && forward[0].agent_id == 1U && forward[1].agent_id == 2U &&
+      (forward[0].velocity_z_milli != 0 || forward[1].velocity_z_milli != 0),
+      "avoidance returns deterministic velocity intents rather than transforms");
+}
+
 void check_generation(TestContext& context) {
   const auto origin = chunk_at(0, 0);
   context.expect(
@@ -551,6 +604,7 @@ int main() {
   check_chunk_seed(context);
   check_job_commit_order(context);
   check_cooperative_world_runtime(context);
+  check_reference_navigation(context);
   check_generation(context);
   check_streaming(context);
   check_statechart_runtime(context);

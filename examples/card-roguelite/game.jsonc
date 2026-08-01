@@ -13,6 +13,11 @@
       "id": "ember-vault.run",
       "schema": "https://ludivra.dev/schemas/card-roguelite/v2",
       "source": "content/run.jsonc"
+    },
+    {
+      "id": "navigation.ember-vault",
+      "schema": "https://ludivra.dev/schemas/navigation-map/v1",
+      "source": "navigation/ember-vault.navigation.jsonc"
     }
   ],
   "composition": {

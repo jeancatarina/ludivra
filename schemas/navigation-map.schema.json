@@ -1,0 +1,82 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ludivra.dev/schemas/navigation-map/v1",
+  "title": "Ludivra reference navigation map",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["$schema", "schemaVersion", "id", "grid", "regions", "profiles", "links"],
+  "properties": {
+    "$schema": { "const": "https://ludivra.dev/schemas/navigation-map/v1" },
+    "schemaVersion": { "const": 1 },
+    "id": { "type": "string", "pattern": "^navigation\\.[a-z][a-z0-9.-]*$" },
+    "grid": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["width", "height", "blocked"],
+      "properties": {
+        "width": { "type": "integer", "minimum": 1, "maximum": 256 },
+        "height": { "type": "integer", "minimum": 1, "maximum": 256 },
+        "blocked": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/cell" }
+        }
+      }
+    },
+    "regions": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "min", "max", "layers"],
+        "properties": {
+          "id": { "type": "string", "pattern": "^navregion\\.[a-z][a-z0-9.-]*$" },
+          "min": { "$ref": "#/$defs/cell" },
+          "max": { "$ref": "#/$defs/cell" },
+          "layers": { "type": "integer", "minimum": 1 }
+        }
+      }
+    },
+    "profiles": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "layers", "maxExpandedNodes"],
+        "properties": {
+          "id": { "type": "string", "pattern": "^navprofile\\.[a-z][a-z0-9.-]*$" },
+          "layers": { "type": "integer", "minimum": 1 },
+          "maxExpandedNodes": { "type": "integer", "minimum": 1, "maximum": 65536 }
+        }
+      }
+    },
+    "links": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "from", "to", "layers", "cost", "bidirectional"],
+        "properties": {
+          "id": { "type": "string", "pattern": "^navlink\\.[a-z][a-z0-9.-]*$" },
+          "from": { "$ref": "#/$defs/cell" },
+          "to": { "$ref": "#/$defs/cell" },
+          "layers": { "type": "integer", "minimum": 1 },
+          "cost": { "type": "integer", "minimum": 1 },
+          "bidirectional": { "type": "boolean" }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "cell": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["x", "z"],
+      "properties": {
+        "x": { "type": "integer", "minimum": 0 },
+        "z": { "type": "integer", "minimum": 0 }
+      }
+    }
+  }
+}
