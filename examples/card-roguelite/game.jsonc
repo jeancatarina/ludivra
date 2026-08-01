@@ -29,6 +29,11 @@
       "id": "motion.ember-vault",
       "schema": "https://ludivra.dev/schemas/motion/v1",
       "source": "motion/ember-vault.motion.jsonc"
+    },
+    {
+      "id": "physics.ember-vault",
+      "schema": "https://ludivra.dev/schemas/physics-world/v1",
+      "source": "physics/ember-vault.physics.jsonc"
     }
   ],
   "spatial": { "worldContentId": "world.ember-vault" },

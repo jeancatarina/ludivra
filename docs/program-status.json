@@ -3,8 +3,8 @@
   "release": "0.7.0",
   "currentFocus": {
     "phase": 6,
-    "summary": "Implementar o adapter de física de referência com autoridade declarada e commit quantizado.",
-    "next": "Implementar PHY-001 com corpos, layers, contatos e golden vector quantizado."
+    "summary": "Integrar os solvers físicos upstream por adapters de borda, mantendo autoridade e commit quantizado.",
+    "next": "Implementar PHY-002 com Jolt/Box2D fixados, target gating e benchmark inicial."
   },
   "phases": [
     {
@@ -165,6 +165,11 @@
           "summary": "Adapter de Motion determinístico para snap, tween e ballistic com relógios lógico/apresentação separados, comando de posição semântico, hash lógico e cancelamento com causa.",
           "capabilities": ["motion.reference-runtime"],
           "evidence": ["schemas/motion.schema.json", "kernel/src/motion_reference.cpp", "examples/card-roguelite/motion/ember-vault.motion.jsonc", "tests/kernel/kernel_test.cpp"]
+        },
+        {
+          "summary": "Adapter de física de referência inteiro com boxes, layers/masks, authority por corpo, triggers, commit gameplay quantizado e golden vector de contato/posição.",
+          "capabilities": ["physics.reference-adapter"],
+          "evidence": ["schemas/physics-world.schema.json", "kernel/src/physics_reference.cpp", "examples/card-roguelite/physics/ember-vault.physics.jsonc", "tests/kernel/kernel_test.cpp"]
         }
       ],
       "remaining": [
@@ -306,11 +311,11 @@
   ],
   "tasks": [
     {
-      "id": "PHY-001",
+      "id": "PHY-002",
       "priority": "high",
       "status": "planned",
       "phase": 6,
-      "work": "Implementar adapter de física de referência com corpos, layers, contatos e commit quantizado verificável.",
+      "work": "Integrar Jolt/Box2D upstream por adapters de borda, com target gating e benchmark inicial.",
       "adrs": ["0021", "0037"]
     },
     {

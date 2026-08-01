@@ -1,6 +1,7 @@
 #include "fixed_point.hpp"
 #include "motion_reference.hpp"
 #include "navigation_reference.hpp"
+#include "physics_reference.hpp"
 #include "random_streams.hpp"
 #include "statechart_runtime.hpp"
 #include "world_chunks.hpp"
@@ -81,6 +82,12 @@ using ludivra::kernel::RegionalWorldConfig;
 using ludivra::kernel::SpatialEntityLocation;
 using ludivra::kernel::SpatialGlobalPosition;
 using ludivra::kernel::RegionalWorldError;
+using ludivra::kernel::ReferencePhysics;
+using ludivra::kernel::PhysicsAuthority;
+using ludivra::kernel::PhysicsBodyKind;
+using ludivra::kernel::PhysicsBox;
+using ludivra::kernel::PhysicsError;
+using ludivra::kernel::PhysicsVelocity;
 
 struct TestContext final {
   void expect(const bool condition, const char* message) {
@@ -501,6 +508,54 @@ void check_reference_motion(TestContext& context) {
       "inspection retains the terminal cancellation cause");
 }
 
+void check_reference_physics(TestContext& context) {
+  const SpatialGlobalPosition origin{7U, 0, 0, 0};
+  ReferencePhysics physics;
+  context.expect(physics.add_body({1U, PhysicsAuthority::gameplay, PhysicsBodyKind::static_body, 1U, 1U, origin, {0, 0, 0}, {500, 500, 500}}) == PhysicsError::none,
+      "a gameplay static box declares authority, layers and quantized collider");
+  context.expect(physics.add_body({2U, PhysicsAuthority::gameplay, PhysicsBodyKind::dynamic, 1U, 1U, {7U, -1'000, 0, 0}, {600, 0, 0}, {500, 500, 500}}) == PhysicsError::none,
+      "a gameplay dynamic box declares quantized velocity");
+  const auto first = physics.step();
+  context.expect(first.error == PhysicsError::none && first.contacts.size() == 1U && first.committed_bodies.size() == 2U,
+      "physics commits ordered gameplay bodies and contacts");
+  context.expect(first.committed_bodies[1].id == 2U && first.committed_bodies[1].position.x_milli == -1'000 &&
+      first.committed_bodies[1].velocity.x_milli == 0,
+      "dynamic resolution quantizes position and removes normal velocity at commit");
+  context.expect(physics.gameplay_hash() == 0xebd1bf8d86436310ULL,
+      "quantized bodies and contact match the reference physics golden vector");
+  context.expect(physics.add_body({3U, PhysicsAuthority::presentation, PhysicsBodyKind::dynamic, 2U, 2U, {7U, 10'000, 0, 0}, {50, 0, 0}, {250, 250, 250}}) == PhysicsError::none,
+      "presentation physics remains isolated on its declared layer");
+  context.expect(physics.step().error == PhysicsError::none,
+      "a separately layered presentation body can advance alongside gameplay physics");
+
+  ReferencePhysics isolated;
+  context.expect(isolated.add_body({1U, PhysicsAuthority::gameplay, PhysicsBodyKind::static_body, 1U, 1U, origin, {0, 0, 0}, {100, 100, 100}}) == PhysicsError::none,
+      "an isolated gameplay body establishes a commit hash baseline");
+  static_cast<void>(isolated.step());
+  const auto hash = isolated.gameplay_hash();
+  context.expect(isolated.add_body({2U, PhysicsAuthority::presentation, PhysicsBodyKind::dynamic, 2U, 2U, {7U, 10'000, 0, 0}, {50, 0, 0}, {100, 100, 100}}) == PhysicsError::none &&
+      isolated.step().error == PhysicsError::none && isolated.gameplay_hash() == hash,
+      "presentation-body integration never changes the gameplay commit hash");
+
+  ReferencePhysics triggered;
+  context.expect(triggered.add_body({1U, PhysicsAuthority::gameplay, PhysicsBodyKind::dynamic, 1U, 1U, origin, {0, 0, 0}, {500, 500, 500}}) == PhysicsError::none &&
+      triggered.add_body({2U, PhysicsAuthority::gameplay, PhysicsBodyKind::trigger, 1U, 1U, origin, {0, 0, 0}, {500, 500, 500}}) == PhysicsError::none,
+      "trigger bodies use the same semantic collider declaration");
+  const auto trigger_step = triggered.step();
+  context.expect(trigger_step.contacts.size() == 1U && trigger_step.contacts[0].trigger &&
+      trigger_step.committed_bodies[0].position.x_milli == 0,
+      "triggers record contacts without resolving a gameplay transform");
+
+  ReferencePhysics mixed;
+  context.expect(mixed.add_body({1U, PhysicsAuthority::gameplay, PhysicsBodyKind::dynamic, 1U, 1U, origin, {0, 0, 0}, {100, 100, 100}}) == PhysicsError::none &&
+      mixed.add_body({2U, PhysicsAuthority::presentation, PhysicsBodyKind::dynamic, 1U, 1U, origin, {0, 0, 0}, {100, 100, 100}}) == PhysicsError::none,
+      "mixed authority setup is representable for boundary validation");
+  context.expect(mixed.step().error == PhysicsError::authority_mismatch,
+      "cross-authority layers are rejected before a presentation body can affect gameplay");
+  context.expect(physics.add_body({4U, PhysicsAuthority::gameplay, PhysicsBodyKind::dynamic, 1U, 1U, origin, {0, 0, 0}, {0, 100, 100}}) == PhysicsError::collider_invalid,
+      "invalid colliders are observable instead of approximated");
+}
+
 void check_generation(TestContext& context) {
   const auto origin = chunk_at(0, 0);
   context.expect(
@@ -669,6 +724,7 @@ int main() {
   check_cooperative_world_runtime(context);
   check_reference_navigation(context);
   check_reference_motion(context);
+  check_reference_physics(context);
   check_generation(context);
   check_streaming(context);
   check_statechart_runtime(context);

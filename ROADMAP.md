@@ -5,8 +5,8 @@
 | Campo | Valor |
 |---|---|
 | Release atual | 0.7.0 |
-| Foco atual | Fase 6 — Implementar o adapter de física de referência com autoridade declarada e commit quantizado. |
-| Próxima entrega | Implementar PHY-001 com corpos, layers, contatos e golden vector quantizado. |
+| Foco atual | Fase 6 — Integrar os solvers físicos upstream por adapters de borda, mantendo autoridade e commit quantizado. |
+| Próxima entrega | Implementar PHY-002 com Jolt/Box2D fixados, target gating e benchmark inicial. |
 | Fonte editável de progresso | [docs/program-status.json](docs/program-status.json) |
 | Decisão do modelo documental | [ADR 0046](docs/adr/0046-generated-program-documentation.md) |
 
@@ -169,6 +169,7 @@ Entregar movimento formal, física por adapters e multidões em níveis de simul
 ### Entregue
 
 - Adapter de Motion determinístico para snap, tween e ballistic com relógios lógico/apresentação separados, comando de posição semântico, hash lógico e cancelamento com causa. Capabilities: `motion.reference-runtime`. Evidência: [schemas/motion.schema.json](schemas/motion.schema.json), [kernel/src/motion_reference.cpp](kernel/src/motion_reference.cpp), [examples/card-roguelite/motion/ember-vault.motion.jsonc](examples/card-roguelite/motion/ember-vault.motion.jsonc), [tests/kernel/kernel_test.cpp](tests/kernel/kernel_test.cpp).
+- Adapter de física de referência inteiro com boxes, layers/masks, authority por corpo, triggers, commit gameplay quantizado e golden vector de contato/posição. Capabilities: `physics.reference-adapter`. Evidência: [schemas/physics-world.schema.json](schemas/physics-world.schema.json), [kernel/src/physics_reference.cpp](kernel/src/physics_reference.cpp), [examples/card-roguelite/physics/ember-vault.physics.jsonc](examples/card-roguelite/physics/ember-vault.physics.jsonc), [tests/kernel/kernel_test.cpp](tests/kernel/kernel_test.cpp).
 
 ### Falta
 

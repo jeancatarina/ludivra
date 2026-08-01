@@ -46,6 +46,7 @@ const requiredFiles = [
   "schemas/navigation-map.schema.json",
   "schemas/motion.schema.json",
   "schemas/spatial-world.schema.json",
+  "schemas/physics-world.schema.json",
   "schemas/prefab.schema.json",
   "schemas/scenario.schema.json",
   "schemas/scene.schema.json",
@@ -82,6 +83,7 @@ const jsonFiles = [
   "schemas/navigation-map.schema.json",
   "schemas/motion.schema.json",
   "schemas/spatial-world.schema.json",
+  "schemas/physics-world.schema.json",
   "schemas/prefab.schema.json",
   "schemas/scenario.schema.json",
   "schemas/scene.schema.json",
@@ -111,6 +113,7 @@ const contractSchemaFiles = [
   "schemas/navigation-map.schema.json",
   "schemas/motion.schema.json",
   "schemas/spatial-world.schema.json",
+  "schemas/physics-world.schema.json",
   "schemas/prefab.schema.json",
   "schemas/scenario.schema.json",
   "schemas/scene.schema.json",
@@ -766,6 +769,12 @@ export async function runValidate(arguments_: string[] = []): Promise<CommandOut
                 const motions = (migratedDocument as { motions?: Array<{ id: string }> }).motions ?? [];
                 if (new Set(motions.map(({ id }) => id)).size !== motions.length) {
                   diagnostics.push({ code: "MOTION_ID_DUPLICATE", severity: "error", message: "Motion IDs must be unique", file: contentPath });
+                }
+              }
+              if (descriptor.schema === "https://ludivra.dev/schemas/physics-world/v1") {
+                const bodies = (migratedDocument as { bodies?: Array<{ id: number }> }).bodies ?? [];
+                if (new Set(bodies.map(({ id }) => id)).size !== bodies.length) {
+                  diagnostics.push({ code: "PHYSICS_BODY_ID_DUPLICATE", severity: "error", message: "Physics body IDs must be unique", file: contentPath });
                 }
               }
             } catch (error) {

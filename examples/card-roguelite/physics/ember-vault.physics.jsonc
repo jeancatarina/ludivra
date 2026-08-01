@@ -1,0 +1,28 @@
+{
+  "$schema": "https://ludivra.dev/schemas/physics-world/v1",
+  "schemaVersion": 1,
+  "id": "physics.ember-vault",
+  "dimension": 7,
+  "bodies": [
+    {
+      "id": 1,
+      "authority": "gameplay",
+      "kind": "static",
+      "layers": 1,
+      "mask": 1,
+      "position": { "xMilli": 0, "yMilli": 0, "zMilli": 0 },
+      "velocity": { "xMilli": 0, "yMilli": 0, "zMilli": 0 },
+      "box": { "halfXMilli": 500, "halfYMilli": 500, "halfZMilli": 500 }
+    },
+    {
+      "id": 2,
+      "authority": "gameplay",
+      "kind": "dynamic",
+      "layers": 1,
+      "mask": 1,
+      "position": { "xMilli": -1000, "yMilli": 0, "zMilli": 0 },
+      "velocity": { "xMilli": 600, "yMilli": 0, "zMilli": 0 },
+      "box": { "halfXMilli": 500, "halfYMilli": 500, "halfZMilli": 500 }
+    }
+  ]
+}

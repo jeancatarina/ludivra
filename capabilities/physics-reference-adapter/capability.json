@@ -1,0 +1,31 @@
+{
+  "id": "physics.reference-adapter",
+  "status": "experimental",
+  "version": "0.1.0",
+  "owner": "kernel",
+  "targets": ["native-headless"],
+  "contracts": [
+    "schemas/physics-world.schema.json",
+    "kernel/src/physics_reference.hpp"
+  ],
+  "examples": [
+    "examples/card-roguelite/physics/ember-vault.physics.jsonc",
+    "tests/kernel/kernel_test.cpp"
+  ],
+  "dependencies": ["spatial.regional-world", "motion.reference-runtime"],
+  "verification": [
+    "pnpm test:native",
+    "pnpm game validate --project examples/card-roguelite --format json",
+    "pnpm test:card-roguelite"
+  ],
+  "limitations": [
+    {
+      "code": "PHYSICS_SOLVER_UNAVAILABLE",
+      "message": "O adapter de referência só cobre boxes quantizados e não substitui os adapters upstream Jolt/Box2D definidos no ADR 0037."
+    },
+    {
+      "code": "PHYSICS_SAVE_REPLAY_UNAVAILABLE",
+      "message": "O commit quantizado tem golden vector nativo, mas corpos e contatos ainda não são persistidos no runtime save/replay."
+    }
+  ]
+}

@@ -2,7 +2,7 @@
 
 - Status: provisório
 - Data: 2026-07-24
-- Revisado: 2026-07-26 para vincular promoção dos solvers à cobertura desktop e ao upstream direto
+- Revisado: 2026-08-01 para registrar o adapter de referência que antecede os vendors
 - Revisão: ao registrar o primeiro benchmark oficial de física, ou se um target suportado deixar de compilar o solver
 - Fecha a pendência de: [ADR 0021](0021-motion-and-physics-adapter-authority.md)
 - Complementa: [ADR 0055](0055-upstream-first-and-external-source-incorporation.md)
@@ -35,6 +35,8 @@ Godot e godot-jolt podem informar cenários, diferenças de configuração e cas
 Autoridade `gameplay` só é liberada para um solver após golden vector de contatos e posições quantizadas, conforme o ADR 0021, e após os cenários de estabilidade do ADR 0036. Até lá, o adapter só serve autoridade `presentation`.
 
 O adapter de referência mínimo do ADR 0021 continua existindo: ele é o que roda em CI quando o solver não estiver disponível para um target, e é o que impede que o contrato dependa de um vendor para ser testado.
+
+`ReferencePhysics` agora cobre o boundary por boxes quantizados, layers/masks, authorities, triggers, contatos e golden vector. A implementação é deliberadamente pequena e não deve crescer para substituir os vendors: Jolt e Box2D seguem necessários para os recursos de produção declarados pelo ADR 0021.
 
 ### O que continua recusado
 

@@ -2,7 +2,7 @@
 
 - Status: provisório
 - Data: 2026-07-24
-- Revisado: 2026-08-01 para o adapter de Motion determinístico inicial
+- Revisado: 2026-08-01 para os adapters determinísticos iniciais de Motion e física
 - Revisão: ao registrar o primeiro benchmark oficial de física; a escolha de solver está no [ADR 0037](0037-physics-solver-selection.md)
 - Depende de: [ADR 0018](0018-numeric-determinism-and-rng-streams.md) e [ADR 0019](0019-spatial-model-chunk-lifecycle-and-job-commit.md)
 - Complementa: [ADR 0008](0008-mandatory-scale-and-procedural-capabilities.md)
@@ -48,6 +48,12 @@ Cada corpo declara autoridade:
 - `host` — o resultado pertence ao host da sessão em rede e chega aos clientes como snapshot.
 
 Autoridade misturada em um mesmo corpo é `PHYSICS_AUTHORITY_MISMATCH`. Resultado de física que entra no estado sem quantização declarada é defeito, não aproximação.
+
+### Adapter de física inicial
+
+`ReferencePhysics` exercita o contrato sem vendor: boxes quantizados, corpos estático, cinemático, dinâmico e trigger, layers/masks, contatos ordenados e resolução inteira no eixo de menor penetração. `step()` retorna apenas corpos `gameplay` no commit, com posição e velocidade inteiras, além do vetor de contatos que alimenta o golden vector.
+
+Uma colisão com layers compatíveis entre corpos de autoridades diferentes é recusada antes da integração; um corpo de apresentação isolado não modifica o hash de gameplay. A fixture cobre colisão estático/dinâmico, trigger, camada isolada, collider inválido e mismatch de autoridade. Isso não escolhe nem substitui Jolt/Box2D: é o boundary obrigatório de CI até o adapter upstream existir.
 
 A quantização no commit é o que torna física com autoridade `gameplay` compatível com o ADR 0018: o solver pode ser flutuante por dentro, mas o que o mundo lógico registra é inteiro e reprodutível.
 

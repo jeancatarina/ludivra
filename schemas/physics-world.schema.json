@@ -1,0 +1,57 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ludivra.dev/schemas/physics-world/v1",
+  "title": "Ludivra reference physics world",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["$schema", "schemaVersion", "id", "dimension", "bodies"],
+  "properties": {
+    "$schema": { "const": "https://ludivra.dev/schemas/physics-world/v1" },
+    "schemaVersion": { "const": 1 },
+    "id": { "type": "string", "pattern": "^physics\\.[a-z][a-z0-9.-]*$" },
+    "dimension": { "type": "integer", "minimum": 0, "maximum": 65535 },
+    "bodies": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/body" }
+    }
+  },
+  "$defs": {
+    "coordinate": { "type": "integer", "minimum": -68719476736000, "maximum": 68719476767999 },
+    "position": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["xMilli", "yMilli", "zMilli"],
+      "properties": {
+        "xMilli": { "$ref": "#/$defs/coordinate" },
+        "yMilli": { "$ref": "#/$defs/coordinate" },
+        "zMilli": { "$ref": "#/$defs/coordinate" }
+      }
+    },
+    "box": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["halfXMilli", "halfYMilli", "halfZMilli"],
+      "properties": {
+        "halfXMilli": { "type": "integer", "minimum": 1, "maximum": 1000000000000 },
+        "halfYMilli": { "type": "integer", "minimum": 1, "maximum": 1000000000000 },
+        "halfZMilli": { "type": "integer", "minimum": 1, "maximum": 1000000000000 }
+      }
+    },
+    "body": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "authority", "kind", "layers", "mask", "position", "velocity", "box"],
+      "properties": {
+        "id": { "type": "integer", "minimum": 1, "maximum": 4294967295 },
+        "authority": { "enum": ["presentation", "gameplay", "host"] },
+        "kind": { "enum": ["static", "kinematic", "dynamic", "trigger"] },
+        "layers": { "type": "integer", "minimum": 1, "maximum": 4294967295 },
+        "mask": { "type": "integer", "minimum": 1, "maximum": 4294967295 },
+        "position": { "$ref": "#/$defs/position" },
+        "velocity": { "$ref": "#/$defs/position" },
+        "box": { "$ref": "#/$defs/box" }
+      }
+    }
+  }
+}

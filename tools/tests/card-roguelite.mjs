@@ -19,7 +19,7 @@ function game(arguments_) {
 game(["status", "--project", project]);
 const validated = game(["validate", "--project", project]);
 assert.equal(validated.status, "passed");
-assert.equal(validated.data.contentFilesChecked, 4);
+assert.equal(validated.data.contentFilesChecked, 5);
 
 const expected = new Map([
   ["scenarios/run-victory.jsonc", { phase: "3", health: "15", enemy: "0" }],
@@ -72,6 +72,8 @@ assert.equal(documents["world.ember-vault"].regionExtentChunks, 2,
   "the declared regional spatial world travels in the pack");
 assert.equal(documents["motion.ember-vault"].motions[0].duration, 4,
   "the declared motion fixture travels in the pack");
+assert.equal(documents["physics.ember-vault"].bodies[1].velocity.xMilli, 600,
+  "the declared physics fixture travels in the pack");
 assert.ok(
   !readFileSync(resolve(project, "scripts/gameplay.lua"), "utf8").includes("CONTENT ="),
   "the script does not carry content"
