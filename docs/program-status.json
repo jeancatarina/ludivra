@@ -170,6 +170,11 @@
           "summary": "Adapter de física de referência inteiro com boxes, layers/masks, authority por corpo, triggers, commit gameplay quantizado e golden vector de contato/posição.",
           "capabilities": ["physics.reference-adapter"],
           "evidence": ["schemas/physics-world.schema.json", "kernel/src/physics_reference.cpp", "examples/card-roguelite/physics/ember-vault.physics.jsonc", "tests/kernel/kernel_test.cpp"]
+        },
+        {
+          "summary": "Mass Runtime de referência com arrays paralelos ordenados, cinco níveis de simulação, budgets, promoção/rebaixamento, operações em lote, query limitada e hash autoritativo sem níveis visuais.",
+          "capabilities": ["mass.reference-runtime"],
+          "evidence": ["schemas/mass-population.schema.json", "kernel/src/mass_reference.cpp", "examples/card-roguelite/mass/ember-vault.mass.jsonc", "tests/kernel/kernel_test.cpp"]
         }
       ],
       "remaining": [

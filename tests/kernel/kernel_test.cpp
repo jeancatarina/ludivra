@@ -1,5 +1,6 @@
 #include "fixed_point.hpp"
 #include "motion_reference.hpp"
+#include "mass_reference.hpp"
 #include "navigation_reference.hpp"
 #include "physics_reference.hpp"
 #include "random_streams.hpp"
@@ -88,6 +89,11 @@ using ludivra::kernel::PhysicsBodyKind;
 using ludivra::kernel::PhysicsBox;
 using ludivra::kernel::PhysicsError;
 using ludivra::kernel::PhysicsVelocity;
+using ludivra::kernel::ReferenceMass;
+using ludivra::kernel::MassAgent;
+using ludivra::kernel::MassBudget;
+using ludivra::kernel::MassError;
+using ludivra::kernel::MassLevel;
 
 struct TestContext final {
   void expect(const bool condition, const char* message) {
@@ -556,6 +562,36 @@ void check_reference_physics(TestContext& context) {
       "invalid colliders are observable instead of approximated");
 }
 
+void check_reference_mass(TestContext& context) {
+  ReferenceMass mass({1U, 1U, 1U, 1'000, 2U});
+  context.expect(mass.add({2U, MassLevel::simplified_agent, 500, 0, 10, 0, 8}) == MassError::none &&
+      mass.add({1U, MassLevel::full_entity, 0, 0, 100, 0, 10}) == MassError::none &&
+      mass.add({3U, MassLevel::visual_instance, 0, 0, 100, 0, 1}) == MassError::none,
+      "Mass stores independently allocated agents in canonical SoA id order");
+  const auto inspection = mass.inspect();
+  context.expect(inspection.agents[0].id == 1U && inspection.agents[1].id == 2U && inspection.visual_instances == 1U,
+      "inspection exposes deterministic level counts without object-owned iteration");
+  context.expect(mass.add({4U, MassLevel::full_entity, 0, 0, 0, 0, 1}) == MassError::budget_exceeded,
+      "authoritative level budgets reject uncontrolled population growth");
+  const auto hash_before_visual = mass.authoritative_hash();
+  context.expect(mass.advance() == MassError::none, "authoritative Mass levels advance in batch");
+  const auto advanced = mass.inspect();
+  context.expect(advanced.agents[0].x_milli == 100 && advanced.agents[1].x_milli == 510 && advanced.agents[2].x_milli == 0,
+      "visual-only instances do not simulate or mutate authoritative agent arrays");
+  std::vector<std::uint32_t> nearby;
+  context.expect(mass.query_disc(0, 0, 1'000, 2U, nearby) == MassError::none && nearby == std::vector<std::uint32_t>{1U, 2U},
+      "bounded spatial queries return authoritative agents in canonical order");
+  context.expect(mass.query_disc(0, 0, 1'000, 1U, nearby) == MassError::query_too_broad,
+      "a query exceeding its declared result budget is not silently truncated");
+  context.expect(mass.damage_disc(0, 0, 1'000, 1, 2U) == MassError::none && mass.inspect().agents[0].health == 9,
+      "area damage applies in deterministic batch order");
+  context.expect(mass.set_level(1U, MassLevel::aggregate_group) == MassError::none &&
+      mass.set_level(3U, MassLevel::full_entity) == MassError::none,
+      "promotion and demotion honor the declared budgets");
+  context.expect(hash_before_visual != mass.authoritative_hash(),
+      "only authoritative agents and their declared levels contribute to the Mass hash");
+}
+
 void check_generation(TestContext& context) {
   const auto origin = chunk_at(0, 0);
   context.expect(
@@ -725,6 +761,7 @@ int main() {
   check_reference_navigation(context);
   check_reference_motion(context);
   check_reference_physics(context);
+  check_reference_mass(context);
   check_generation(context);
   check_streaming(context);
   check_statechart_runtime(context);

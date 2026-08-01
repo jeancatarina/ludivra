@@ -1,0 +1,11 @@
+{
+  "$schema": "https://ludivra.dev/schemas/mass-population/v1",
+  "schemaVersion": 1,
+  "id": "mass.ember-vault",
+  "budget": { "fullEntities": 1, "simplifiedAgents": 4, "aggregateGroups": 2, "maximumQueryRadiusMilli": 1000, "maximumQueryResults": 4 },
+  "agents": [
+    { "id": 1, "level": "full", "xMilli": 0, "zMilli": 0, "velocityXMilli": 100, "velocityZMilli": 0, "health": 10 },
+    { "id": 2, "level": "simplified", "xMilli": 500, "zMilli": 0, "velocityXMilli": 10, "velocityZMilli": 0, "health": 8 },
+    { "id": 3, "level": "visual", "xMilli": 0, "zMilli": 0, "velocityXMilli": 100, "velocityZMilli": 0, "health": 1 }
+  ]
+}

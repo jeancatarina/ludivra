@@ -34,6 +34,11 @@
       "id": "physics.ember-vault",
       "schema": "https://ludivra.dev/schemas/physics-world/v1",
       "source": "physics/ember-vault.physics.jsonc"
+    },
+    {
+      "id": "mass.ember-vault",
+      "schema": "https://ludivra.dev/schemas/mass-population/v1",
+      "source": "mass/ember-vault.mass.jsonc"
     }
   ],
   "spatial": { "worldContentId": "world.ember-vault" },

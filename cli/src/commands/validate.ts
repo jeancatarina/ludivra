@@ -45,6 +45,7 @@ const requiredFiles = [
   "schemas/character-spec.schema.json",
   "schemas/navigation-map.schema.json",
   "schemas/motion.schema.json",
+  "schemas/mass-population.schema.json",
   "schemas/spatial-world.schema.json",
   "schemas/physics-world.schema.json",
   "schemas/prefab.schema.json",
@@ -82,6 +83,7 @@ const jsonFiles = [
   "schemas/game.schema.json",
   "schemas/navigation-map.schema.json",
   "schemas/motion.schema.json",
+  "schemas/mass-population.schema.json",
   "schemas/spatial-world.schema.json",
   "schemas/physics-world.schema.json",
   "schemas/prefab.schema.json",
@@ -112,6 +114,7 @@ const contractSchemaFiles = [
   "schemas/game.schema.json",
   "schemas/navigation-map.schema.json",
   "schemas/motion.schema.json",
+  "schemas/mass-population.schema.json",
   "schemas/spatial-world.schema.json",
   "schemas/physics-world.schema.json",
   "schemas/prefab.schema.json",
@@ -775,6 +778,12 @@ export async function runValidate(arguments_: string[] = []): Promise<CommandOut
                 const bodies = (migratedDocument as { bodies?: Array<{ id: number }> }).bodies ?? [];
                 if (new Set(bodies.map(({ id }) => id)).size !== bodies.length) {
                   diagnostics.push({ code: "PHYSICS_BODY_ID_DUPLICATE", severity: "error", message: "Physics body IDs must be unique", file: contentPath });
+                }
+              }
+              if (descriptor.schema === "https://ludivra.dev/schemas/mass-population/v1") {
+                const agents = (migratedDocument as { agents?: Array<{ id: number }> }).agents ?? [];
+                if (new Set(agents.map(({ id }) => id)).size !== agents.length) {
+                  diagnostics.push({ code: "MASS_AGENT_ID_DUPLICATE", severity: "error", message: "Mass agent IDs must be unique", file: contentPath });
                 }
               }
             } catch (error) {

@@ -2,6 +2,7 @@
 
 - Status: provisório
 - Data: 2026-07-24
+- Revisado: 2026-08-01 para o runtime de referência contíguo e limitado
 - Revisão: antes de declarar suporte a horda em qualquer target
 - Depende de: [ADR 0018](0018-numeric-determinism-and-rng-streams.md), [ADR 0019](0019-spatial-model-chunk-lifecycle-and-job-commit.md) e [ADR 0020](0020-presentation-buffers-and-wasm-memory.md)
 - Fase: 6
@@ -47,6 +48,12 @@ Queries espaciais são limitadas por raio e por contagem máxima declarados. Que
 ### Operações em lote
 
 Movimento, steering, separação, dano em área e despawn operam em lote sobre os arrays. Damage fields são declarativos, com forma, intervalo e efeito, e sua aplicação é ordenada deterministicamente por chave, nunca por ordem de descoberta espacial.
+
+### Runtime de referência implementado
+
+`ReferenceMass` armazena ID, nível, posição, velocidade e vida em arrays paralelos ordenados por ID. Ele cobre os cinco níveis, budgets de níveis autoritativos, promoção/rebaixamento, avanço em lote, dano em disco e consulta espacial com raio e resultado máximos. Níveis visual e density não avançam e não entram no hash autoritativo.
+
+O runtime é uma prova de contrato nativa: ainda não persiste arrays por região, não produz buffer de instancing e não invoca Lua por agente. As limitações são expostas pela capability em vez de transformar a referência em alegação de horda pronta para targets finais.
 
 ### Budget e apresentação
 
