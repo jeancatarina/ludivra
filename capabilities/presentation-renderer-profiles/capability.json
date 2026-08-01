@@ -24,8 +24,8 @@
   ],
   "limitations": [
     {
-      "code": "RENDER_GPU_BENCHMARK_REQUIRED",
-      "message": "desktop-high expõe adapter físico quando o navegador o permite e uma janela limitada de timestamps GPU (mediana/p95); a promoção do tier ainda exige smoke aprovado no Electron e pós-processamento WebGPU específico por tier."
+      "code": "RENDER_WEBGPU_POSTPROCESS_TIER_PENDING",
+      "message": "desktop-high publica adapter e benchmark GPU no smoke do Electron, mas ainda usa render direto com tone mapping; bloom e demais pós-processamentos WebGPU continuam dependentes do tier declarado."
     }
   ]
 }

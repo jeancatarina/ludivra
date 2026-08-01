@@ -206,12 +206,19 @@ async function smokeTest(directory, targetPlatform, productName) {
       : resolve(directory, productName);
   const smokeRoot = await mkdtemp(resolve(engineRoot, "build/desktop-smoke-"));
   try {
+    const rendererReport = resolve(smokeRoot, "renderer-smoke.json");
     await run(executable, targetPlatform === "linux" ? ["--no-sandbox"] : [], {
       cwd: directory,
-      env: { ...process.env, LUDIVRA_SMOKE_TEST: "1", LUDIVRA_SMOKE_USER_DATA: smokeRoot },
+      env: {
+        ...process.env,
+        LUDIVRA_SMOKE_TEST: "1",
+        LUDIVRA_SMOKE_USER_DATA: smokeRoot,
+        LUDIVRA_SMOKE_REPORT: rendererReport
+      },
       stdio: "inherit"
     });
-    return { status: "passed", executable };
+    const rendering = JSON.parse(await readFile(rendererReport, "utf8"));
+    return { status: "passed", executable, rendering };
   } finally {
     await rm(smokeRoot, { recursive: true, force: true });
   }

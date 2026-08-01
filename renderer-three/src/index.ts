@@ -267,6 +267,7 @@ export async function createThreeRenderer(
     : selectRendererProfile(options.profile, options.backends ?? { webgl2: true, webgpu: false, adapter: null });
   let renderer: WebGLRenderer | WebGPURenderer;
   let gpuTiming = createGpuTimingSampler(false);
+  let gpuTimestampTelemetryEnabled = false;
   if (selection?.effectiveMethod === "webgpu") {
     try {
       const { WebGPURenderer: WebGpuRenderer } = await import("three/webgpu");
@@ -290,6 +291,7 @@ export async function createThreeRenderer(
       }
       renderer = webgpu;
       gpuTiming = createGpuTimingSampler(webgpuDevice.timestampsAvailable);
+      gpuTimestampTelemetryEnabled = webgpuDevice.timestampsAvailable;
       if (!webgpuDevice.timestampsAvailable) {
         const detail = webgpuDevice.timestampRequestFailed
           ? "timestamp-query was advertised but device creation rejected it"
@@ -380,6 +382,26 @@ export async function createThreeRenderer(
     )
     : null;
   let previousRenderTime = performance.now();
+  let gpuTimestampResolve: Promise<void> | null = null;
+
+  function collectGpuTiming(): void {
+    if (renderer instanceof WebGLRenderer || !gpuTimestampTelemetryEnabled || gpuTimestampResolve !== null) return;
+    const pending = renderer.resolveTimestampsAsync("render")
+      .then((milliseconds) => {
+        if (milliseconds !== undefined) options.onGpuTiming?.(gpuTiming.record(milliseconds));
+      })
+      .catch((error: unknown) => {
+        gpuTimestampTelemetryEnabled = false;
+        gpuTiming = createGpuTimingSampler(false);
+        const detail = error instanceof Error ? error.message : String(error);
+        options.reportDiagnostic?.("RENDER_GPU_TIMESTAMPS_UNAVAILABLE", detail, "renderer-three:webgpu");
+        options.onGpuTiming?.(gpuTiming.snapshot());
+      });
+    gpuTimestampResolve = pending;
+    void pending.finally(() => {
+      if (gpuTimestampResolve === pending) gpuTimestampResolve = null;
+    });
+  }
 
   function updateParticles(): void {
     const time = performance.now();
@@ -511,7 +533,7 @@ export async function createThreeRenderer(
         updateParticles();
         if (cinematicPipeline === null) {
           renderer.render(scene, camera);
-          if (!(renderer instanceof WebGLRenderer)) options.onGpuTiming?.(gpuTiming.record(renderer.info.render.timestamp));
+          collectGpuTiming();
         } else cinematicPipeline.render();
       });
     },

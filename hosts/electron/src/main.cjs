@@ -1,5 +1,5 @@
 const { app, autoUpdater, BrowserWindow, crashReporter, ipcMain, powerMonitor, shell } = require("electron");
-const { readFileSync } = require("node:fs");
+const { readFileSync, writeFileSync } = require("node:fs");
 const path = require("node:path");
 const channels = require("./generated/desktop-channels.cjs");
 const { runCapture } = require("./services/capture.cjs");
@@ -211,6 +211,7 @@ app.whenReady().then(() => {
   }
   if (process.env.LUDIVRA_SMOKE_TEST === "1") {
     let smokeWindow;
+    let rendererReadyAt = null;
     void storage.write("smoke", new Uint8Array([1, 2, 3]))
       .then(() => storage.read("smoke"))
       .then((archive) => {
@@ -224,12 +225,36 @@ app.whenReady().then(() => {
           });
           smokeWindow.webContents.once("did-finish-load", () => {
             const inspect = () => {
-              void smokeWindow.webContents.executeJavaScript(
-                "document.querySelector('#host-status')?.textContent ?? ''"
-              ).then((status) => {
-                if (status.includes("Kernel WASM") && status.includes("autosave desktop")) {
+              void smokeWindow.webContents.executeJavaScript(`JSON.stringify({
+                status: document.querySelector('#host-status')?.textContent ?? '',
+                ready: window.ludivraUi?.ready === true,
+                rendering: window.ludivraUi?.rendering?.() ?? null
+              })`).then((encoded) => {
+                const inspection = JSON.parse(encoded);
+                if (
+                  inspection.ready === true &&
+                  inspection.status.includes("Kernel WASM") &&
+                  inspection.status.includes("autosave desktop") &&
+                  inspection.rendering !== null
+                ) {
+                  if (inspection.rendering.requestedProfile !== "desktop-high") {
+                    clearTimeout(timeout);
+                    reject(new Error("desktop renderer smoke did not request desktop-high"));
+                    return;
+                  }
+                  if (rendererReadyAt === null) rendererReadyAt = Date.now();
+                  const timing = inspection.rendering.gpuTiming;
+                  const timingReady = timing?.available !== true || timing.sampleCount >= 30;
+                  // Timestamp resolves are asynchronous. Give a supported device a
+                  // short, bounded warm-up window, then retain the observable
+                  // partial result instead of turning a measurement delay into a
+                  // false renderer failure.
+                  if (!timingReady && Date.now() - rendererReadyAt < 3_000) {
+                    setTimeout(inspect, 100);
+                    return;
+                  }
                   clearTimeout(timeout);
-                  resolve();
+                  resolve(inspection);
                   return;
                 }
                 setTimeout(inspect, 200);
@@ -242,10 +267,14 @@ app.whenReady().then(() => {
           });
         });
       })
-      .then(() => storage.delete("smoke"))
-      .then(() => {
+      .then((inspection) => storage.delete("smoke").then(() => inspection))
+      .then((inspection) => {
+        const reportPath = process.env.LUDIVRA_SMOKE_REPORT;
+        if (typeof reportPath === "string" && reportPath.length > 0) {
+          writeFileSync(reportPath, `${JSON.stringify({ schemaVersion: 1, ...inspection }, null, 2)}\n`, "utf8");
+        }
         smokeWindow.destroy();
-        process.stdout.write("ludivra_desktop_smoke=ok\n");
+        process.stdout.write(`ludivra_desktop_smoke=${JSON.stringify(inspection.rendering)}\n`);
         app.quit();
       })
       .catch((error) => {

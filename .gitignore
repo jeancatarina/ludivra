@@ -17,6 +17,7 @@ node_modules/
 !/reports/runs/.gitkeep
 **/.ludivra/project-state.json
 **/.ludivra/audio-index.json
+**/.ludivra/visual-index.json
 **/.ludivra/content-pack.json
 **/.ludivra/content-pack.meta.json
 **/.ludivra/cache/
