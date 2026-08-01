@@ -1,12 +1,12 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://ludivra.dev/schemas/game/v4",
+  "$id": "https://ludivra.dev/schemas/game/v5",
   "title": "Ludivra game manifest",
   "type": "object",
   "additionalProperties": false,
   "required": ["schemaVersion", "id", "name", "engine", "targets", "rendering", "entrypoints", "inputs", "ui", "inspection", "projectors", "scenarios"],
   "properties": {
-    "schemaVersion": { "const": 4 },
+    "schemaVersion": { "const": 5 },
     "id": { "type": "string", "pattern": "^[a-z][a-z0-9-]*$" },
     "name": { "type": "string", "minLength": 1 },
     "engine": {
@@ -28,10 +28,19 @@
     "rendering": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["browser", "desktop"],
+      "required": ["browser", "desktop", "environments"],
       "properties": {
         "browser": { "$ref": "#/$defs/renderProfile" },
-        "desktop": { "$ref": "#/$defs/renderProfile" }
+        "desktop": { "$ref": "#/$defs/renderProfile" },
+        "environments": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["browser", "desktop"],
+          "properties": {
+            "browser": { "$ref": "#/$defs/renderEnvironment" },
+            "desktop": { "$ref": "#/$defs/renderEnvironment" }
+          }
+        }
       }
     },
     "capabilities": {
@@ -371,6 +380,40 @@
         "requiredFeatures": { "type": "array", "uniqueItems": true, "items": { "$ref": "#/$defs/rendererFeature" } },
         "optionalFeatures": { "type": "array", "uniqueItems": true, "items": { "$ref": "#/$defs/rendererFeature" } },
         "fallbackProfiles": { "type": "array", "uniqueItems": true, "items": { "enum": ["web-compatible", "desktop-compatible", "desktop-high"] } }
+      }
+    },
+    "renderEnvironment": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "tier", "skyColor", "exposure", "fog", "lighting", "shadows"],
+      "properties": {
+        "id": { "type": "string", "pattern": "^[a-z][a-z0-9.-]*$" },
+        "tier": { "enum": ["core", "enhanced"] },
+        "skyColor": { "type": "integer", "minimum": 0, "maximum": 16777215 },
+        "exposure": { "type": "number", "minimum": 0.1, "maximum": 3 },
+        "fog": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["color", "density"],
+          "properties": {
+            "color": { "type": "integer", "minimum": 0, "maximum": 16777215 },
+            "density": { "type": "number", "minimum": 0, "maximum": 0.25 }
+          }
+        },
+        "lighting": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["ambientColor", "ambientIntensity", "keyColor", "keyIntensity", "fillColor", "fillIntensity"],
+          "properties": {
+            "ambientColor": { "type": "integer", "minimum": 0, "maximum": 16777215 },
+            "ambientIntensity": { "type": "number", "minimum": 0, "maximum": 20 },
+            "keyColor": { "type": "integer", "minimum": 0, "maximum": 16777215 },
+            "keyIntensity": { "type": "number", "minimum": 0, "maximum": 100 },
+            "fillColor": { "type": "integer", "minimum": 0, "maximum": 16777215 },
+            "fillIntensity": { "type": "number", "minimum": 0, "maximum": 100 }
+          }
+        },
+        "shadows": { "enum": ["basic", "soft"] }
       }
     }
   },

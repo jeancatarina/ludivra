@@ -1,10 +1,10 @@
 {
-  "schemaVersion": 4,
+  "schemaVersion": 5,
   "id": "first-game",
   "name": "First Ludivra Game",
   "engine": { "version": "0.7.0" },
   "targets": ["browser", "desktop", "native-headless"],
-  "capabilities": ["authoring.asset-cooker"],
+  "capabilities": ["authoring.asset-cooker", "presentation.render-environments"],
   "rendering": {
     "browser": {
       "profile": "web-compatible",
@@ -17,6 +17,40 @@
       "requiredFeatures": ["pbr", "shadows", "postprocess", "instancing", "lod", "culling"],
       "optionalFeatures": ["gpu-particles", "gpu-timestamps"],
       "fallbackProfiles": ["desktop-compatible"]
+    },
+    "environments": {
+      "browser": {
+        "id": "reactor.browser",
+        "tier": "core",
+        "skyColor": 329998,
+        "exposure": 1.05,
+        "fog": { "color": 329998, "density": 0.035 },
+        "lighting": {
+          "ambientColor": 7054259,
+          "ambientIntensity": 1.2,
+          "keyColor": 16777215,
+          "keyIntensity": 4,
+          "fillColor": 5824706,
+          "fillIntensity": 28
+        },
+        "shadows": "basic"
+      },
+      "desktop": {
+        "id": "reactor.desktop",
+        "tier": "enhanced",
+        "skyColor": 329998,
+        "exposure": 1.12,
+        "fog": { "color": 329998, "density": 0.03 },
+        "lighting": {
+          "ambientColor": 7054259,
+          "ambientIntensity": 1.25,
+          "keyColor": 16777215,
+          "keyIntensity": 4.2,
+          "fillColor": 5824706,
+          "fillIntensity": 30
+        },
+        "shadows": "soft"
+      }
     }
   },
   "entrypoints": {

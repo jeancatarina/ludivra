@@ -12,6 +12,10 @@ export interface GameManifest {
   rendering: {
     browser: RendererProfileDeclaration;
     desktop: RendererProfileDeclaration;
+    environments: {
+      browser: RendererEnvironmentDeclaration;
+      desktop: RendererEnvironmentDeclaration;
+    };
   };
   assets?: AssetDeclaration[];
   entrypoints: { gameplay: string; presentation: string };
@@ -47,6 +51,23 @@ export interface RendererProfileDeclaration {
   requiredFeatures: RendererFeature[];
   optionalFeatures: RendererFeature[];
   fallbackProfiles: Array<"web-compatible" | "desktop-compatible" | "desktop-high">;
+}
+
+export interface RendererEnvironmentDeclaration {
+  id: string;
+  tier: "core" | "enhanced";
+  skyColor: number;
+  exposure: number;
+  fog: { color: number; density: number };
+  lighting: {
+    ambientColor: number;
+    ambientIntensity: number;
+    keyColor: number;
+    keyIntensity: number;
+    fillColor: number;
+    fillIntensity: number;
+  };
+  shadows: "basic" | "soft";
 }
 
 export interface AssetDeclaration {

@@ -1,0 +1,29 @@
+{
+  "id": "presentation.render-environments",
+  "status": "experimental",
+  "version": "0.1.0",
+  "owner": "renderer-three",
+  "targets": ["browser", "electron"],
+  "contracts": [
+    "schemas/game.schema.json",
+    "cli/src/project.ts",
+    "renderer-three/src/environment.ts",
+    "renderer-three/src/index.ts",
+    "hosts/browser/src/main.ts",
+    "hosts/electron/src/main.cjs",
+    "docs/adr/0050-material-shader-environment-and-render-feature-tiers.md"
+  ],
+  "examples": ["examples/first-game/game.jsonc", "examples/card-roguelite/game.jsonc"],
+  "dependencies": ["presentation.renderer-profiles"],
+  "verification": [
+    "pnpm --filter @ludivra/renderer-three test",
+    "pnpm --filter @ludivra/browser-host build",
+    "pnpm game package --project examples/first-game --target steam-macos --format json"
+  ],
+  "limitations": [
+    {
+      "code": "MATERIAL_SEMANTIC_PROFILES_PENDING",
+      "message": "Ambientes core/enhanced já são declarados por target e aplicados no renderer; modelos semânticos de material, texturas por papel, warmup e shaders customizados permanecem pendentes."
+    }
+  ]
+}

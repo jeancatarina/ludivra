@@ -132,7 +132,9 @@ const initialUiProjection = uiProjections.get(gameUiProjector.declaration.id);
 if (initialUiProjection === undefined) throw new Error("UI_PROJECTOR_GAME_MISSING");
 let uiProjection: UiInspectionProjection = initialUiProjection;
 const desktop = await createDesktopCheckpointManager(runtime);
-const requestedRendererProfile = manifest.rendering[window.ludivraDesktop === undefined ? "browser" : "desktop"];
+const renderingTarget = window.ludivraDesktop === undefined ? "browser" : "desktop";
+const requestedRendererProfile = manifest.rendering[renderingTarget];
+const requestedEnvironment = manifest.rendering.environments[renderingTarget];
 const rendererProfileReport: {
   requestedProfile: string;
   effectiveProfile: string;
@@ -142,6 +144,7 @@ const rendererProfileReport: {
   fallbackReason: string | null;
   unavailableOptionalFeatures: string[];
   postprocess: "unavailable" | "webgl-cinematic" | "webgpu-bloom";
+  environment: { id: string; tier: string } | null;
   gpuTiming: {
     available: boolean;
     latestMs: number | null;
@@ -160,6 +163,7 @@ const rendererProfileReport: {
   fallbackReason: null,
   unavailableOptionalFeatures: [],
   postprocess: "unavailable",
+  environment: null,
   gpuTiming: {
     available: false,
     latestMs: null,
@@ -190,10 +194,14 @@ const recording = createRecordingRenderer(await createThreeRenderer(gameCanvas, 
   onPostprocessConfigured: (pipeline) => {
     rendererProfileReport.postprocess = pipeline;
   },
+  onEnvironmentConfigured: (environment) => {
+    rendererProfileReport.environment = { id: environment.id, tier: environment.tier };
+  },
   onGpuTiming: (metrics) => {
     rendererProfileReport.gpuTiming = { ...metrics };
   },
-  assetSources
+  assetSources,
+  environment: requestedEnvironment
 }));
 // Host diagnostics stay outside the UI contract: they describe the host, not the game.
 hostStatus.textContent = `Kernel WASM${desktop === null ? "" : " · autosave desktop"} · ${rendererProfileReport.effectiveProfile}`;
@@ -249,6 +257,7 @@ window.ludivraUi = {
   rendering: () => ({
     ...rendererProfileReport,
     unavailableOptionalFeatures: [...rendererProfileReport.unavailableOptionalFeatures],
+    environment: rendererProfileReport.environment === null ? null : { ...rendererProfileReport.environment },
     gpuTiming: { ...rendererProfileReport.gpuTiming }
   }),
   diagnostics: () => hostDiagnostics.list()

@@ -241,11 +241,16 @@
           "summary": "Manifest declara modelos glTF/GLB com provenance, targets e budgets; o cooker valida containers, dependências e isolamento, preserva fonte/dependências em cache content-addressed, o build reescreve cada URL estática e o renderer instancia modelos sob demanda com diagnóstico estruturado.",
           "capabilities": ["authoring.asset-cooker"],
           "evidence": ["schemas/game.schema.json", "cli/src/asset-forge.ts", "cli/src/commands/build.ts", "presentation-protocol/src/index.ts", "renderer-three/src/index.ts", "hosts/browser/vite.config.ts", "examples/first-game/assets/models/reference-triangle.gltf", "cli/test/cli.test.mjs"]
+        },
+        {
+          "summary": "Manifest v5 declara environments core/enhanced por target com sky, exposição, fog, luzes e perfil de sombra; BrowserHost aplica o environment antes do primeiro frame, recusa tier enhanced em web-compatible e o smoke Electron registra o tier efetivo.",
+          "capabilities": ["presentation.render-environments"],
+          "evidence": ["schemas/game.schema.json", "renderer-three/src/environment.ts", "renderer-three/src/index.ts", "hosts/browser/src/main.ts", "hosts/electron/src/main.cjs", "examples/first-game/game.jsonc", "examples/card-roguelite/game.jsonc"]
         }
       ],
       "remaining": [
         "Adicionar normalização/otimização upstream licenciada, variantes comprimidas por target, residência e streaming aos assets glTF/GLB já carregáveis.",
-        "Materiais e ambientes por tiers, shader warmup, cache e fallback verificável.",
+        "Modelos semânticos de material, texturas por papel, shader warmup/cache e fallback verificável.",
         "Grafos de animação com blend, layers, masks, retarget, IK e root motion controlado.",
         "VFX GPU/CPU com trails, subemitters, colisão, pooling e budgets.",
         "Buffers contíguos, instancing, LOD, culling, pooling e terrain streaming.",
@@ -348,7 +353,7 @@
     {
       "id": "RND-001",
       "priority": "high",
-      "status": "planned",
+      "status": "in_progress",
       "phase": 8,
       "work": "Implementar materiais, shaders, ambiente e feature tiers com warmup e fallback.",
       "adrs": ["0050"]

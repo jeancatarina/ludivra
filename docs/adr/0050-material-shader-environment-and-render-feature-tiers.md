@@ -36,6 +36,10 @@ Shaders e pipelines são compilados ou aquecidos antes do primeiro uso observáv
 
 Scene referencia um environment textual com sky, exposição, tonemap, fog, ambient light, shadow profile e cadeia de pós-processamento. Câmera pode selecionar ou sobrescrever environment por ID, sem carregar objetos de renderer no estado lógico.
 
+O primeiro corte dessa superfície é `rendering.environments` no manifest v5, com um perfil para Browser e outro para Desktop. Cada perfil declara ID, tier `core`/`enhanced`, sky, exposição, fog, as três luzes semânticas e sombra `basic`/`soft`. O BrowserHost entrega o perfil escolhido ao renderer antes do primeiro frame; `web-compatible` rejeita um environment `enhanced`, enquanto Desktop pode declarar esse tier. A inspeção e o smoke Electron registram o ID/tier efetivo, para que o tier não seja apenas configuração sem evidência.
+
+Os valores ainda servem como environment-base; `setAtmosphere` continua uma sobrescrita efêmera de apresentação para o gameplay. Material IDs, texturas por papel, shaders customizados e warmup de variantes são os próximos cortes desta decisão.
+
 Códigos: `MATERIAL_MODEL_UNSUPPORTED`, `MATERIAL_TEXTURE_ROLE_MISSING`, `SHADER_TARGET_UNSUPPORTED`, `SHADER_COMPILE_FAILED`, `SHADER_VARIANT_WARMUP_MISSED`, `RENDER_FEATURE_TIER_UNAVAILABLE`, `ENVIRONMENT_PROFILE_INVALID`.
 
 ## Consequências

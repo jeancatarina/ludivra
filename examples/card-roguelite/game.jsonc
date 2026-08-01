@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 4,
+  "schemaVersion": 5,
   "id": "ember-vault",
   "name": "Cofre das Brasas",
   "engine": { "version": "0.7.0" },
@@ -16,9 +16,43 @@
       "requiredFeatures": ["pbr", "shadows", "postprocess", "instancing", "lod", "culling"],
       "optionalFeatures": ["gpu-particles", "gpu-timestamps"],
       "fallbackProfiles": ["desktop-compatible"]
+    },
+    "environments": {
+      "browser": {
+        "id": "ember.browser",
+        "tier": "core",
+        "skyColor": 1384737,
+        "exposure": 1,
+        "fog": { "color": 1384737, "density": 0.045 },
+        "lighting": {
+          "ambientColor": 5251315,
+          "ambientIntensity": 1.1,
+          "keyColor": 16756643,
+          "keyIntensity": 3.6,
+          "fillColor": 13141084,
+          "fillIntensity": 20
+        },
+        "shadows": "basic"
+      },
+      "desktop": {
+        "id": "ember.desktop",
+        "tier": "enhanced",
+        "skyColor": 1384737,
+        "exposure": 1.08,
+        "fog": { "color": 1384737, "density": 0.04 },
+        "lighting": {
+          "ambientColor": 5251315,
+          "ambientIntensity": 1.2,
+          "keyColor": 16756643,
+          "keyIntensity": 4,
+          "fillColor": 13141084,
+          "fillIntensity": 24
+        },
+        "shadows": "soft"
+      }
     }
   },
-  "capabilities": ["spatial.regional-world"],
+  "capabilities": ["spatial.regional-world", "presentation.render-environments"],
   "entrypoints": {
     "gameplay": "scripts/gameplay.lua",
     "presentation": "presentation/index.ts"

@@ -8,6 +8,10 @@ interface GameManifest {
   rendering: {
     browser: RendererProfileDeclaration;
     desktop: RendererProfileDeclaration;
+    environments: {
+      browser: RendererEnvironmentDeclaration;
+      desktop: RendererEnvironmentDeclaration;
+    };
   };
   entrypoints: {
     gameplay: string;
@@ -35,6 +39,23 @@ interface RendererProfileDeclaration {
   requiredFeatures: string[];
   optionalFeatures: string[];
   fallbackProfiles: Array<"web-compatible" | "desktop-compatible" | "desktop-high">;
+}
+
+interface RendererEnvironmentDeclaration {
+  id: string;
+  tier: "core" | "enhanced";
+  skyColor: number;
+  exposure: number;
+  fog: { color: number; density: number };
+  lighting: {
+    ambientColor: number;
+    ambientIntensity: number;
+    keyColor: number;
+    keyIntensity: number;
+    fillColor: number;
+    fillIntensity: number;
+  };
+  shadows: "basic" | "soft";
 }
 
 interface CookedAudioIndex {

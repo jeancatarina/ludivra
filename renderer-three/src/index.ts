@@ -29,6 +29,7 @@ import {
   PointsMaterial,
   PerspectiveCamera,
   PCFShadowMap,
+  PCFSoftShadowMap,
   RingGeometry,
   Scene,
   SphereGeometry,
@@ -39,6 +40,7 @@ import {
 } from "three";
 import type { WebGPURenderer } from "three/webgpu";
 import { createCinematicPipeline } from "./cinematic-pipeline.js";
+import { DEFAULT_RENDERER_ENVIRONMENT, type RendererEnvironment } from "./environment.js";
 import { createWebGpuCinematicPipeline, type WebGpuCinematicPipeline } from "./webgpu-cinematic-pipeline.js";
 import { createGpuTimingSampler, type GpuTimingMetrics } from "./gpu-timing.js";
 import {
@@ -71,6 +73,12 @@ export {
   type RendererProfileRequest,
   type RendererProfileSelection
 } from "./profiles.js";
+export {
+  DEFAULT_RENDERER_ENVIRONMENT,
+  type RendererEnvironment,
+  type RendererFeatureTier,
+  type RendererShadowProfile
+} from "./environment.js";
 
 export interface ThreeRendererOptions {
   reportDiagnostic?: RendererDiagnosticReporter;
@@ -78,8 +86,10 @@ export interface ThreeRendererOptions {
   backends?: RendererBackendAvailability;
   onProfileSelected?: (selection: RendererProfileSelection) => void;
   onPostprocessConfigured?: (pipeline: RendererPostprocessPipeline) => void;
+  onEnvironmentConfigured?: (environment: RendererEnvironment) => void;
   onGpuTiming?: (metrics: GpuTimingMetrics) => void;
   assetSources?: Readonly<Record<string, CookedAssetSource>>;
+  environment?: RendererEnvironment;
 }
 
 export type RendererPostprocessPipeline = "webgl-cinematic" | "webgpu-bloom";
@@ -368,6 +378,14 @@ export async function createThreeRenderer(
   if (selection?.fallbackReason !== undefined) {
     options.reportDiagnostic?.("RENDER_METHOD_FALLBACK", selection.fallbackReason, "renderer-three:profile");
   }
+  const environment = options.environment ?? DEFAULT_RENDERER_ENVIRONMENT;
+  if (environment.tier === "enhanced" && selection?.effectiveProfile === "web-compatible") {
+    throw new RendererFailure(
+      "RENDER_FEATURE_TIER_UNAVAILABLE",
+      `environment ${environment.id} requires enhanced features unavailable to web-compatible`,
+      "renderer-three:environment"
+    );
+  }
   options.onProfileSelected?.(selection ?? {
     requestedProfile: "web-compatible",
     effectiveProfile: "web-compatible",
@@ -381,17 +399,18 @@ export async function createThreeRenderer(
   options.onGpuTiming?.(gpuTiming.snapshot());
   renderer.outputColorSpace = SRGBColorSpace;
   renderer.toneMapping = ACESFilmicToneMapping;
-  renderer.toneMappingExposure = 1.12;
+  renderer.toneMappingExposure = environment.exposure;
   renderer.shadowMap.enabled = true;
-  renderer.shadowMap.type = PCFShadowMap;
+  renderer.shadowMap.type = environment.shadows === "soft" ? PCFSoftShadowMap : PCFShadowMap;
   const scene = new Scene();
+  scene.background = new Color(environment.skyColor);
   const camera = new PerspectiveCamera(42, 1, 0.1, 100);
   camera.position.set(0, 6.4, 9.5);
   camera.lookAt(0, -0.4, -1.3);
-  scene.fog = new FogExp2(0x05090e, 0.035);
-  const ambientLight = new AmbientLight(0x6ba3b3, 1.2);
+  scene.fog = new FogExp2(environment.fog.color, environment.fog.density);
+  const ambientLight = new AmbientLight(environment.lighting.ambientColor, environment.lighting.ambientIntensity);
   scene.add(ambientLight);
-  const keyLight = new DirectionalLight(0xffffff, 4);
+  const keyLight = new DirectionalLight(environment.lighting.keyColor, environment.lighting.keyIntensity);
   keyLight.position.set(3, 4, 6);
   keyLight.castShadow = true;
   keyLight.shadow.mapSize.set(2048, 2048);
@@ -402,10 +421,10 @@ export async function createThreeRenderer(
   keyLight.shadow.camera.near = 0.5;
   keyLight.shadow.camera.far = 32;
   scene.add(keyLight);
-  const reactorLight = new PointLight(0x58e0c2, 28, 18, 2);
+  const reactorLight = new PointLight(environment.lighting.fillColor, environment.lighting.fillIntensity, 18, 2);
   reactorLight.position.set(0, 2.2, -1.4);
   scene.add(reactorLight);
-  const rimLight = new PointLight(0xd35cff, 18, 16, 2);
+  const rimLight = new PointLight(environment.lighting.fillColor, environment.lighting.fillIntensity * 0.55, 16, 2);
   rimLight.position.set(-5, 1.5, -5);
   scene.add(rimLight);
   const visuals = new Map<string, Object3D>();
@@ -421,6 +440,7 @@ export async function createThreeRenderer(
       throw rendererFailure("RENDER_INITIALIZATION_FAILED", "renderer-three:webgpu-cinematic-pipeline", error);
     });
   options.onPostprocessConfigured?.(renderer instanceof WebGLRenderer ? "webgl-cinematic" : "webgpu-bloom");
+  options.onEnvironmentConfigured?.(environment);
   let previousRenderTime = performance.now();
   let gpuTimestampResolve: Promise<void> | null = null;
 

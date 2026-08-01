@@ -4,6 +4,10 @@ declare module "virtual:ludivra-game" {
     rendering: {
       browser: RendererProfileDeclaration;
       desktop: RendererProfileDeclaration;
+      environments: {
+        browser: RendererEnvironmentDeclaration;
+        desktop: RendererEnvironmentDeclaration;
+      };
     };
     inspection: {
       integerStates: Array<{ id: string; label: string; key: number }>;
@@ -87,6 +91,23 @@ interface RendererProfileDeclaration {
   fallbackProfiles: Array<"web-compatible" | "desktop-compatible" | "desktop-high">;
 }
 
+interface RendererEnvironmentDeclaration {
+  id: string;
+  tier: "core" | "enhanced";
+  skyColor: number;
+  exposure: number;
+  fog: { color: number; density: number };
+  lighting: {
+    ambientColor: number;
+    ambientIntensity: number;
+    keyColor: number;
+    keyIntensity: number;
+    fillColor: number;
+    fillIntensity: number;
+  };
+  shadows: "basic" | "soft";
+}
+
 declare module "@ludivra/runtime-module" {
   import type { RuntimeModuleFactory } from "@ludivra/runtime-web";
   const factory: RuntimeModuleFactory;
@@ -116,6 +137,7 @@ interface LudivraUiInspection {
     fallbackReason: string | null;
     unavailableOptionalFeatures: string[];
     postprocess: "unavailable" | "webgl-cinematic" | "webgpu-bloom";
+    environment: { id: string; tier: string } | null;
     gpuTiming: {
       available: boolean;
       latestMs: number | null;
