@@ -4,6 +4,14 @@ declare module "virtual:ludivra-game" {
     inspection: {
       integerStates: Array<{ id: string; label: string; key: number }>;
     };
+    projectors: Array<{
+      projectorVersion: 1;
+      id: string;
+      kind: "ui-inspection";
+      screen: string;
+      states: string[];
+      inputs: string[];
+    }>;
     timers?: Array<{ id: string; key: number }>;
     inputs: Array<{
       id: string;
@@ -63,6 +71,7 @@ interface LudivraUiInspection {
   viewModel(): import("@ludivra/presentation-protocol").UiViewModel;
   snapshot(): import("@ludivra/presentation-protocol").RenderedUiSnapshot;
   projection(): import("@ludivra/presentation-protocol").ProjectionTrace;
+  projectors(): Array<import("@ludivra/presentation-protocol").UiInspectionProjectorMetrics>;
   diagnostics(): Array<{ code: string; message: string; tick: string | null; source: string }>;
 }
 

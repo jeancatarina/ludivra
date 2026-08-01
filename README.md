@@ -150,7 +150,7 @@ Edit `../my-first-game/game.jsonc`:
 
 ```jsonc
 {
-  "schemaVersion": 2,
+  "schemaVersion": 3,
   "id": "my-first-game",
   "name": "My First Game",
   "engine": { "version": "0.7.0" },
@@ -172,6 +172,16 @@ Edit `../my-first-game/game.jsonc`:
       { "id": "score", "label": "Score", "key": 1 }
     ]
   },
+  "projectors": [
+    {
+      "projectorVersion": 1,
+      "id": "ui.inspection",
+      "kind": "ui-inspection",
+      "screen": "game",
+      "states": ["score"],
+      "inputs": ["confirm"]
+    }
+  ],
   "scenarios": ["scenarios/confirm.jsonc"],
   "audio": [
     {

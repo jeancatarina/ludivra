@@ -150,7 +150,7 @@ Edite `../meu-primeiro-jogo/game.jsonc`:
 
 ```jsonc
 {
-  "schemaVersion": 2,
+  "schemaVersion": 3,
   "id": "meu-primeiro-jogo",
   "name": "Meu Primeiro Jogo",
   "engine": { "version": "0.7.0" },
@@ -172,6 +172,16 @@ Edite `../meu-primeiro-jogo/game.jsonc`:
       { "id": "score", "label": "Pontuação", "key": 1 }
     ]
   },
+  "projectors": [
+    {
+      "projectorVersion": 1,
+      "id": "ui.inspection",
+      "kind": "ui-inspection",
+      "screen": "game",
+      "states": ["score"],
+      "inputs": ["confirmar"]
+    }
+  ],
   "scenarios": ["scenarios/confirmar.jsonc"],
   "audio": [
     {

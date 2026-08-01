@@ -10,6 +10,7 @@ const scripts = [
   "tools/contracts/generate-desktop-host.mjs",
   "tools/contracts/generate-presentation-events.mjs",
   "tools/contracts/generate-lua-sdk.mjs",
+  "tools/contracts/generate-ui-inspection-projector.mjs",
   "tools/contracts/generate-operability.mjs",
   "tools/contracts/generate-capabilities.mjs",
   "tools/contracts/generate-ui.mjs",

@@ -2,12 +2,11 @@
 
 > Gerado de `docs/program-status.json` por `tools/program-status/generate.mjs`. Não edite manualmente.
 
-Foco atual: **Fase 4 — Fechar o contrato versionado da camada 1 do SDK Lua, queries e projectors.**
+Foco atual: **Fase 4 — Implementar migrations explícitas do content pack e suas fixtures.**
 
 | ID | Prioridade | Estado | Fase | Trabalho | ADRs |
 |---|---|---|---:|---|---|
-| SDK-001 | alta | em andamento | 4 | Fechar o contrato versionado da camada 1 do SDK Lua, queries e projectors. | [ADR 0016](docs/adr/0016-public-lua-sdk-layers-and-escape-hatches.md) |
-| CNT-001 | alta | planejado | 4 | Implementar migrations explícitas do content pack e suas fixtures. | [ADR 0017](docs/adr/0017-content-pack-compilation-and-migrations.md) |
+| CNT-001 | alta | em andamento | 4 | Implementar migrations explícitas do content pack e suas fixtures. | [ADR 0017](docs/adr/0017-content-pack-compilation-and-migrations.md) |
 | FSM-001 | alta | planejado | 4 | Implementar statecharts determinísticas de gameplay com save, hash, replay e diagnóstico. | [ADR 0053](docs/adr/0053-deterministic-gameplay-statecharts.md) |
 | SCN-001 | alta | planejado | 4 | Implementar schemas, compilação e inspeção do grafo textual de cenas e prefabs. | [ADR 0048](docs/adr/0048-textual-scene-prefab-and-resource-graph.md) |
 | NAV-001 | alta | planejado | 5 | Implementar contratos de regiões, pathfinding, links, obstacles, agents e avoidance com fixture de benchmark. | [ADR 0054](docs/adr/0054-navigation-regions-pathfinding-and-avoidance.md) |

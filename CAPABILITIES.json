@@ -165,6 +165,7 @@
         "contracts/control-protocol.schema.json",
         "schemas/scenario.schema.json",
         "contracts/run-manifest.schema.json",
+        "contracts/ui-inspection-projector.schema.json",
         "contracts/ui-view-model.schema.json",
         "contracts/rendered-ui-snapshot.schema.json"
       ],
@@ -173,6 +174,7 @@
       ],
       "dependencies": [
         "runtime.lua-gameplay",
+        "presentation.readonly-projectors",
         "runtime.save-replay"
       ],
       "verification": [
@@ -196,6 +198,40 @@
         {
           "code": "HARNESS_COMMAND_TRACE_DERIVED",
           "message": "Command-stage traces report committed state diffs and do not expose private Lua instructions."
+        }
+      ]
+    },
+    {
+      "id": "presentation.readonly-projectors",
+      "status": "experimental",
+      "version": "0.1.0",
+      "owner": "presentation-protocol",
+      "targets": [
+        "native-headless",
+        "browser",
+        "electron"
+      ],
+      "contracts": [
+        "contracts/ui-inspection-projector.schema.json",
+        "schemas/game.schema.json",
+        "presentation-protocol/src/ui-inspection-projector.ts"
+      ],
+      "examples": [
+        "examples/first-game",
+        "examples/card-roguelite"
+      ],
+      "dependencies": [
+        "runtime.lua-gameplay"
+      ],
+      "verification": [
+        "pnpm contracts",
+        "pnpm test:cli",
+        "pnpm test:card-roguelite"
+      ],
+      "limitations": [
+        {
+          "code": "PROJECTOR_KIND_UI_INSPECTION_ONLY",
+          "message": "The first public projector kind emits an inspection-oriented UI view model from declared integer states and inputs; scene, animation and custom-data projectors remain future work."
         }
       ]
     },
@@ -249,6 +285,7 @@
       "dependencies": [
         "feedback.audio-effects",
         "operability.control-harness",
+        "presentation.readonly-projectors",
         "presentation.three",
         "runtime.content-binding",
         "runtime.lua-gameplay",

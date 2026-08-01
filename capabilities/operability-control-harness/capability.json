@@ -10,6 +10,7 @@
     "contracts/control-protocol.schema.json",
     "schemas/scenario.schema.json",
     "contracts/run-manifest.schema.json",
+    "contracts/ui-inspection-projector.schema.json",
     "contracts/ui-view-model.schema.json",
     "contracts/rendered-ui-snapshot.schema.json"
   ],
@@ -18,6 +19,7 @@
   ],
   "dependencies": [
     "runtime.lua-gameplay",
+    "presentation.readonly-projectors",
     "runtime.save-replay"
   ],
   "verification": [

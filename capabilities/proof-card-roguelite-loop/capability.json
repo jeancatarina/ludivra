@@ -20,6 +20,7 @@
   "dependencies": [
     "feedback.audio-effects",
     "operability.control-harness",
+    "presentation.readonly-projectors",
     "presentation.three",
     "runtime.content-binding",
     "runtime.lua-gameplay",

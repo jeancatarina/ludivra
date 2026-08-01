@@ -5,8 +5,8 @@
 | Campo | Valor |
 |---|---|
 | Release atual | 0.7.0 |
-| Foco atual | Fase 4 — Fechar o contrato versionado da camada 1 do SDK Lua, queries e projectors. |
-| Próxima entrega | Declarar e medir projectors read-only antes de avançar para migrations de conteúdo. |
+| Foco atual | Fase 4 — Implementar migrations explícitas do content pack e suas fixtures. |
+| Próxima entrega | Definir uma cadeia de migrations do content pack, rejeitar saltos ambíguos e cobrir cada versão com fixtures. |
 | Fonte editável de progresso | [docs/program-status.json](docs/program-status.json) |
 | Decisão do modelo documental | [ADR 0046](docs/adr/0046-generated-program-documentation.md) |
 
@@ -26,7 +26,7 @@
 | 1 | Estado canônico e catálogo de capacidades | `CONCLUÍDA` | nenhuma no gate atual |
 | 2 | Context Engine, CLI e Development Runner | `CONCLUÍDA` | nenhuma no gate atual |
 | 3 | AI Control Plane e observabilidade causal | `CONCLUÍDA` | nenhuma no gate atual |
-| 4 | Autoria text-first de gameplay, UI e conteúdo | `EM ANDAMENTO` | Contrato público e versionado da camada 1 do SDK, incluindo queries declarativas e maturidade por símbolo. |
+| 4 | Autoria text-first de gameplay, UI e conteúdo | `EM ANDAMENTO` | Migrations explícitas de schema e conteúdo com fixtures. |
 | 5 | Runtime espacial e mundo procedural | `PARCIAL` | Jobs assíncronos reais sem alterar a ordem de commit. |
 | 6 | Motion, física e Mass Simulation | `PLANEJADA` | Motion por tempo declarado e comandos semânticos. |
 | 7 | Persistência, replays e multiplayer player-hosted | `PARCIAL` | Region storage atômico com journal, compactação, recovery e migrations. |
@@ -114,19 +114,18 @@ Um defeito nos pixels é correlacionado a estado, ação, evento, projector e or
 | Estado | `EM ANDAMENTO` |
 | Owners | kernel, Lua SDK, content compiler, presentation protocol |
 | Dependências | Fase 3 |
-| ADRs | [ADR 0004](docs/adr/0004-lua-sandbox.md), [ADR 0016](docs/adr/0016-public-lua-sdk-layers-and-escape-hatches.md), [ADR 0017](docs/adr/0017-content-pack-compilation-and-migrations.md), [ADR 0018](docs/adr/0018-numeric-determinism-and-rng-streams.md), [ADR 0044](docs/adr/0044-approved-native-extension-process.md), [ADR 0048](docs/adr/0048-textual-scene-prefab-and-resource-graph.md), [ADR 0053](docs/adr/0053-deterministic-gameplay-statecharts.md) |
+| ADRs | [ADR 0004](docs/adr/0004-lua-sandbox.md), [ADR 0014](docs/adr/0014-declarative-ui-contracts-and-initial-renderer.md), [ADR 0016](docs/adr/0016-public-lua-sdk-layers-and-escape-hatches.md), [ADR 0017](docs/adr/0017-content-pack-compilation-and-migrations.md), [ADR 0018](docs/adr/0018-numeric-determinism-and-rng-streams.md), [ADR 0044](docs/adr/0044-approved-native-extension-process.md), [ADR 0048](docs/adr/0048-textual-scene-prefab-and-resource-graph.md), [ADR 0053](docs/adr/0053-deterministic-gameplay-statecharts.md) |
 
 Permitir que jogos sejam criados por APIs públicas textuais sem alterar internals da engine.
 
 ### Entregue
 
-- Lua sandboxed com estado por símbolo, timers, fixed-point, streams de RNG e diagnósticos estáveis. Capabilities: `runtime.lua-gameplay`. Evidência: [kernel/src/lua_sandbox.cpp](kernel/src/lua_sandbox.cpp), [tests/runtime/runtime_test.cpp](tests/runtime/runtime_test.cpp), [tests/fixtures/determinism.lua](tests/fixtures/determinism.lua).
+- SDK Lua v1 versionado com símbolos semânticos, queries declarativas medidas, tempo lógico, timers, RNG, conteúdo compilado e diagnósticos estáveis. Capabilities: `runtime.lua-gameplay`. Evidência: [contracts/lua-sdk-v1.json](contracts/lua-sdk-v1.json), [kernel/src/lua_sandbox.cpp](kernel/src/lua_sandbox.cpp), [tests/runtime/runtime_test.cpp](tests/runtime/runtime_test.cpp).
+- Projector de UI read-only declarado no manifesto, executado após commit e medido por leituras de estado e nós emitidos. Capabilities: `presentation.readonly-projectors`. Evidência: [contracts/ui-inspection-projector.schema.json](contracts/ui-inspection-projector.schema.json), [presentation-protocol/src/ui-inspection-projector.ts](presentation-protocol/src/ui-inspection-projector.ts), [cli/test/cli.test.mjs](cli/test/cli.test.mjs).
 - Content pack versionado, determinístico, rastreável e carregado pelo kernel em todos os hosts. Capabilities: `runtime.content-binding`. Evidência: [content-compiler/src/pack.ts](content-compiler/src/pack.ts), [kernel/src/content_pack.cpp](kernel/src/content_pack.cpp), [tools/tests/card-roguelite.mjs](tools/tests/card-roguelite.mjs).
 
 ### Falta
 
-- Contrato público e versionado da camada 1 do SDK, incluindo queries declarativas e maturidade por símbolo.
-- Projectors read-only declarados e medidos separadamente.
 - Migrations explícitas de schema e conteúdo com fixtures.
 - Grafo textual compilado de cenas, prefabs e recursos com IDs estáveis.
 - Statecharts determinísticas com guards/actions registrados, save, hash e replay.

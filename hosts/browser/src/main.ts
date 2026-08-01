@@ -1,9 +1,8 @@
 import {
+  createUiInspectionProjector,
   createRecordingRenderer,
-  createUiLocaleTable,
-  createUiViewModel,
   type PresentationState,
-  type UiProjectionInput
+  type UiInspectionProjection
 } from "@ludivra/presentation-protocol";
 import { createThreeRenderer } from "@ludivra/renderer-three";
 import { LudivraRuntime } from "@ludivra/runtime-web";
@@ -66,6 +65,23 @@ for (const definition of manifest.timers ?? []) {
 const contentPackBytes = new TextEncoder().encode(contentPackSource);
 runtime.loadContentPack(contentPackBytes);
 runtime.loadGameplay(gameplaySource);
+const presentationState: PresentationState = {
+  get tick() { return runtime.tick(); },
+  integer(key) { return runtime.integerState(key); }
+};
+const uiProjectors = manifest.projectors.map((declaration) => createUiInspectionProjector(declaration, {
+  states: manifest.inspection.integerStates,
+  inputs: manifest.inputs
+}));
+const uiProjector = uiProjectors.find(({ declaration }) => declaration.screen === "game");
+if (uiProjector === undefined) throw new Error("UI_PROJECTOR_GAME_MISSING");
+// Gameplay is loaded and its initial state is now committed. Every subsequent
+// invocation happens immediately after runtime.step, before presentation reads it.
+let uiProjections = new Map<string, UiInspectionProjection>(
+  uiProjectors.map((projector) => [projector.declaration.id, projector.project(presentationState)])
+);
+let uiProjection = uiProjections.get(uiProjector.declaration.id);
+if (uiProjection === undefined) throw new Error("UI_PROJECTOR_GAME_MISSING");
 const desktop = await createDesktopCheckpointManager(runtime);
 // Host diagnostics stay outside the UI contract: they describe the host, not the game.
 hostStatus.textContent = `Kernel WASM${desktop === null ? "" : " · autosave desktop"}`;
@@ -105,20 +121,6 @@ function submit(actionId: number): void {
   desktop?.schedule();
 }
 
-function projection(): UiProjectionInput {
-  return {
-    screen: "game",
-    tick: runtime.tick().toString(),
-    integers: manifest.inspection.integerStates.map((definition) => ({
-      id: definition.id,
-      label: definition.label,
-      value: runtime.integerState(definition.key).toString()
-    })),
-    inputs: manifest.inputs.map(({ id, label, actionId }) => ({ id, label, actionId }))
-  };
-}
-
-const localeTable = createUiLocaleTable(projection());
 const ui = createDomUiRenderer({
   status: gameStatus,
   actions,
@@ -126,7 +128,7 @@ const ui = createDomUiRenderer({
 });
 
 function renderUi(): void {
-  ui.render(createUiViewModel(projection()), localeTable);
+  ui.render(uiProjection.viewModel, uiProjection.localeTable);
 }
 renderUi();
 
@@ -134,9 +136,10 @@ window.ludivraUi = {
   ready: false,
   tick: runtime.tick().toString(),
   stateHash: runtime.stateHash().toString(16).padStart(16, "0"),
-  viewModel: () => createUiViewModel(projection()),
+  viewModel: () => uiProjection.viewModel,
   snapshot: () => ui.snapshot(),
   projection: () => recording.trace(runtime.tick().toString()),
+  projectors: () => uiProjectors.map((projector) => projector.metrics()),
   diagnostics: () => hostDiagnostics.list()
 };
 
@@ -155,10 +158,30 @@ function resize(): void {
 window.addEventListener("resize", resize);
 resize();
 
-const presentationState: PresentationState = {
-  get tick() { return runtime.tick(); },
-  integer(key) { return runtime.integerState(key); }
-};
+function projectAfterCommit(): void {
+  try {
+    const nextProjections = new Map(
+      uiProjectors.map((projector) => [projector.declaration.id, projector.project(presentationState)])
+    );
+    const projection = nextProjections.get(uiProjector.declaration.id);
+    if (projection === undefined) throw new Error("UI_PROJECTOR_GAME_MISSING");
+    uiProjections = nextProjections;
+    uiProjection = projection;
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    const code = message.match(/^[A-Z][A-Z0-9_]+/)?.[0] ?? "UI_PROJECTOR_FAILED";
+    // The tick is already confirmed. Keep the last valid projection and record
+    // the failure instead of letting presentation become a rollback channel.
+    hostDiagnostics.report(code, message, "ui-projector");
+  }
+}
+
+function stepAndProject(count: number): void {
+  for (let index = 0; index < count; index += 1) {
+    runtime.step(1);
+    projectAfterCommit();
+  }
+}
 
 function drainEvents(): void {
   for (const event of runtime.drainPresentationEvents()) {
@@ -190,7 +213,7 @@ function frame(time: number): void {
   previousTime = time;
   const ticks = Math.min(Math.floor(accumulator / tickDuration), 5);
   if (ticks > 0) {
-    runtime.step(ticks);
+    stepAndProject(ticks);
     accumulator -= ticks * tickDuration;
     drainEvents();
   }
@@ -203,7 +226,7 @@ if (captureTicks === null) {
   animationFrame = requestAnimationFrame(frame);
 } else {
   if (captureTicks > 0) {
-    runtime.step(captureTicks);
+    stepAndProject(captureTicks);
     drainEvents();
   }
   present();

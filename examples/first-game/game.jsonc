@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 2,
+  "schemaVersion": 3,
   "id": "first-game",
   "name": "First Ludivra Game",
   "engine": { "version": "0.7.0" },
@@ -17,6 +17,16 @@
       { "id": "core.charge", "label": "Carga do núcleo", "key": 1 }
     ]
   },
+  "projectors": [
+    {
+      "projectorVersion": 1,
+      "id": "ui.inspection",
+      "kind": "ui-inspection",
+      "screen": "game",
+      "states": ["core.charge"],
+      "inputs": ["charge", "reset"]
+    }
+  ],
   "scenarios": ["scenarios/charge-core.jsonc"],
   "audio": [
     {

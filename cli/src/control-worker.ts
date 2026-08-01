@@ -7,13 +7,13 @@ import { isAbsolute, relative, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 import {
   BASE_LOCALE,
-  createUiLocaleTable,
-  createUiViewModel,
+  createUiInspectionProjector,
   RENDERED_UI_SNAPSHOT_PROTOCOL_VERSION,
   resolveUiLabel,
+  type UiInspectionProjection,
+  type UiInspectionProjector,
   type RenderedUiSnapshot,
   type UiLocaleTable,
-  type UiProjectionInput,
   type UiViewModel
 } from "@ludivra/presentation-protocol";
 import { LudivraRuntime, RuntimeFailure, type PresentationEvent, type RuntimeModuleFactory } from "@ludivra/runtime-web";
@@ -85,6 +85,9 @@ let actionCount = 0;
 let steppedTicks = 0;
 let startedAt = performance.now();
 let timeline: TimelineEntry[] = [];
+let uiProjectors: UiInspectionProjector[] = [];
+let latestUiProjections = new Map<string, UiInspectionProjection>();
+let gameProjectorId: string | undefined;
 
 function logicalState(): LogicalStateSnapshot {
   if (runtime === undefined) throw new Error("CONTROL_SCENARIO_NOT_LOADED");
@@ -98,21 +101,22 @@ function logicalState(): LogicalStateSnapshot {
   };
 }
 
-function projectionInput(state: LogicalStateSnapshot): UiProjectionInput {
-  return {
-    screen: "game",
-    tick: state.tick,
-    integers: state.integers,
-    inputs: manifest.inputs.map(({ id, label, actionId }) => ({ id, label, actionId }))
+function projectAfterCommit(): UiInspectionProjection {
+  const committedRuntime = runtime;
+  if (committedRuntime === undefined || uiProjectors.length === 0) throw new Error("CONTROL_PROJECTOR_NOT_READY");
+  const state = {
+    get tick() { return committedRuntime.tick(); },
+    integer(key: number) { return committedRuntime.integerState(key); }
   };
+  latestUiProjections = new Map(uiProjectors.map((projector) => [projector.declaration.id, projector.project(state)]));
+  return currentUiProjection();
 }
 
-function uiViewModel(state: LogicalStateSnapshot): UiViewModel {
-  return createUiViewModel(projectionInput(state));
-}
-
-function localeTable(state: LogicalStateSnapshot): UiLocaleTable {
-  return createUiLocaleTable(projectionInput(state));
+function currentUiProjection(): UiInspectionProjection {
+  if (gameProjectorId === undefined) throw new Error("CONTROL_PROJECTOR_NOT_READY");
+  const projection = latestUiProjections.get(gameProjectorId);
+  if (projection === undefined) throw new Error("CONTROL_PROJECTOR_NOT_READY");
+  return projection;
 }
 
 /**
@@ -191,7 +195,8 @@ function step(count = 1): void {
       }
     }
     recordEvents(runtime.drainPresentationEvents());
-    append("presentation", "frame-projected", { stateHash: after.stateHash });
+    const projection = projectAfterCommit();
+    append("presentation", "frame-projected", { stateHash: after.stateHash, projector: projection.measurement });
   }
 }
 
@@ -199,12 +204,12 @@ function inspect(): Record<string, unknown> {
   const activeRuntime = runtime;
   if (activeRuntime === undefined) throw new Error("CONTROL_SCENARIO_NOT_LOADED");
   const state = logicalState();
-  const ui = uiViewModel(state);
+  const projection = currentUiProjection();
   return {
     scenarioId,
     logicalState: state,
-    uiViewModel: ui,
-    renderedUiSnapshot: renderedUiSnapshot(ui, localeTable(state)),
+    uiViewModel: projection.viewModel,
+    renderedUiSnapshot: renderedUiSnapshot(projection.viewModel, projection.localeTable),
     timeline,
     replayBase64: Buffer.from(activeRuntime.replay()).toString("base64")
   };
@@ -217,8 +222,8 @@ function conditionSatisfied(condition: Record<string, unknown>): boolean {
   if (integer !== undefined) return runtime.integerState(integer.key) === BigInt(integer.equals);
   const ui = condition.ui as { id: string; visible: boolean } | undefined;
   if (ui !== undefined) {
-    const state = logicalState();
-    const snapshot = renderedUiSnapshot(uiViewModel(state), localeTable(state));
+    const projection = currentUiProjection();
+    const snapshot = renderedUiSnapshot(projection.viewModel, projection.localeTable);
     return snapshot.nodes.some((node) => node.id === ui.id && node.visible === ui.visible);
   }
   return false;
@@ -255,6 +260,13 @@ async function handle(request: ControlRequest): Promise<ControlResponse> {
       steppedTicks = 0;
       startedAt = performance.now();
       timeline = [];
+      uiProjectors = manifest.projectors.map((declaration) => createUiInspectionProjector(declaration, {
+        states: manifest.inspection.integerStates,
+        inputs: manifest.inputs
+      }));
+      gameProjectorId = uiProjectors.find(({ declaration }) => declaration.screen === "game")?.declaration.id;
+      if (gameProjectorId === undefined) throw new Error("UI_PROJECTOR_GAME_MISSING");
+      projectAfterCommit();
       return pass(inspect());
     }
     case "act": {
@@ -285,12 +297,12 @@ async function handle(request: ControlRequest): Promise<ControlResponse> {
       return pass(inspect());
     case "capture": {
       const state = logicalState();
-      const ui = uiViewModel(state);
-      const rendered = renderedUiSnapshot(ui, localeTable(state));
-      return pass({ name: (request.payload as { name: string }).name, svg: captureSvg(state, rendered), logicalState: state, uiViewModel: ui, renderedUiSnapshot: rendered });
+      const projection = currentUiProjection();
+      const rendered = renderedUiSnapshot(projection.viewModel, projection.localeTable);
+      return pass({ name: (request.payload as { name: string }).name, svg: captureSvg(state, rendered), logicalState: state, uiViewModel: projection.viewModel, renderedUiSnapshot: rendered });
     }
     case "metrics":
-      return pass({ actions: actionCount, steppedTicks, timelineEntries: timeline.length, elapsedMs: Math.max(0, Math.round(performance.now() - startedAt)) });
+      return pass({ actions: actionCount, steppedTicks, timelineEntries: timeline.length, elapsedMs: Math.max(0, Math.round(performance.now() - startedAt)), projectors: uiProjectors.map((projector) => projector.metrics()) });
     case "verify_replay": {
       if (runtime === undefined) throw new Error("CONTROL_SCENARIO_NOT_LOADED");
       const archive = Buffer.from((request.payload as { archiveBase64: string }).archiveBase64, "base64");
@@ -300,6 +312,9 @@ async function handle(request: ControlRequest): Promise<ControlResponse> {
     case "shutdown":
       runtime?.destroy();
       runtime = undefined;
+      uiProjectors = [];
+      latestUiProjections = new Map();
+      gameProjectorId = undefined;
       return pass({ shutdown: true });
   }
 }

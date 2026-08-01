@@ -35,6 +35,12 @@ kernel/Lua ──UiViewModel──> UI renderer ──RenderedUiSnapshot──> 
 - o produtor de `RenderedUiSnapshot` é o renderer; ele não decide existência de nó, texto de origem, ação permitida nem estado de jogo;
 - fundir os dois em um payload é proibido, porque apagaria a diferença entre "o botão deveria existir" e "o botão apareceu e pode ser acionado".
 
+### Declaração e medição do projector
+
+O primeiro projector público é declarado em `game.jsonc.projectors` pelo schema `contracts/ui-inspection-projector.schema.json`. Ele recebe somente estado confirmado e read-only, resolve uma vez as referências semânticas a estados e inputs, e produz o `UiViewModel` antes de o renderer consumir a projeção.
+
+A medição é determinística: cada execução publica `stateReads` (campos declarados lidos) e `uiNodes` (nós semânticos emitidos), além de seus totais acumulados. Tempo de parede não é custo do contrato, pois depende do host. BrowserHost e control worker executam todos os projectors declarados após cada commit e reutilizam a última projeção válida durante renderização e inspeção.
+
 ### Campos mínimos
 
 `UiViewModel`: tela, foco pretendido, e nós com ID estável, role semântico, chave de localização com parâmetros, estado, habilitação, seleção, navegação e ações permitidas. Texto já resolvido é proibido no ViewModel.

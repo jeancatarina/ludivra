@@ -1,6 +1,7 @@
 import { access, readFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import { parse, type ParseError } from "jsonc-parser";
+import type { UiInspectionProjectorDeclaration } from "@ludivra/presentation-protocol";
 import { optionValue } from "./arguments.js";
 
 export interface GameManifest {
@@ -13,6 +14,7 @@ export interface GameManifest {
   inputs: Array<{ id: string; label: string; actionId: number; keys: string[] }>;
   timers?: Array<{ id: string; key: number }>;
   inspection: { integerStates: Array<{ id: string; label: string; key: number }> };
+  projectors: UiInspectionProjectorDeclaration[];
   scenarios: string[];
   steam?: { appId: number | null; depotId: number | null };
   desktop?: { updates?: { enabled: boolean; feedUrl: string | null } };

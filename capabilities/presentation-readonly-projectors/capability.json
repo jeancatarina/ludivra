@@ -1,0 +1,25 @@
+{
+  "id": "presentation.readonly-projectors",
+  "status": "experimental",
+  "version": "0.1.0",
+  "owner": "presentation-protocol",
+  "targets": ["native-headless", "browser", "electron"],
+  "contracts": [
+    "contracts/ui-inspection-projector.schema.json",
+    "schemas/game.schema.json",
+    "presentation-protocol/src/ui-inspection-projector.ts"
+  ],
+  "examples": ["examples/first-game", "examples/card-roguelite"],
+  "dependencies": ["runtime.lua-gameplay"],
+  "verification": [
+    "pnpm contracts",
+    "pnpm test:cli",
+    "pnpm test:card-roguelite"
+  ],
+  "limitations": [
+    {
+      "code": "PROJECTOR_KIND_UI_INSPECTION_ONLY",
+      "message": "The first public projector kind emits an inspection-oriented UI view model from declared integer states and inputs; scene, animation and custom-data projectors remain future work."
+    }
+  ]
+}

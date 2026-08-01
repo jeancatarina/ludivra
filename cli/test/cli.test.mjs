@@ -210,12 +210,13 @@ test("validate rejects card content that references an absent manifest action", 
   }
 });
 
-test("ui contracts validate the projected view model and the measured snapshot", async () => {
+test("declared UI projector validates the view model and reports deterministic reads", async () => {
   const root = fileURLToPath(new URL("../..", import.meta.url));
-  const { BASE_LOCALE, createUiLocaleTable, createUiViewModel, resolveUiLabel } = await import(
+  const { BASE_LOCALE, createUiInspectionProjector, resolveUiLabel } = await import(
     "@ludivra/presentation-protocol"
   );
   const validator = createContractValidator();
+  const projectorSchema = JSON.parse(readFileSync(resolve(root, "contracts/ui-inspection-projector.schema.json"), "utf8"));
   const viewModelSchema = JSON.parse(readFileSync(resolve(root, "contracts/ui-view-model.schema.json"), "utf8"));
   const snapshotSchema = JSON.parse(
     readFileSync(resolve(root, "contracts/rendered-ui-snapshot.schema.json"), "utf8")
@@ -223,15 +224,46 @@ test("ui contracts validate the projected view model and the measured snapshot",
   const validateViewModel = validator.compile(viewModelSchema);
   const validateSnapshot = validator.compile(snapshotSchema);
 
-  const projection = {
+  const declaration = {
+    projectorVersion: 1,
+    id: "ui.inspection",
+    kind: "ui-inspection",
     screen: "game",
-    tick: "12",
-    integers: [{ id: "energy", label: "Energia", value: "3" }],
-    inputs: [{ id: "play-strike", label: "Jogar Golpe", actionId: 1 }]
+    states: ["energy"],
+    inputs: ["play-strike"]
   };
-  const viewModel = createUiViewModel(projection);
-  const locale = createUiLocaleTable(projection);
+  const validateProjector = validator.compile(projectorSchema);
+  assert.ok(validateProjector(declaration), JSON.stringify(validateProjector.errors));
+  const projector = createUiInspectionProjector(declaration, {
+    states: [{ id: "energy", label: "Energia", key: 7 }],
+    inputs: [{ id: "play-strike", label: "Jogar Golpe", actionId: 1 }]
+  });
+  const projection = projector.project({
+    tick: 12n,
+    integer(key) {
+      assert.equal(key, 7);
+      return 3n;
+    }
+  });
+  const { viewModel, localeTable: locale } = projection;
   assert.ok(validateViewModel(viewModel), JSON.stringify(validateViewModel.errors));
+  assert.deepEqual(projection.measurement, {
+    projectorId: "ui.inspection",
+    projectorVersion: 1,
+    kind: "ui-inspection",
+    access: "read-only",
+    execution: "post-commit",
+    stateReadsFormula: "states.length",
+    uiNodesFormula: "viewModel.nodes.length",
+    stateReads: 1,
+    uiNodes: 3
+  });
+  assert.deepEqual(projector.metrics(), {
+    ...projection.measurement,
+    executions: 1,
+    totalStateReads: 1,
+    totalUiNodes: 3
+  });
 
   // The view model carries keys and parameters; resolved text belongs to the renderer.
   for (const node of viewModel.nodes) {
@@ -267,6 +299,13 @@ test("ui contracts validate the projected view model and the measured snapshot",
 
   // An unknown renderer must be refused so headless evidence is never read as browser evidence.
   assert.equal(validateSnapshot({ ...snapshot, renderer: "unknown-v1" }), false);
+  assert.throws(
+    () => createUiInspectionProjector({ ...declaration, states: ["missing"] }, {
+      states: [{ id: "energy", label: "Energia", key: 7 }],
+      inputs: [{ id: "play-strike", label: "Jogar Golpe", actionId: 1 }]
+    }),
+    /UI_PROJECTOR_STATE_UNKNOWN/
+  );
 });
 
 test("raster comparison decodes PNG filters and applies declared tolerance", async () => {

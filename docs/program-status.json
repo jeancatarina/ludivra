@@ -3,8 +3,8 @@
   "release": "0.7.0",
   "currentFocus": {
     "phase": 4,
-    "summary": "Fechar o contrato versionado da camada 1 do SDK Lua, queries e projectors.",
-    "next": "Declarar e medir projectors read-only antes de avançar para migrations de conteúdo."
+    "summary": "Implementar migrations explícitas do content pack e suas fixtures.",
+    "next": "Definir uma cadeia de migrations do content pack, rejeitar saltos ambíguos e cobrir cada versão com fixtures."
   },
   "phases": [
     {
@@ -73,13 +73,18 @@
       "status": "active",
       "owners": ["kernel", "Lua SDK", "content compiler", "presentation protocol"],
       "dependencies": [3],
-      "adrs": ["0004", "0016", "0017", "0018", "0044", "0048", "0053"],
+      "adrs": ["0004", "0014", "0016", "0017", "0018", "0044", "0048", "0053"],
       "objective": "Permitir que jogos sejam criados por APIs públicas textuais sem alterar internals da engine.",
       "delivered": [
         {
-          "summary": "Lua sandboxed com estado por símbolo, timers, fixed-point, streams de RNG e diagnósticos estáveis.",
+          "summary": "SDK Lua v1 versionado com símbolos semânticos, queries declarativas medidas, tempo lógico, timers, RNG, conteúdo compilado e diagnósticos estáveis.",
           "capabilities": ["runtime.lua-gameplay"],
-          "evidence": ["kernel/src/lua_sandbox.cpp", "tests/runtime/runtime_test.cpp", "tests/fixtures/determinism.lua"]
+          "evidence": ["contracts/lua-sdk-v1.json", "kernel/src/lua_sandbox.cpp", "tests/runtime/runtime_test.cpp"]
+        },
+        {
+          "summary": "Projector de UI read-only declarado no manifesto, executado após commit e medido por leituras de estado e nós emitidos.",
+          "capabilities": ["presentation.readonly-projectors"],
+          "evidence": ["contracts/ui-inspection-projector.schema.json", "presentation-protocol/src/ui-inspection-projector.ts", "cli/test/cli.test.mjs"]
         },
         {
           "summary": "Content pack versionado, determinístico, rastreável e carregado pelo kernel em todos os hosts.",
@@ -88,8 +93,6 @@
         }
       ],
       "remaining": [
-        "Contrato público e versionado da camada 1 do SDK, incluindo queries declarativas e maturidade por símbolo.",
-        "Projectors read-only declarados e medidos separadamente.",
         "Migrations explícitas de schema e conteúdo com fixtures.",
         "Grafo textual compilado de cenas, prefabs e recursos com IDs estáveis.",
         "Statecharts determinísticas com guards/actions registrados, save, hash e replay.",
@@ -274,17 +277,9 @@
   ],
   "tasks": [
     {
-      "id": "SDK-001",
-      "priority": "high",
-      "status": "in_progress",
-      "phase": 4,
-      "work": "Fechar o contrato versionado da camada 1 do SDK Lua, queries e projectors.",
-      "adrs": ["0016"]
-    },
-    {
       "id": "CNT-001",
       "priority": "high",
-      "status": "planned",
+      "status": "in_progress",
       "phase": 4,
       "work": "Implementar migrations explícitas do content pack e suas fixtures.",
       "adrs": ["0017"]

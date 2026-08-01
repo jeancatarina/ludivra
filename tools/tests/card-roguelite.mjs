@@ -34,6 +34,14 @@ for (const [scenario, state] of expected) {
   assert.equal(integers.get(1), state.phase);
   assert.equal(integers.get(2), state.health);
   assert.equal(integers.get(3), state.enemy);
+  const metrics = JSON.parse(readFileSync(resolve(project, "reports/runs", result.runId, "metrics.json"), "utf8"));
+  const projector = metrics.projectors?.find(({ projectorId }) => projectorId === "ui.inspection");
+  assert.ok(projector, "the declared UI projector is measured by the headless host");
+  assert.equal(projector.execution, "post-commit");
+  assert.equal(projector.access, "read-only");
+  assert.equal(projector.stateReads, 9);
+  assert.equal(projector.uiNodes, 17);
+  assert.ok(projector.executions >= 1);
   assert.ok(result.artifacts.some(({ kind, sha256 }) => kind === "replay" && /^[a-f0-9]{64}$/.test(sha256)));
 }
 

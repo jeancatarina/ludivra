@@ -1,5 +1,7 @@
 export * from "./generated/ui.js";
+export * from "./generated/ui-inspection-projector.js";
 export * from "./projection-trace.js";
+export * from "./ui-inspection-projector.js";
 export * from "./ui-projection.js";
 
 export type VisualShape =

@@ -30,6 +30,7 @@ const requiredFiles = [
   "contracts/presentation-events.schema.json",
   "contracts/program-status.schema.json",
   "contracts/run-manifest.schema.json",
+  "contracts/ui-inspection-projector.schema.json",
   "docs/program-status.json",
   "schemas/card-roguelite.schema.json",
   "schemas/character-spec.schema.json",
@@ -55,6 +56,7 @@ const jsonFiles = [
   "contracts/presentation-events.schema.json",
   "contracts/program-status.schema.json",
   "contracts/run-manifest.schema.json",
+  "contracts/ui-inspection-projector.schema.json",
   "docs/program-status.json",
   "schemas/card-roguelite.schema.json",
   "schemas/character-spec.schema.json",
@@ -76,6 +78,7 @@ const contractSchemaFiles = [
   "contracts/presentation-events.schema.json",
   "contracts/program-status.schema.json",
   "contracts/run-manifest.schema.json",
+  "contracts/ui-inspection-projector.schema.json",
   "schemas/card-roguelite.schema.json",
   "schemas/texture-request.schema.json",
   "schemas/character-spec.schema.json",
@@ -511,8 +514,13 @@ export async function runValidate(arguments_: string[] = []): Promise<CommandOut
       if (parseErrors.length > 0) {
         diagnostics.push({ code: "GAME_JSONC_INVALID", severity: "error", message: "game.jsonc is not valid JSONC", file: gamePath });
       } else {
-        const schema = JSON.parse(await readFile(resolve(root, "schemas/game.schema.json"), "utf8"));
-        const validator = createContractValidator().compile(schema);
+        const [schema, projectorSchema] = await Promise.all([
+          readFile(resolve(root, "schemas/game.schema.json"), "utf8").then(JSON.parse),
+          readFile(resolve(root, "contracts/ui-inspection-projector.schema.json"), "utf8").then(JSON.parse)
+        ]);
+        const gameValidator = createContractValidator();
+        gameValidator.addSchema(projectorSchema);
+        const validator = gameValidator.compile(schema);
         if (!validator(game)) {
           for (const error of validator.errors ?? []) {
             diagnostics.push({
@@ -529,6 +537,7 @@ export async function runValidate(arguments_: string[] = []): Promise<CommandOut
             content?: Array<{ id: string; schema: string; source: string }>;
             inputs: Array<{ id: string; actionId: number }>;
             inspection: { integerStates: Array<{ id: string; key: number }> };
+            projectors: Array<{ id: string; states: string[]; inputs: string[] }>;
             scenarios: string[];
             audio?: Array<{ id: string; eventId: number; source?: string }>;
             effects?: Array<{ id: string; eventId: number }>;
@@ -542,6 +551,25 @@ export async function runValidate(arguments_: string[] = []): Promise<CommandOut
           const stateIds = manifest.inspection.integerStates.map(({ id }) => id);
           if (new Set(stateIds).size !== stateIds.length || declaredStateKeys.size !== manifest.inspection.integerStates.length) {
             diagnostics.push({ code: "INSPECTION_STATE_DUPLICATE", severity: "error", message: "Inspection state IDs and keys must be unique", file: gamePath });
+          }
+          const projectorIds = new Set<string>();
+          const declaredStateIds = new Set(stateIds);
+          const declaredInputIds = new Set(manifest.inputs.map(({ id }) => id));
+          for (const projector of manifest.projectors) {
+            if (projectorIds.has(projector.id)) {
+              diagnostics.push({ code: "PROJECTOR_ID_DUPLICATE", severity: "error", message: `Projector ID is duplicated: ${projector.id}`, file: gamePath });
+            }
+            projectorIds.add(projector.id);
+            for (const stateId of projector.states) {
+              if (!declaredStateIds.has(stateId)) {
+                diagnostics.push({ code: "PROJECTOR_STATE_UNKNOWN", severity: "error", message: `Projector ${projector.id} references unknown state: ${stateId}`, file: gamePath });
+              }
+            }
+            for (const inputId of projector.inputs) {
+              if (!declaredInputIds.has(inputId)) {
+                diagnostics.push({ code: "PROJECTOR_INPUT_UNKNOWN", severity: "error", message: `Projector ${projector.id} references unknown input: ${inputId}`, file: gamePath });
+              }
+            }
           }
           const contentIds = new Set<string>();
           for (const descriptor of manifest.content ?? []) {

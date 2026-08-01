@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 2,
+  "schemaVersion": 3,
   "id": "ember-vault",
   "name": "Cofre das Brasas",
   "engine": { "version": "0.7.0" },
@@ -37,6 +37,16 @@
       { "id": "card.last", "label": "Última carta", "key": 9 }
     ]
   },
+  "projectors": [
+    {
+      "projectorVersion": 1,
+      "id": "ui.inspection",
+      "kind": "ui-inspection",
+      "screen": "game",
+      "states": ["phase", "player.health", "enemy.health", "energy", "block", "turn", "room", "cards.played", "card.last"],
+      "inputs": ["start-run", "play-strike", "play-guard", "play-surge", "end-turn", "choose-reward", "restart"]
+    }
+  ],
   "scenarios": [
     "scenarios/run-victory.jsonc",
     "scenarios/run-defeat.jsonc",
