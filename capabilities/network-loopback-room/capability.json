@@ -3,9 +3,12 @@
   "status": "experimental",
   "version": "0.1.0",
   "owner": "kernel",
-  "targets": ["native-headless"],
+  "targets": ["native-headless", "browser", "electron"],
   "contracts": [
     "kernel/src/network_session.hpp",
+    "runtime-c-api/include/ludivra/network.h",
+    "runtime-web/src/index.ts",
+    "hosts/browser/src/network/room-bridge.ts",
     "docs/adr/0024-player-hosted-multiplayer-and-protocol-compatibility.md",
     "docs/adr/0038-network-transport-adapters.md"
   ],
@@ -14,12 +17,14 @@
   ],
   "dependencies": ["runtime.save-replay", "spatial.region-storage"],
   "verification": [
-    "pnpm test:native"
+    "pnpm test:native",
+    "pnpm test:wasm-equivalence",
+    "pnpm --filter @ludivra/browser-host build"
   ],
   "limitations": [
     {
-      "code": "NETWORK_STEAM_TRANSPORT_UNAVAILABLE",
-      "message": "WebRTC DataChannel já possui boundary browser/Electron; Steam Networking permanece indisponível até que a API nativa seja declarada e validada."
+      "code": "NETWORK_DIVERGENCE_LOCALIZATION_PENDING",
+      "message": "A sala publica snapshots canônicos e valida identidade, mas ainda não produz a primeira localização remota de divergência por tick/chunk."
     }
   ]
 }

@@ -296,15 +296,55 @@
       ]
     },
     {
+      "id": "network.host-room-bridge",
+      "status": "experimental",
+      "version": "0.1.0",
+      "owner": "hosts/browser",
+      "targets": [
+        "browser",
+        "electron"
+      ],
+      "contracts": [
+        "hosts/browser/src/network/room-bridge.ts",
+        "runtime-c-api/include/ludivra/network.h",
+        "runtime-web/src/index.ts",
+        "docs/adr/0038-network-transport-adapters.md"
+      ],
+      "examples": [
+        "hosts/browser/src/network/room-bridge.ts",
+        "tools/tests/wasm-equivalence.mjs"
+      ],
+      "dependencies": [
+        "network.loopback-room",
+        "network.webrtc-datachannel",
+        "network.steam-p2p"
+      ],
+      "verification": [
+        "pnpm test:wasm-equivalence",
+        "pnpm --filter @ludivra/browser-host build"
+      ],
+      "limitations": [
+        {
+          "code": "NETWORK_HOST_TICK_DRIVER_REQUIRED",
+          "message": "O host chama HostedRoomBridge.advance no seu tick determinístico; o bridge não cria loop, matchmaking, relay nem sinalização."
+        }
+      ]
+    },
+    {
       "id": "network.loopback-room",
       "status": "experimental",
       "version": "0.1.0",
       "owner": "kernel",
       "targets": [
-        "native-headless"
+        "native-headless",
+        "browser",
+        "electron"
       ],
       "contracts": [
         "kernel/src/network_session.hpp",
+        "runtime-c-api/include/ludivra/network.h",
+        "runtime-web/src/index.ts",
+        "hosts/browser/src/network/room-bridge.ts",
         "docs/adr/0024-player-hosted-multiplayer-and-protocol-compatibility.md",
         "docs/adr/0038-network-transport-adapters.md"
       ],
@@ -316,12 +356,50 @@
         "spatial.region-storage"
       ],
       "verification": [
-        "pnpm test:native"
+        "pnpm test:native",
+        "pnpm test:wasm-equivalence",
+        "pnpm --filter @ludivra/browser-host build"
       ],
       "limitations": [
         {
-          "code": "NETWORK_STEAM_TRANSPORT_UNAVAILABLE",
-          "message": "WebRTC DataChannel já possui boundary browser/Electron; Steam Networking permanece indisponível até que a API nativa seja declarada e validada."
+          "code": "NETWORK_DIVERGENCE_LOCALIZATION_PENDING",
+          "message": "A sala publica snapshots canônicos e valida identidade, mas ainda não produz a primeira localização remota de divergência por tick/chunk."
+        }
+      ]
+    },
+    {
+      "id": "network.steam-p2p",
+      "status": "experimental",
+      "version": "0.1.0",
+      "owner": "hosts/electron",
+      "targets": [
+        "electron"
+      ],
+      "contracts": [
+        "hosts/electron/src/services/steam.cjs",
+        "hosts/browser/src/network/steam-transport.ts",
+        "contracts/desktop-host.schema.json",
+        "docs/adr/0038-network-transport-adapters.md"
+      ],
+      "examples": [
+        "hosts/electron/test/services.test.cjs"
+      ],
+      "dependencies": [
+        "network.webrtc-datachannel",
+        "host.electron-steam-package"
+      ],
+      "verification": [
+        "pnpm test:desktop",
+        "pnpm --filter @ludivra/browser-host build"
+      ],
+      "limitations": [
+        {
+          "code": "NETWORK_STEAM_CLIENT_REQUIRED",
+          "message": "P2P só fica disponível quando Steam, App ID e a API nativa estiverem presentes; indisponibilidade é reportada pelo host, sem fallback automático."
+        },
+        {
+          "code": "NETWORK_STEAM_POLLING_EXPLICIT",
+          "message": "A leitura Steam preserva a semântica de polling da API nativa; o jogo alimenta os pacotes recebidos no HostedRoomBridge explicitamente."
         }
       ]
     },
@@ -353,8 +431,8 @@
           "message": "O adapter serializa offer/answer copiáveis, mas troca de signaling é uma decisão do jogador e nunca serviço operado pela engine."
         },
         {
-          "code": "NETWORK_WEBRTC_ROOM_BINDING_UNAVAILABLE",
-          "message": "DataChannels já validam e roteiam envelopes lógicos; o bridge do host para LoopbackRoom ainda não está publicado."
+          "code": "NETWORK_WEBRTC_SIGNALING_MANUAL",
+          "message": "O bridge de sala é público, mas o jogador ainda realiza a troca de signaling e inicia os DataChannels explicitamente."
         }
       ]
     },

@@ -4,7 +4,7 @@
   "currentFocus": {
     "phase": 7,
     "summary": "Persistir regiões regeneráveis com journal atômico, recovery e migrations sem duplicar o mundo procedural.",
-    "next": "Publicar boundaries dos adapters WebRTC/Steam sobre o protocolo lógico, mantendo loopback como prova CI obrigatória."
+    "next": "Conectar envelopes WebRTC/Steam ao lifecycle de sala nos hosts, mantendo loopback como prova CI obrigatória."
   },
   "phases": [
     {
@@ -205,13 +205,18 @@
           "evidence": ["kernel/src/region_storage.cpp", "kernel/src/runtime.cpp", "runtime-c-api/include/ludivra/runtime.h", "cli/src/commands/storage.ts", "tests/kernel/kernel_test.cpp", "tests/runtime/runtime_test.cpp", "tests/fixtures/region-storage.lua", "cli/test/cli.test.mjs"]
         },
         {
-          "summary": "Sala loopback host-authoritative com protocolo N/N-1, identidade procedural no handshake, inputs de cliente ordenados e limitados, snapshots checksummed, late join, reconexão, migração de host verificada por hash e recusa de estado enviado por cliente.",
+          "summary": "Sala loopback host-authoritative com protocolo N/N-1, identidade procedural no handshake, inputs de cliente ordenados e limitados, snapshots checksummed, late join, reconexão, migração de host verificada por hash e recusa de estado enviado por cliente; a mesma sala é publicada pela ABI C e pelo Runtime WASM.",
           "capabilities": ["network.loopback-room"],
-          "evidence": ["kernel/src/network_session.cpp", "tests/kernel/kernel_test.cpp"]
+          "evidence": ["kernel/src/network_session.cpp", "runtime-c-api/include/ludivra/network.h", "runtime-web/src/index.ts", "tests/kernel/kernel_test.cpp", "tests/runtime/runtime_test.cpp", "tools/tests/wasm-equivalence.mjs"]
+        },
+        {
+          "summary": "Boundaries WebRTC DataChannel e Steam P2P com envelope binário compartilhado, canais/limites explícitos e signaling player-owned, sem fallback automático; HostedRoomBridge conecta handshake/input à única sala WASM autoritativa e publica snapshots confiáveis, sem duplicar a simulação.",
+          "capabilities": ["network.webrtc-datachannel", "network.steam-p2p", "network.host-room-bridge"],
+          "evidence": ["hosts/browser/src/network/webrtc-transport.ts", "hosts/browser/src/network/steam-transport.ts", "hosts/browser/src/network/room-bridge.ts", "hosts/electron/src/services/steam.cjs", "hosts/electron/test/services.test.cjs"]
         }
       ],
       "remaining": [
-        "Adapters WebRTC/Steam sobre o protocolo lógico, sem duplicar a simulação host-authoritative."
+        "Localizar a primeira divergência remota por tick/chunk e publicar a recuperação de estado remota sobre os adapters externos."
       ],
       "gate": "Save mundial sobrevive a crash e migration, replay localiza divergência e uma sala casual suporta seu lifecycle completo."
     },
@@ -326,11 +331,11 @@
   ],
   "tasks": [
     {
-      "id": "NET-003",
+      "id": "NET-005",
       "priority": "high",
       "status": "in_progress",
       "phase": 7,
-      "work": "Publicar boundaries dos adapters WebRTC/Steam sobre o protocolo lógico, mantendo loopback como prova CI obrigatória.",
+      "work": "Localizar a primeira divergência remota por tick/chunk e publicar recuperação de estado sobre WebRTC/Steam, mantendo loopback como prova CI obrigatória.",
       "adrs": ["0024", "0038"]
     },
     {

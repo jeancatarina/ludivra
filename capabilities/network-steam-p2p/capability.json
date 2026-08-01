@@ -1,0 +1,31 @@
+{
+  "id": "network.steam-p2p",
+  "status": "experimental",
+  "version": "0.1.0",
+  "owner": "hosts/electron",
+  "targets": ["electron"],
+  "contracts": [
+    "hosts/electron/src/services/steam.cjs",
+    "hosts/browser/src/network/steam-transport.ts",
+    "contracts/desktop-host.schema.json",
+    "docs/adr/0038-network-transport-adapters.md"
+  ],
+  "examples": [
+    "hosts/electron/test/services.test.cjs"
+  ],
+  "dependencies": ["network.webrtc-datachannel", "host.electron-steam-package"],
+  "verification": [
+    "pnpm test:desktop",
+    "pnpm --filter @ludivra/browser-host build"
+  ],
+  "limitations": [
+    {
+      "code": "NETWORK_STEAM_CLIENT_REQUIRED",
+      "message": "P2P só fica disponível quando Steam, App ID e a API nativa estiverem presentes; indisponibilidade é reportada pelo host, sem fallback automático."
+    },
+    {
+      "code": "NETWORK_STEAM_POLLING_EXPLICIT",
+      "message": "A leitura Steam preserva a semântica de polling da API nativa; o jogo alimenta os pacotes recebidos no HostedRoomBridge explicitamente."
+    }
+  ]
+}

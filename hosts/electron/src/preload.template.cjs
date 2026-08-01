@@ -17,6 +17,11 @@ contextBridge.exposeInMainWorld("ludivraDesktop", Object.freeze({
     write: (slot, data) => invoke(channels.cloudWrite, slot, data),
     delete: (slot) => invoke(channels.cloudDelete, slot)
   }),
+  network: Object.freeze({
+    accept: (peerId) => invoke(channels.steamNetworkAccept, peerId),
+    send: (peerId, mode, data) => invoke(channels.steamNetworkSend, peerId, mode, data),
+    read: (maximumBytes) => invoke(channels.steamNetworkRead, maximumBytes)
+  }),
   user: Object.freeze({ current: () => invoke(channels.userCurrent) }),
   overlay: Object.freeze({ activate: (dialog) => invoke(channels.overlayActivate, dialog) }),
   updates: Object.freeze({ check: () => invoke(channels.updateCheck) }),

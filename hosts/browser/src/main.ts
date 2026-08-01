@@ -15,6 +15,17 @@ import { presentEffect } from "./effect-feedback";
 import { createHostDiagnostics } from "./host-diagnostics";
 import { createDomUiRenderer } from "./ui-renderer";
 export { WebRtcDataChannelTransport, decodeNetworkPacket, decodeSignalingDescription, encodeNetworkPacket, encodeSignalingDescription } from "./network/webrtc-transport";
+export { SteamP2PTransport } from "./network/steam-transport";
+export {
+  HostedRoomBridge,
+  HostedRoomBridgeFailure,
+  decodeNetworkHello,
+  decodeNetworkInput,
+  decodeNetworkSnapshot,
+  encodeNetworkHello,
+  encodeNetworkInput,
+  encodeNetworkSnapshot
+} from "./network/room-bridge";
 import "./style.css";
 
 const canvas = document.querySelector<HTMLCanvasElement>("#game-canvas");
@@ -26,6 +37,10 @@ const app = document.querySelector<HTMLElement>("#app");
 if (canvas === null || title === null || hostStatus === null || gameStatus === null || actions === null || app === null) {
   throw new Error("browser host document is incomplete");
 }
+// Values captured by async callbacks need non-null aliases; DOM readiness was
+// asserted above and these nodes are not replaced for the host lifetime.
+const gameCanvas: HTMLCanvasElement = canvas;
+const applicationRoot: HTMLElement = app;
 
 /**
  * Deterministic capture mode. `?ludivra-capture=<ticks>` replaces the animation
@@ -93,20 +108,22 @@ const uiProjectors = manifest.projectors.map((declaration) => createUiInspection
   inputs: manifest.inputs,
   locale: { catalog: manifest.ui, requestedLocale }
 }));
-const uiProjector = uiProjectors.find(({ declaration }) => declaration.screen === "game");
-if (uiProjector === undefined) throw new Error("UI_PROJECTOR_GAME_MISSING");
+const selectedUiProjector = uiProjectors.find(({ declaration }) => declaration.screen === "game");
+if (selectedUiProjector === undefined) throw new Error("UI_PROJECTOR_GAME_MISSING");
+const gameUiProjector: NonNullable<typeof selectedUiProjector> = selectedUiProjector;
 // Gameplay is loaded and its initial state is now committed. Every subsequent
 // invocation happens immediately after runtime.step, before presentation reads it.
 let uiProjections = new Map<string, UiInspectionProjection>(
   uiProjectors.map((projector) => [projector.declaration.id, projector.project(presentationState)])
 );
-let uiProjection = uiProjections.get(uiProjector.declaration.id);
-if (uiProjection === undefined) throw new Error("UI_PROJECTOR_GAME_MISSING");
+const initialUiProjection = uiProjections.get(gameUiProjector.declaration.id);
+if (initialUiProjection === undefined) throw new Error("UI_PROJECTOR_GAME_MISSING");
+let uiProjection: UiInspectionProjection = initialUiProjection;
 const desktop = await createDesktopCheckpointManager(runtime);
 // Host diagnostics stay outside the UI contract: they describe the host, not the game.
 hostStatus.textContent = `Kernel WASM${desktop === null ? "" : " · autosave desktop"}`;
 
-const recording = createRecordingRenderer(createThreeRenderer(canvas, {
+const recording = createRecordingRenderer(createThreeRenderer(gameCanvas, {
   reportDiagnostic: hostDiagnostics.report
 }));
 const renderer = recording.renderer;
@@ -182,9 +199,9 @@ function currentBreakpoint(width: number): string {
 }
 
 function resize(): void {
-  const bounds = canvas.getBoundingClientRect();
+  const bounds = gameCanvas.getBoundingClientRect();
   renderer.resize(bounds.width, bounds.height, window.devicePixelRatio);
-  app.dataset.uiBreakpoint = currentBreakpoint(document.documentElement.clientWidth);
+  applicationRoot.dataset.uiBreakpoint = currentBreakpoint(document.documentElement.clientWidth);
 }
 window.addEventListener("resize", resize);
 resize();
@@ -194,7 +211,7 @@ function projectAfterCommit(): void {
     const nextProjections = new Map(
       uiProjectors.map((projector) => [projector.declaration.id, projector.project(presentationState)])
     );
-    const projection = nextProjections.get(uiProjector.declaration.id);
+    const projection = nextProjections.get(gameUiProjector.declaration.id);
     if (projection === undefined) throw new Error("UI_PROJECTOR_GAME_MISSING");
     uiProjections = nextProjections;
     uiProjection = projection;

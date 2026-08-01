@@ -33,11 +33,14 @@ const typeOutput = `// Generated from contracts/desktop-host.schema.json. Do not
   `export interface DesktopServiceStatus { id: DesktopServiceId; availability: ServiceAvailability; reason?: string; }\n` +
   `export interface DesktopHostInfo { protocolVersion: typeof DESKTOP_HOST_PROTOCOL_VERSION; platform: DesktopPlatform; packaged: boolean; services: DesktopServiceStatus[]; }\n` +
   `export interface DesktopCurrentUser { id: string; displayName: string; }\n` +
+  `export type SteamNetworkMode = "realtime" | "reliable";\n` +
+  `export interface SteamNetworkPacket { peerId: string; data: Uint8Array; }\n` +
   `export interface DesktopBridge {\n` +
   `  info(): Promise<DesktopHostInfo>;\n` +
   `  storage: { read(slot: string): Promise<Uint8Array | null>; readBackup(slot: string): Promise<Uint8Array | null>; write(slot: string, data: Uint8Array): Promise<void>; delete(slot: string): Promise<void>; };\n` +
   `  achievements: { unlock(id: string): Promise<void>; };\n` +
   `  cloud: { read(slot: string): Promise<Uint8Array | null>; write(slot: string, data: Uint8Array): Promise<void>; delete(slot: string): Promise<void>; };\n` +
+  `  network: { accept(peerId: string): Promise<void>; send(peerId: string, mode: SteamNetworkMode, data: Uint8Array): Promise<void>; read(maximumBytes: number): Promise<SteamNetworkPacket | null>; };\n` +
   `  user: { current(): Promise<DesktopCurrentUser>; };\n` +
   `  overlay: { activate(dialog: string): Promise<void>; };\n` +
   `  updates: { check(): Promise<DesktopUpdateStatus>; };\n` +

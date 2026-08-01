@@ -76,6 +76,29 @@ try {
   } finally {
     restored.destroy();
   }
+  const world = { seed: 42n, generatorId: "ember-vault", generatorVersion: 3, contentHash: 0x44aabbccn };
+  const room = runtime.createNetworkRoom({
+    tickRateHz: 60,
+    maxPendingInputs: 4096,
+    seed: 42n,
+    protocolVersion: 2,
+    maximumClients: 2,
+    maximumInputsPerClient: 4,
+    world
+  });
+  try {
+    const clientId = room.connect({ protocolVersion: 2, world });
+    room.submitInput(clientId, { actionId: 1, valueMilli: 1000, sequence: 1n });
+    const snapshot = room.advance();
+    if (snapshot.tick !== runtime.tick() || snapshot.stateHash !== runtime.stateHash() || snapshot.archive.length <= 8) {
+      throw new Error("WASM network room did not publish the authoritative runtime snapshot");
+    }
+    let rejectedState = false;
+    try { room.rejectClientState(clientId); } catch { rejectedState = true; }
+    if (!rejectedState) throw new Error("WASM network room accepted client-owned state");
+  } finally {
+    room.destroy();
+  }
   process.stdout.write(`native_wasm_hash=${wasmHash}\n`);
 } finally {
   runtime.destroy();

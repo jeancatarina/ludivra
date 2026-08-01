@@ -21,8 +21,8 @@
       "message": "O adapter serializa offer/answer copiáveis, mas troca de signaling é uma decisão do jogador e nunca serviço operado pela engine."
     },
     {
-      "code": "NETWORK_WEBRTC_ROOM_BINDING_UNAVAILABLE",
-      "message": "DataChannels já validam e roteiam envelopes lógicos; o bridge do host para LoopbackRoom ainda não está publicado."
+      "code": "NETWORK_WEBRTC_SIGNALING_MANUAL",
+      "message": "O bridge de sala é público, mas o jogador ainda realiza a troca de signaling e inicia os DataChannels explicitamente."
     }
   ]
 }

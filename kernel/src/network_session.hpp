@@ -4,6 +4,7 @@
 
 #include <cstdint>
 #include <map>
+#include <optional>
 #include <span>
 #include <string>
 #include <vector>
@@ -97,6 +98,7 @@ struct NetworkHostMigration final {
 class LoopbackRoom final {
  public:
   explicit LoopbackRoom(NetworkRoomConfig config);
+  LoopbackRoom(NetworkRoomConfig config, Runtime& host);
 
   [[nodiscard]] Runtime& host_runtime() noexcept;
   [[nodiscard]] const Runtime& host_runtime() const noexcept;
@@ -107,6 +109,7 @@ class LoopbackRoom final {
   /// A client can never upload a snapshot or arbitrary state to the host.
   [[nodiscard]] NetworkError submit_client_state(std::uint32_t client_id, std::span<const std::uint8_t> state) const;
   [[nodiscard]] NetworkAdvance advance();
+  [[nodiscard]] NetworkSnapshot current_snapshot() const;
   [[nodiscard]] NetworkError apply_snapshot(Runtime& client, const NetworkSnapshot& snapshot) const;
   [[nodiscard]] NetworkError prepare_host_migration(NetworkHostMigration& migration) const;
   [[nodiscard]] NetworkError adopt_host_migration(const NetworkHostMigration& migration);
@@ -125,7 +128,8 @@ class LoopbackRoom final {
   [[nodiscard]] NetworkSnapshot snapshot() const;
 
   NetworkRoomConfig config_;
-  Runtime host_;
+  std::optional<Runtime> owned_host_;
+  Runtime* host_;
   std::map<std::uint32_t, Client> clients_;
   std::uint32_t next_client_id_{1U};
   std::uint64_t next_host_sequence_{1U};

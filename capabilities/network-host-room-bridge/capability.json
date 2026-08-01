@@ -1,0 +1,28 @@
+{
+  "id": "network.host-room-bridge",
+  "status": "experimental",
+  "version": "0.1.0",
+  "owner": "hosts/browser",
+  "targets": ["browser", "electron"],
+  "contracts": [
+    "hosts/browser/src/network/room-bridge.ts",
+    "runtime-c-api/include/ludivra/network.h",
+    "runtime-web/src/index.ts",
+    "docs/adr/0038-network-transport-adapters.md"
+  ],
+  "examples": [
+    "hosts/browser/src/network/room-bridge.ts",
+    "tools/tests/wasm-equivalence.mjs"
+  ],
+  "dependencies": ["network.loopback-room", "network.webrtc-datachannel", "network.steam-p2p"],
+  "verification": [
+    "pnpm test:wasm-equivalence",
+    "pnpm --filter @ludivra/browser-host build"
+  ],
+  "limitations": [
+    {
+      "code": "NETWORK_HOST_TICK_DRIVER_REQUIRED",
+      "message": "O host chama HostedRoomBridge.advance no seu tick determinístico; o bridge não cria loop, matchmaking, relay nem sinalização."
+    }
+  ]
+}

@@ -1,6 +1,7 @@
 #include "ludivra/runtime.h"
 
 #include "runtime.hpp"
+#include "runtime_handle.hpp"
 
 #include <algorithm>
 #include <cstddef>
@@ -11,12 +12,6 @@
 #include <type_traits>
 #include <utility>
 #include <vector>
-
-struct ludivra_runtime final {
-  explicit ludivra_runtime(const ludivra::kernel::RuntimeConfig config) : value(config) {}
-
-  ludivra::kernel::Runtime value;
-};
 
 namespace {
 

@@ -10,6 +10,9 @@ const channels = Object.freeze({
   "cloudRead": "ludivra:cloud-read",
   "cloudWrite": "ludivra:cloud-write",
   "cloudDelete": "ludivra:cloud-delete",
+  "steamNetworkAccept": "ludivra:steam-network-accept",
+  "steamNetworkSend": "ludivra:steam-network-send",
+  "steamNetworkRead": "ludivra:steam-network-read",
   "userCurrent": "ludivra:user-current",
   "overlayActivate": "ludivra:overlay-activate",
   "updateCheck": "ludivra:update-check",
@@ -33,6 +36,11 @@ contextBridge.exposeInMainWorld("ludivraDesktop", Object.freeze({
     read: (slot) => invoke(channels.cloudRead, slot),
     write: (slot, data) => invoke(channels.cloudWrite, slot, data),
     delete: (slot) => invoke(channels.cloudDelete, slot)
+  }),
+  network: Object.freeze({
+    accept: (peerId) => invoke(channels.steamNetworkAccept, peerId),
+    send: (peerId, mode, data) => invoke(channels.steamNetworkSend, peerId, mode, data),
+    read: (maximumBytes) => invoke(channels.steamNetworkRead, maximumBytes)
   }),
   user: Object.freeze({ current: () => invoke(channels.userCurrent) }),
   overlay: Object.freeze({ activate: (dialog) => invoke(channels.overlayActivate, dialog) }),

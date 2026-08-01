@@ -6,7 +6,7 @@
 |---|---|
 | Release atual | 0.7.0 |
 | Foco atual | Fase 7 — Persistir regiões regeneráveis com journal atômico, recovery e migrations sem duplicar o mundo procedural. |
-| Próxima entrega | Publicar boundaries dos adapters WebRTC/Steam sobre o protocolo lógico, mantendo loopback como prova CI obrigatória. |
+| Próxima entrega | Conectar envelopes WebRTC/Steam ao lifecycle de sala nos hosts, mantendo loopback como prova CI obrigatória. |
 | Fonte editável de progresso | [docs/program-status.json](docs/program-status.json) |
 | Decisão do modelo documental | [ADR 0046](docs/adr/0046-generated-program-documentation.md) |
 
@@ -29,7 +29,7 @@
 | 4 | Autoria text-first de gameplay, UI e conteúdo | `CONCLUÍDA` | nenhuma no gate atual |
 | 5 | Runtime espacial e mundo procedural | `CONCLUÍDA` | nenhuma no gate atual |
 | 6 | Motion, física e Mass Simulation | `CONCLUÍDA` | nenhuma no gate atual |
-| 7 | Persistência, replays e multiplayer player-hosted | `EM ANDAMENTO` | Adapters WebRTC/Steam sobre o protocolo lógico, sem duplicar a simulação host-authoritative. |
+| 7 | Persistência, replays e multiplayer player-hosted | `EM ANDAMENTO` | Localizar a primeira divergência remota por tick/chunk e publicar a recuperação de estado remota sobre os adapters externos. |
 | 8 | Renderer, UI, áudio e apresentação escalável | `PARCIAL` | Perfis web-compatible, desktop-compatible e desktop-high com fallback gráfico observado. |
 | 9 | Procedural Construction Runtime | `PLANEJADA` | Construction Graph, comandos semânticos, undo/redo e replay. |
 | 10 | Procedural Forges | `PARCIAL` | Completar música, stems, previews gráficos e runtime/cooker do Audio Forge. |
@@ -192,11 +192,12 @@ Preservar mundo e sessões player-hosted com compatibilidade e recuperação exp
 
 - Saves lógicos versionados, migrations básicas, replays, checkpoints e equivalência native/WASM. Capabilities: `runtime.save-replay`. Evidência: [kernel/src/state_archive.cpp](kernel/src/state_archive.cpp), [kernel/src/runtime.cpp](kernel/src/runtime.cpp), [tools/tests/wasm-equivalence.mjs](tools/tests/wasm-equivalence.mjs).
 - Region storage nativo com blobs de deltas checksummed, substituição temporário+sync+rename, journal multi-região, recovery observável, compactação e migração v0→v1 sem salvar base procedural; ABI C, CLI e Runtime/Lua publicam escrita transacional, restore e referências checksummed em save/replay sem expor o arquivo. Capabilities: `spatial.region-storage`. Evidência: [kernel/src/region_storage.cpp](kernel/src/region_storage.cpp), [kernel/src/runtime.cpp](kernel/src/runtime.cpp), [runtime-c-api/include/ludivra/runtime.h](runtime-c-api/include/ludivra/runtime.h), [cli/src/commands/storage.ts](cli/src/commands/storage.ts), [tests/kernel/kernel_test.cpp](tests/kernel/kernel_test.cpp), [tests/runtime/runtime_test.cpp](tests/runtime/runtime_test.cpp), [tests/fixtures/region-storage.lua](tests/fixtures/region-storage.lua), [cli/test/cli.test.mjs](cli/test/cli.test.mjs).
-- Sala loopback host-authoritative com protocolo N/N-1, identidade procedural no handshake, inputs de cliente ordenados e limitados, snapshots checksummed, late join, reconexão, migração de host verificada por hash e recusa de estado enviado por cliente. Capabilities: `network.loopback-room`. Evidência: [kernel/src/network_session.cpp](kernel/src/network_session.cpp), [tests/kernel/kernel_test.cpp](tests/kernel/kernel_test.cpp).
+- Sala loopback host-authoritative com protocolo N/N-1, identidade procedural no handshake, inputs de cliente ordenados e limitados, snapshots checksummed, late join, reconexão, migração de host verificada por hash e recusa de estado enviado por cliente; a mesma sala é publicada pela ABI C e pelo Runtime WASM. Capabilities: `network.loopback-room`. Evidência: [kernel/src/network_session.cpp](kernel/src/network_session.cpp), [runtime-c-api/include/ludivra/network.h](runtime-c-api/include/ludivra/network.h), [runtime-web/src/index.ts](runtime-web/src/index.ts), [tests/kernel/kernel_test.cpp](tests/kernel/kernel_test.cpp), [tests/runtime/runtime_test.cpp](tests/runtime/runtime_test.cpp), [tools/tests/wasm-equivalence.mjs](tools/tests/wasm-equivalence.mjs).
+- Boundaries WebRTC DataChannel e Steam P2P com envelope binário compartilhado, canais/limites explícitos e signaling player-owned, sem fallback automático; HostedRoomBridge conecta handshake/input à única sala WASM autoritativa e publica snapshots confiáveis, sem duplicar a simulação. Capabilities: `network.webrtc-datachannel`, `network.steam-p2p`, `network.host-room-bridge`. Evidência: [hosts/browser/src/network/webrtc-transport.ts](hosts/browser/src/network/webrtc-transport.ts), [hosts/browser/src/network/steam-transport.ts](hosts/browser/src/network/steam-transport.ts), [hosts/browser/src/network/room-bridge.ts](hosts/browser/src/network/room-bridge.ts), [hosts/electron/src/services/steam.cjs](hosts/electron/src/services/steam.cjs), [hosts/electron/test/services.test.cjs](hosts/electron/test/services.test.cjs).
 
 ### Falta
 
-- Adapters WebRTC/Steam sobre o protocolo lógico, sem duplicar a simulação host-authoritative.
+- Localizar a primeira divergência remota por tick/chunk e publicar a recuperação de estado remota sobre os adapters externos.
 
 ### Gate de saída
 

@@ -22,6 +22,7 @@
         "diagnostics.logs",
         "steam.achievements",
         "steam.cloud",
+        "steam.networking",
         "steam.overlay",
         "steam.user",
         "updates.desktop"
@@ -63,6 +64,9 @@
     "cloudRead": "ludivra:cloud-read",
     "cloudWrite": "ludivra:cloud-write",
     "cloudDelete": "ludivra:cloud-delete",
+    "steamNetworkAccept": "ludivra:steam-network-accept",
+    "steamNetworkSend": "ludivra:steam-network-send",
+    "steamNetworkRead": "ludivra:steam-network-read",
     "userCurrent": "ludivra:user-current",
     "overlayActivate": "ludivra:overlay-activate",
     "updateCheck": "ludivra:update-check",

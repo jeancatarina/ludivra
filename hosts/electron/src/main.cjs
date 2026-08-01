@@ -130,6 +130,7 @@ function registerIpc(storage, steam, updates) {
         serviceStatus("diagnostics.logs", true),
         serviceStatus("steam.achievements", steam.available, steam.reason),
         serviceStatus("steam.cloud", steam.cloudAvailable, steam.cloudReason),
+        serviceStatus("steam.networking", steam.networkAvailable, steam.networkReason),
         serviceStatus("steam.overlay", steam.available, steam.reason),
         serviceStatus("steam.user", steam.available, steam.reason),
         serviceStatus("updates.desktop", updates.available, updates.reason)
@@ -143,6 +144,9 @@ function registerIpc(storage, steam, updates) {
     [channels.cloudRead, (_event, slot) => steam.cloudRead(slot)],
     [channels.cloudWrite, (_event, slot, data) => steam.cloudWrite(slot, data)],
     [channels.cloudDelete, (_event, slot) => steam.cloudDelete(slot)],
+    [channels.steamNetworkAccept, (_event, peerId) => steam.networkAccept(peerId)],
+    [channels.steamNetworkSend, (_event, peerId, mode, data) => steam.networkSend(peerId, mode, data)],
+    [channels.steamNetworkRead, (_event, maximumBytes) => steam.networkRead(maximumBytes)],
     [channels.userCurrent, () => steam.currentUser()],
     [channels.overlayActivate, (_event, dialog) => steam.activateOverlay(dialog)],
     [channels.updateCheck, () => updates.check()]

@@ -6,7 +6,7 @@ const path = require("node:path");
 const test = require("node:test");
 const { createStorageService } = require("../src/services/storage.cjs");
 const { captureWebPreferences, readCaptureOptions } = require("../src/services/capture.cjs");
-const { prepareSteam } = require("../src/services/steam.cjs");
+const { createAvailableAdapter, prepareSteam } = require("../src/services/steam.cjs");
 const { createUpdateService } = require("../src/services/updates.cjs");
 
 const logger = Object.freeze({ info() {}, warn() {}, error() {} });
@@ -32,6 +32,30 @@ test("Steam absence is explicit and never reports false success", () => {
   const steam = prepareSteam(null, logger).initialize();
   assert.equal(steam.available, false);
   assert.throws(() => steam.unlock("FIRST_WIN"), /STEAM_UNAVAILABLE/);
+});
+
+test("Steam P2P adapter bounds and labels raw transport packets", () => {
+  const sent = [];
+  const client = {
+    cloud: { isEnabledForAccount: () => true, isEnabledForApp: () => true, fileExists: () => false },
+    achievement: { activate: () => true },
+    localplayer: { getSteamId: () => ({ steamId64: 1n }), getName: () => "Host" },
+    overlay: { activateDialog: () => {} },
+    networking: {
+      acceptP2PSession: (peer) => { sent.push({ accept: peer }); },
+      sendP2PPacket: (peer, mode, data) => { sent.push({ peer, mode, data: Buffer.from(data) }); return true; },
+      isP2PPacketAvailable: () => 2,
+      readP2PPacket: () => ({ data: Buffer.from([7, 8]), size: 2, steamId: { steamId64: 99n } })
+    }
+  };
+  const steam = createAvailableAdapter(client);
+  steam.networkAccept("99");
+  steam.networkSend("99", "reliable", new Uint8Array([1, 2, 3]));
+  assert.equal(steam.networkAvailable, true);
+  assert.deepEqual(steam.networkRead(64), { peerId: "99", data: new Uint8Array([7, 8]) });
+  assert.equal(sent[0].accept, 99n);
+  assert.equal(sent[1].mode, 2);
+  assert.throws(() => steam.networkSend("99", "realtime", new Uint8Array(1201)), /STEAM_NETWORK_PACKET_INVALID/);
 });
 
 test("desktop updates are disabled unless every release precondition exists", async () => {

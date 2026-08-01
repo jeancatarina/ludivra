@@ -95,6 +95,9 @@ const spatialPositionSize = 32;
 const spatialOffsetSize = 32;
 const spatialRegionSize = 16;
 const spatialLocationSize = 48;
+const networkRoomConfigurationSize = 56;
+const networkPeerHelloSize = 40;
+const networkInputSize = 24;
 // `ludivra_statechart_trace` contains a uint64_t and is therefore padded to the
 // public C ABI record size. Reading 36 bytes desynchronizes every trace after
 // the first record.
@@ -106,6 +109,131 @@ function call(
   arguments_: number[] = []
 ): number {
   return module.ccall(name, "number", arguments_.map(() => "number"), arguments_) as number;
+}
+
+/** WASM wrapper for the kernel's LoopbackRoom. Transport adapters pass it only
+ * logical input and snapshots; they never receive a mutable state surface. */
+export class LudivraNetworkRoom {
+  static create(module: RuntimeModule, hostHandle: number, configuration: NetworkRoomConfiguration, onDestroy?: () => void): LudivraNetworkRoom {
+    const generator = new TextEncoder().encode(configuration.world.generatorId);
+    if (generator.length === 0 || generator.length > 128) throw new NetworkFailure("network generator id must contain 1 through 128 UTF-8 bytes");
+    const configPointer = module._malloc(networkRoomConfigurationSize);
+    const outputPointer = module._malloc(4);
+    const generatorPointer = module._malloc(generator.length);
+    try {
+      module.HEAPU8.fill(0, configPointer, configPointer + networkRoomConfigurationSize);
+      module.HEAPU8.set(generator, generatorPointer);
+      const view = new DataView(module.HEAPU8.buffer);
+      view.setUint32(configPointer, networkRoomConfigurationSize, true);
+      view.setUint32(configPointer + 4, configuration.tickRateHz, true);
+      view.setUint32(configPointer + 8, configuration.maxPendingInputs, true);
+      view.setBigUint64(configPointer + 16, configuration.seed, true);
+      view.setUint32(configPointer + 24, configuration.protocolVersion, true);
+      view.setUint32(configPointer + 28, configuration.maximumClients, true);
+      view.setUint32(configPointer + 32, configuration.maximumInputsPerClient, true);
+      view.setUint32(configPointer + 36, generatorPointer, true);
+      view.setUint32(configPointer + 40, generator.length, true);
+      view.setUint32(configPointer + 44, configuration.world.generatorVersion, true);
+      view.setBigUint64(configPointer + 48, configuration.world.contentHash, true);
+      requireNetworkOk(module, "network room creation", call(module, "ludivra_network_room_create", [hostHandle, configPointer, outputPointer]));
+      const handle = module.HEAPU32[outputPointer >>> 2];
+      if (handle === undefined || handle === 0) throw new NetworkFailure("network room creation returned an empty handle");
+      return new LudivraNetworkRoom(module, handle, onDestroy);
+    } finally {
+      module._free(generatorPointer);
+      module._free(outputPointer);
+      module._free(configPointer);
+    }
+  }
+
+  private constructor(
+    private readonly module: RuntimeModule,
+    private handle: number,
+    private readonly onDestroy?: () => void
+  ) {}
+
+  connect(hello: NetworkPeerHello): number {
+    const generator = new TextEncoder().encode(hello.world.generatorId);
+    if (generator.length === 0 || generator.length > 128) throw new NetworkFailure("network generator id must contain 1 through 128 UTF-8 bytes");
+    const helloPointer = this.module._malloc(networkPeerHelloSize);
+    const outputPointer = this.module._malloc(4);
+    const generatorPointer = this.module._malloc(generator.length);
+    try {
+      this.module.HEAPU8.fill(0, helloPointer, helloPointer + networkPeerHelloSize);
+      this.module.HEAPU8.set(generator, generatorPointer);
+      const view = new DataView(this.module.HEAPU8.buffer);
+      view.setUint32(helloPointer, networkPeerHelloSize, true);
+      view.setUint32(helloPointer + 4, hello.protocolVersion, true);
+      view.setUint32(helloPointer + 8, generatorPointer, true);
+      view.setUint32(helloPointer + 12, generator.length, true);
+      view.setUint32(helloPointer + 16, hello.world.generatorVersion, true);
+      view.setBigUint64(helloPointer + 24, hello.world.seed, true);
+      view.setBigUint64(helloPointer + 32, hello.world.contentHash, true);
+      requireNetworkOk(this.module, "network peer connect", call(this.module, "ludivra_network_room_connect", [this.liveHandle(), helloPointer, outputPointer]));
+      return new DataView(this.module.HEAPU8.buffer).getUint32(outputPointer, true);
+    } finally {
+      this.module._free(generatorPointer);
+      this.module._free(outputPointer);
+      this.module._free(helloPointer);
+    }
+  }
+
+  submitInput(clientId: number, input: LogicalInput): void {
+    const pointer = this.module._malloc(networkInputSize);
+    try {
+      this.module.HEAPU8.fill(0, pointer, pointer + networkInputSize);
+      const view = new DataView(this.module.HEAPU8.buffer);
+      view.setUint32(pointer, networkInputSize, true);
+      view.setUint32(pointer + 4, input.actionId, true);
+      view.setInt32(pointer + 8, input.valueMilli, true);
+      view.setBigUint64(pointer + 16, input.sequence, true);
+      requireNetworkOk(this.module, "network input", call(this.module, "ludivra_network_room_submit_input", [this.liveHandle(), clientId, pointer]));
+    } finally { this.module._free(pointer); }
+  }
+
+  rejectClientState(clientId: number): void {
+    requireNetworkOk(this.module, "network client-state rejection", call(this.module, "ludivra_network_room_reject_client_state", [this.liveHandle(), clientId]));
+  }
+
+  advance(): NetworkRoomSnapshot {
+    requireNetworkOk(this.module, "network room advance", call(this.module, "ludivra_network_room_advance", [this.liveHandle()]));
+    return this.snapshot();
+  }
+
+  snapshot(): NetworkRoomSnapshot {
+    const sizePointer = this.module._malloc(4);
+    try {
+      requireNetworkOk(this.module, "network snapshot size", call(this.module, "ludivra_network_room_snapshot_size", [this.liveHandle(), sizePointer]));
+      const size = new DataView(this.module.HEAPU8.buffer).getUint32(sizePointer, true);
+      const archivePointer = this.module._malloc(size);
+      const tickPointer = this.module._malloc(8);
+      const hashPointer = this.module._malloc(8);
+      try {
+        requireNetworkOk(this.module, "network snapshot write", call(this.module, "ludivra_network_room_snapshot_write", [
+          this.liveHandle(), archivePointer, size, tickPointer, hashPointer
+        ]));
+        const view = new DataView(this.module.HEAPU8.buffer);
+        return { tick: view.getBigUint64(tickPointer, true), stateHash: view.getBigUint64(hashPointer, true),
+          archive: this.module.HEAPU8.slice(archivePointer, archivePointer + size) };
+      } finally {
+        this.module._free(hashPointer);
+        this.module._free(tickPointer);
+        this.module._free(archivePointer);
+      }
+    } finally { this.module._free(sizePointer); }
+  }
+
+  destroy(): void {
+    if (this.handle === 0) return;
+    call(this.module, "ludivra_network_room_destroy", [this.handle]);
+    this.handle = 0;
+    this.onDestroy?.();
+  }
+
+  private liveHandle(): number {
+    if (this.handle === 0) throw new NetworkFailure("network room has been destroyed");
+    return this.handle;
+  }
 }
 
 function requireOk(module: RuntimeModule, operation: string, result: number, handle?: number): void {
@@ -134,6 +262,40 @@ function requireOk(module: RuntimeModule, operation: string, result: number, han
 /** Failure carrying the stable code the kernel reported, when there is one. */
 export class RuntimeFailure extends Error {
   code?: string;
+}
+
+export interface NetworkWorldIdentity {
+  seed: bigint;
+  generatorId: string;
+  generatorVersion: number;
+  contentHash: bigint;
+}
+
+export interface NetworkRoomConfiguration extends RuntimeConfiguration {
+  protocolVersion: number;
+  maximumClients: number;
+  maximumInputsPerClient: number;
+  world: NetworkWorldIdentity;
+}
+
+export interface NetworkPeerHello {
+  protocolVersion: number;
+  world: NetworkWorldIdentity;
+}
+
+export interface NetworkRoomSnapshot {
+  tick: bigint;
+  stateHash: bigint;
+  archive: Uint8Array;
+}
+
+/** Failure returned by the authoritative network-room boundary. */
+export class NetworkFailure extends Error {}
+
+function requireNetworkOk(module: RuntimeModule, operation: string, result: number): void {
+  if (result === ok) return;
+  const message = module.ccall("ludivra_network_result_message", "string", ["number"], [result]) as string;
+  throw new NetworkFailure(`${operation} failed: ${message}`);
 }
 
 export interface SpatialWorldConfiguration {
@@ -339,6 +501,8 @@ export class LudivraRuntime {
     private readonly module: RuntimeModule,
     private handle: number
   ) {}
+
+  private readonly networkRooms = new Set<LudivraNetworkRoom>();
 
   /**
    * Declares the semantic name of a state or timer before gameplay loads. It is
@@ -667,8 +831,18 @@ export class LudivraRuntime {
     }
   }
 
+  /** Creates a host-authoritative room around this exact Runtime handle. Once
+   * attached, advance the room rather than stepping this Runtime directly. */
+  createNetworkRoom(configuration: NetworkRoomConfiguration): LudivraNetworkRoom {
+    let room: LudivraNetworkRoom;
+    room = LudivraNetworkRoom.create(this.module, this.liveHandle(), configuration, () => this.networkRooms.delete(room));
+    this.networkRooms.add(room);
+    return room;
+  }
+
   destroy(): void {
     if (this.handle !== 0) {
+      for (const room of this.networkRooms) room.destroy();
       call(this.module, "ludivra_runtime_destroy", [this.handle]);
       this.handle = 0;
     }

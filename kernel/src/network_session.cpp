@@ -27,11 +27,15 @@ bool input_before(const std::pair<std::uint32_t, NetworkClientInput>& left,
 
 }  // namespace
 
-LoopbackRoom::LoopbackRoom(NetworkRoomConfig config) : config_(std::move(config)), host_(config_.runtime) {}
+LoopbackRoom::LoopbackRoom(NetworkRoomConfig config)
+    : config_(std::move(config)), owned_host_(config_.runtime), host_(&*owned_host_) {}
 
-Runtime& LoopbackRoom::host_runtime() noexcept { return host_; }
+LoopbackRoom::LoopbackRoom(NetworkRoomConfig config, Runtime& host)
+    : config_(std::move(config)), host_(&host) {}
 
-const Runtime& LoopbackRoom::host_runtime() const noexcept { return host_; }
+Runtime& LoopbackRoom::host_runtime() noexcept { return *host_; }
+
+const Runtime& LoopbackRoom::host_runtime() const noexcept { return *host_; }
 
 bool LoopbackRoom::valid() const noexcept {
   return config_.runtime.tick_rate_hz > 0U && config_.runtime.max_pending_inputs > 0U &&
@@ -46,7 +50,7 @@ bool LoopbackRoom::compatible(const NetworkPeerHello& hello) const noexcept {
 }
 
 NetworkSnapshot LoopbackRoom::snapshot() const {
-  return {host_.tick(), host_.state_hash(), host_.save()};
+  return {host_->tick(), host_->state_hash(), host_->save()};
 }
 
 NetworkError LoopbackRoom::connect(const NetworkPeerHello& hello, std::uint32_t& client_id, NetworkSnapshot& initial) {
@@ -109,17 +113,19 @@ NetworkAdvance LoopbackRoom::advance() {
   std::sort(inputs.begin(), inputs.end(), input_before);
   for (const auto& [client_id, input] : inputs) {
     static_cast<void>(client_id);
-    if (host_.submit_input({input.action_id, input.value_milli, next_host_sequence_++}) != RuntimeError::none) {
+    if (host_->submit_input({input.action_id, input.value_milli, next_host_sequence_++}) != RuntimeError::none) {
       return {NetworkError::runtime_failure, {}};
     }
   }
-  if (host_.step(1U) != RuntimeError::none) return {NetworkError::runtime_failure, {}};
+  if (host_->step(1U) != RuntimeError::none) return {NetworkError::runtime_failure, {}};
   for (auto& [client_id, client] : clients_) {
     static_cast<void>(client_id);
     client.pending_inputs.clear();
   }
   return {NetworkError::none, snapshot()};
 }
+
+NetworkSnapshot LoopbackRoom::current_snapshot() const { return snapshot(); }
 
 NetworkError LoopbackRoom::apply_snapshot(Runtime& client, const NetworkSnapshot& remote) const {
   if (remote.archive.empty() || client.load_save(remote.archive) != RuntimeError::none ||
@@ -159,8 +165,8 @@ NetworkError LoopbackRoom::adopt_host_migration(const NetworkHostMigration& migr
       return NetworkError::host_migration_failed;
     }
   }
-  if (host_.load_save(migration.snapshot.archive) != RuntimeError::none || host_.tick() != migration.snapshot.tick ||
-      host_.state_hash() != migration.snapshot.state_hash) {
+  if (host_->load_save(migration.snapshot.archive) != RuntimeError::none || host_->tick() != migration.snapshot.tick ||
+      host_->state_hash() != migration.snapshot.state_hash) {
     return NetworkError::host_migration_failed;
   }
   clients_ = std::move(restored);
@@ -170,7 +176,7 @@ NetworkError LoopbackRoom::adopt_host_migration(const NetworkHostMigration& migr
 }
 
 NetworkRoomInspection LoopbackRoom::inspect() const {
-  NetworkRoomInspection inspection{host_.tick(), host_.state_hash(), {}};
+  NetworkRoomInspection inspection{host_->tick(), host_->state_hash(), {}};
   inspection.clients.reserve(clients_.size());
   for (const auto& [id, client] : clients_) {
     inspection.clients.push_back({id, client.protocol_version, client.connected,

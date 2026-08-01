@@ -1,4 +1,5 @@
 #include "ludivra/runtime.h"
+#include "ludivra/network.h"
 #include "ludivra/region_storage.h"
 #include "ludivra/spatial.h"
 
@@ -274,6 +275,37 @@ void check_runtime_region_storage(TestContext& context) {
   context.expect(!filesystem_error, "runtime region-storage fixture leaves no filesystem artifacts");
 }
 
+void check_network_c_api(TestContext& context) {
+  auto* host = create_runtime(context);
+  const char generator[] = "ember-vault";
+  const ludivra_network_room_config config{sizeof(ludivra_network_room_config), 60U, 4096U, 42U,
+      2U, 2U, 4U, generator, 11U, 3U, 0x44aabbccU};
+  ludivra_network_room* room = nullptr;
+  context.expect(ludivra_network_abi_version() == 1U &&
+      ludivra_network_room_create(host, &config, &room) == LUDIVRA_NETWORK_OK && room != nullptr,
+      "network C boundary binds a room to the supplied authoritative runtime");
+  const ludivra_network_peer_hello hello{sizeof(ludivra_network_peer_hello), 2U, generator, 11U, 3U, 0U, 42U, 0x44aabbccU};
+  uint32_t client = 0U;
+  context.expect(ludivra_network_room_connect(room, &hello, &client) == LUDIVRA_NETWORK_OK && client == 1U,
+      "network C boundary completes the logical peer handshake");
+  const ludivra_network_input input{sizeof(ludivra_network_input), 9U, 1000, 0U, 1U};
+  context.expect(ludivra_network_room_submit_input(room, client, &input) == LUDIVRA_NETWORK_OK &&
+      ludivra_network_room_reject_client_state(room, client) == LUDIVRA_NETWORK_ERROR_CLIENT_SENT_STATE &&
+      ludivra_network_room_advance(room) == LUDIVRA_NETWORK_OK,
+      "network C boundary accepts input but rejects any client-owned authoritative state");
+  uint32_t snapshot_size = 0U;
+  context.expect(ludivra_network_room_snapshot_size(room, &snapshot_size) == LUDIVRA_NETWORK_OK && snapshot_size > 8U,
+      "network C boundary reports the checksummed host snapshot size");
+  std::vector<uint8_t> snapshot(snapshot_size);
+  uint64_t tick = 0U;
+  uint64_t hash = 0U;
+  context.expect(ludivra_network_room_snapshot_write(room, snapshot.data(), snapshot_size, &tick, &hash) == LUDIVRA_NETWORK_OK &&
+      tick == 1U && hash == state_hash(context, host),
+      "network C boundary writes the current host archive with matching tick and hash");
+  ludivra_network_room_destroy(room);
+  ludivra_runtime_destroy(host);
+}
+
 }  // namespace
 
 int main() {
@@ -285,6 +317,7 @@ int main() {
   check_regional_world(context);
   check_region_storage_c_api(context);
   check_runtime_region_storage(context);
+  check_network_c_api(context);
   context.expect(
       ludivra_runtime_create(nullptr, nullptr) == LUDIVRA_ERROR_INVALID_ARGUMENT,
       "invalid creation arguments are rejected");
