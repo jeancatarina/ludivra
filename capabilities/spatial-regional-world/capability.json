@@ -22,8 +22,8 @@
   ],
   "limitations": [
     {
-      "code": "SPATIAL_REGION_STORAGE_BINDING_UNAVAILABLE",
-      "message": "O kernel possui region storage com journal e recovery, mas a superfície C/Web em memória ainda não o vincula ao runtime ou ao projeto."
+      "code": "SPATIAL_REGION_STORAGE_AUTOMATIC_SELECTION_UNAVAILABLE",
+      "message": "Runtime/Lua já persiste deltas por chave regional explícita; RegionalWorld ainda não seleciona nem serializa automaticamente suas partições C/Web."
     },
     {
       "code": "SPATIAL_MOTION_BINDING_UNAVAILABLE",

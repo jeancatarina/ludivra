@@ -73,6 +73,15 @@ std::int32_t checked_milli(lua_State* state, const int index, const char* messag
   return static_cast<std::int32_t>(value);
 }
 
+std::int32_t checked_i32(lua_State* state, const int index, const char* message) {
+  const auto value = luaL_checkinteger(state, index);
+  if (value < std::numeric_limits<std::int32_t>::min() ||
+      value > std::numeric_limits<std::int32_t>::max()) {
+    luaL_argerror(state, index, message);
+  }
+  return static_cast<std::int32_t>(value);
+}
+
 ExecutionContext& context(lua_State* state) {
   lua_pushlightuserdata(state, const_cast<char*>(&execution_context_key));
   lua_gettable(state, LUA_REGISTRYINDEX);
@@ -191,6 +200,37 @@ int commands_spawn_effect(lua_State* state) {
     execution.commands->spawn_effect(id, intensity, x, y, z);
   } catch (...) {
     return luaL_error(state, "unable to allocate effect command");
+  }
+  return 0;
+}
+
+/// Persists an explicit player-authored delta, never a generated chunk base.
+/// Coordinates name a semantic region and one local chunk delta; bytes are kept
+/// opaque so game formats stay outside the engine's generic storage layer.
+int world_set_delta(lua_State* state) {
+  const auto dimension = luaL_checkinteger(state, 2);
+  if (dimension < 0 || dimension > std::numeric_limits<std::uint16_t>::max()) {
+    return luaL_argerror(state, 2, "region dimension must be an unsigned 16-bit integer");
+  }
+  std::size_t payload_size = 0U;
+  const char* payload = luaL_checklstring(state, 9, &payload_size);
+  if (payload_size > 64U * 1024U) {
+    return luaL_argerror(state, 9, "region delta payload exceeds 65536 bytes");
+  }
+  try {
+    auto& execution = context(state);
+    if (!execution.commands_allowed) return luaL_error(state, "STATECHART_GUARD_MUTATION_FORBIDDEN: guards are read-only");
+    execution.commands->set_region_delta(
+        {static_cast<std::uint16_t>(dimension),
+            checked_i32(state, 3, "region x must be a signed 32-bit integer"),
+            checked_i32(state, 4, "region y must be a signed 32-bit integer"),
+            checked_i32(state, 5, "region z must be a signed 32-bit integer")},
+        {checked_i32(state, 6, "chunk x must be a signed 32-bit integer"),
+            checked_i32(state, 7, "chunk y must be a signed 32-bit integer"),
+            checked_i32(state, 8, "chunk z must be a signed 32-bit integer"),
+            {reinterpret_cast<const std::uint8_t*>(payload), reinterpret_cast<const std::uint8_t*>(payload) + payload_size}});
+  } catch (...) {
+    return luaL_error(state, "unable to allocate region delta command");
   }
   return 0;
 }
@@ -434,7 +474,7 @@ void set_context(lua_State* state, ExecutionContext* value) {
 }
 
 void push_context_table(lua_State* state) {
-  lua_createtable(state, 0, 6);
+  lua_createtable(state, 0, 7);
   lua_createtable(state, 0, 3);
   lua_pushcfunction(state, query_get_i64);
   lua_setfield(state, -2, "get_i64");
@@ -455,6 +495,10 @@ void push_context_table(lua_State* state) {
   lua_pushcfunction(state, commands_spawn_effect);
   lua_setfield(state, -2, "spawn_effect");
   lua_setfield(state, -2, "commands");
+  lua_createtable(state, 0, 1);
+  lua_pushcfunction(state, world_set_delta);
+  lua_setfield(state, -2, "set_delta");
+  lua_setfield(state, -2, "world");
   lua_createtable(state, 0, 2);
   lua_pushcfunction(state, random_range);
   lua_setfield(state, -2, "range");

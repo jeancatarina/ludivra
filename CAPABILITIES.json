@@ -215,7 +215,7 @@
       "limitations": [
         {
           "code": "MASS_SAVE_UNAVAILABLE",
-          "message": "Os arrays autoritativos ainda não são persistidos porque region storage pertence à Fase 7."
+          "message": "Region storage já está disponível, mas Mass ainda não declarou o encoder regional que persiste seus arrays autoritativos."
         },
         {
           "code": "MASS_PRESENTATION_BUFFER_UNAVAILABLE",
@@ -683,12 +683,8 @@
       ],
       "limitations": [
         {
-          "code": "WORLD_REGION_STORAGE_RUNTIME_BINDING_UNAVAILABLE",
-          "message": "O armazenamento nativo já preserva deltas e journal, mas o Runtime/Lua ainda não seleciona regiões para save ou replay de jogo."
-        },
-        {
           "code": "WORLD_REGION_STORAGE_WEB_UNAVAILABLE",
-          "message": "A CLI publica inspect, recover, compact e migrate para os envelopes nativos; ainda não há adapter Web nem binding de memória do runtime."
+          "message": "A CLI e o Runtime/Lua nativos publicam inspect, recovery e deltas transacionais; ainda não há adapter Web persistente nem binding de memória do runtime."
         }
       ]
     },
@@ -722,8 +718,8 @@
       ],
       "limitations": [
         {
-          "code": "SPATIAL_REGION_STORAGE_BINDING_UNAVAILABLE",
-          "message": "O kernel possui region storage com journal e recovery, mas a superfície C/Web em memória ainda não o vincula ao runtime ou ao projeto."
+          "code": "SPATIAL_REGION_STORAGE_AUTOMATIC_SELECTION_UNAVAILABLE",
+          "message": "Runtime/Lua já persiste deltas por chave regional explícita; RegionalWorld ainda não seleciona nem serializa automaticamente suas partições C/Web."
         },
         {
           "code": "SPATIAL_MOTION_BINDING_UNAVAILABLE",

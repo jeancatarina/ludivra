@@ -102,6 +102,10 @@ std::string statechart_gameplay() {
   return fixture("statechart.lua");
 }
 
+std::string region_storage_gameplay() {
+  return fixture("region-storage.lua");
+}
+
 std::vector<uint8_t> save_archive(TestContext& context, ludivra_runtime* runtime) {
   uint32_t size = 0;
   context.expect(ludivra_runtime_save_size(runtime, &size) == LUDIVRA_OK, "save size is available");
@@ -216,6 +220,60 @@ void check_region_storage_c_api(TestContext& context) {
   context.expect(!filesystem_error, "region-storage C API fixture leaves no filesystem artifacts");
 }
 
+void check_runtime_region_storage(TestContext& context) {
+  const std::filesystem::path root = std::filesystem::temp_directory_path() / "ludivra-runtime-region-storage-test";
+  std::error_code filesystem_error;
+  std::filesystem::remove_all(root, filesystem_error);
+  const std::string root_text = root.string();
+  const char generator[] = "ember-vault";
+  const ludivra_runtime_region_storage_config config{sizeof(ludivra_runtime_region_storage_config), root_text.data(),
+      static_cast<uint32_t>(root_text.size()), 0U, 1U * 1024U * 1024U, generator, 11U, 3U};
+  auto* persisted = create_runtime(context);
+  context.expect(ludivra_runtime_configure_region_storage(persisted, &config) == LUDIVRA_OK,
+      "runtime recovers and owns a configured region store");
+  const auto source = region_storage_gameplay();
+  context.expect(ludivra_runtime_load_gameplay(persisted, source.data(), static_cast<uint32_t>(source.size())) == LUDIVRA_OK,
+      "Lua gameplay exposing a regional delta command loads");
+  submit(context, persisted, 91U, 0, 1U);
+  context.expect(ludivra_runtime_step(persisted, 1U) == LUDIVRA_OK,
+      "Lua region delta is committed through the runtime boundary");
+  const auto saved = save_archive(context, persisted);
+  context.expect(saved.size() > 8U && saved[4] == 6U,
+      "logical save version 6 references external regional data without embedding generated base chunks");
+  const auto replay = replay_archive(context, persisted);
+
+  ludivra_region_storage* storage = nullptr;
+  const ludivra_region_storage_config storage_config{sizeof(ludivra_region_storage_config), root_text.data(),
+      static_cast<uint32_t>(root_text.size()), 0U, 1U * 1024U * 1024U};
+  uint32_t region_count = 0U;
+  context.expect(ludivra_region_storage_create(&storage_config, &storage) == LUDIVRA_REGION_STORAGE_OK &&
+      ludivra_region_storage_inspect_count(storage, &region_count) == LUDIVRA_REGION_STORAGE_OK && region_count == 1U,
+      "the runtime stores one regional delta in LDWR rather than the logical archive");
+  ludivra_region_storage_destroy(storage);
+
+  auto* restored = create_runtime(context);
+  context.expect(ludivra_runtime_configure_region_storage(restored, &config) == LUDIVRA_OK &&
+      ludivra_runtime_load_gameplay(restored, source.data(), static_cast<uint32_t>(source.size())) == LUDIVRA_OK &&
+      ludivra_runtime_load_save(restored, saved.data(), static_cast<uint32_t>(saved.size())) == LUDIVRA_OK &&
+      state_hash(context, restored) == state_hash(context, persisted),
+      "save restore verifies the region fingerprint and keeps the runtime hash");
+  context.expect(ludivra_runtime_verify_replay(persisted, replay.data(), static_cast<uint32_t>(replay.size())) == LUDIVRA_OK,
+      "replay re-executes regional Lua commands without rewriting the region store");
+
+  const char wrong_generator[] = "wrong-world";
+  const ludivra_runtime_region_storage_config wrong_config{sizeof(ludivra_runtime_region_storage_config), root_text.data(),
+      static_cast<uint32_t>(root_text.size()), 0U, 1U * 1024U * 1024U, wrong_generator, 11U, 3U};
+  auto* incompatible = create_runtime(context);
+  context.expect(ludivra_runtime_configure_region_storage(incompatible, &wrong_config) == LUDIVRA_OK &&
+      ludivra_runtime_load_save(incompatible, saved.data(), static_cast<uint32_t>(saved.size())) == LUDIVRA_ERROR_REGION_IDENTITY_MISMATCH,
+      "restore rejects a region from another declared generator identity");
+  ludivra_runtime_destroy(incompatible);
+  ludivra_runtime_destroy(restored);
+  ludivra_runtime_destroy(persisted);
+  std::filesystem::remove_all(root, filesystem_error);
+  context.expect(!filesystem_error, "runtime region-storage fixture leaves no filesystem artifacts");
+}
+
 }  // namespace
 
 int main() {
@@ -223,9 +281,10 @@ int main() {
   context.expect(
       ludivra::kernel::LuaSandbox::sdk_contract_boundary_valid(),
       "the reachable Lua SDK surface matches its versioned contract");
-  context.expect(ludivra_runtime_abi_version() == 5U, "ABI version is stable");
+  context.expect(ludivra_runtime_abi_version() == 6U, "ABI version is stable");
   check_regional_world(context);
   check_region_storage_c_api(context);
+  check_runtime_region_storage(context);
   context.expect(
       ludivra_runtime_create(nullptr, nullptr) == LUDIVRA_ERROR_INVALID_ARGUMENT,
       "invalid creation arguments are rejected");

@@ -50,6 +50,10 @@ struct StoredRegion final {
   std::vector<std::uint8_t> construction_graph;
 };
 
+/** Deterministic fingerprint of the canonical region record. It is a reference
+ * in logical saves and replays, never a replacement for the delta payload. */
+[[nodiscard]] std::uint64_t stored_region_hash(const StoredRegion& region);
+
 struct RegionStorageConfig final {
   std::filesystem::path root;
   std::uint64_t maximum_region_bytes;

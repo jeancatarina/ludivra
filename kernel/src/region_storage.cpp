@@ -371,6 +371,19 @@ void write_key(Writer& writer, const StoredRegionKey key) {
 
 RegionStorage::RegionStorage(RegionStorageConfig config) : config_(std::move(config)) {}
 
+std::uint64_t stored_region_hash(const StoredRegion& region) {
+  std::vector<std::uint8_t> bytes;
+  if (encode_region(region, std::numeric_limits<std::uint64_t>::max(), bytes) != RegionStorageError::none ||
+      bytes.size() < sizeof(std::uint64_t)) {
+    return 0U;
+  }
+  std::uint64_t hash = 0U;
+  for (std::uint32_t shift = 0U; shift < 64U; shift += 8U) {
+    hash |= static_cast<std::uint64_t>(bytes[bytes.size() - sizeof(std::uint64_t) + (shift / 8U)]) << shift;
+  }
+  return hash;
+}
+
 RegionStorageError RegionStorage::write_region(const StoredRegion& region) {
   if (!config_valid(config_)) return RegionStorageError::configuration_invalid;
   std::vector<std::uint8_t> bytes;

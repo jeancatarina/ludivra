@@ -2,6 +2,7 @@
 
 #include "logical_timers.hpp"
 #include "random_streams.hpp"
+#include "region_storage.hpp"
 #include "statechart_runtime.hpp"
 
 #include <cstdint>
@@ -24,6 +25,17 @@ struct ReplayFrame final {
   std::vector<ArchiveInput> inputs;
 };
 
+/** Logical archives refer to region data by identity and canonical fingerprint.
+ * The actual deltas remain in LDWR, so saving a world never copies its
+ * regenerable base or re-embeds regional payloads in LDSV/LDRP. */
+struct RegionSaveReference final {
+  StoredRegionKey key;
+  std::string generator_id;
+  std::uint32_t generator_version;
+  std::uint64_t seed;
+  std::uint64_t content_hash;
+};
+
 struct SavedState final {
   std::uint64_t tick;
   std::uint64_t state_hash;
@@ -36,6 +48,7 @@ struct SavedState final {
   std::vector<LogicalTimer> timers;
   /// Present only when a statechart has been installed for this runtime.
   std::optional<StatechartSnapshot> statechart;
+  std::vector<RegionSaveReference> regions;
 };
 
 struct ReplayState final {

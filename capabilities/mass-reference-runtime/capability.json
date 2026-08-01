@@ -9,7 +9,7 @@
   "dependencies": ["spatial.regional-world"],
   "verification": ["pnpm test:native", "pnpm game validate --project examples/card-roguelite --format json", "pnpm test:card-roguelite"],
   "limitations": [
-    { "code": "MASS_SAVE_UNAVAILABLE", "message": "Os arrays autoritativos ainda não são persistidos porque region storage pertence à Fase 7." },
+    { "code": "MASS_SAVE_UNAVAILABLE", "message": "Region storage já está disponível, mas Mass ainda não declarou o encoder regional que persiste seus arrays autoritativos." },
     { "code": "MASS_PRESENTATION_BUFFER_UNAVAILABLE", "message": "Níveis visuais e de densidade não emitem o buffer de instancing até o renderer escalável da Fase 8." }
   ]
 }

@@ -114,6 +114,12 @@ export const LUA_SDK_SYMBOLS: readonly LuaSdkSymbol[] = [
     "consumer": "tests/fixtures/timers.lua"
   },
   {
+    "name": "ctx.world.set_delta",
+    "layer": 1,
+    "maturity": "experimental",
+    "consumer": "tests/fixtures/region-storage.lua"
+  },
+  {
     "name": "event.action_id",
     "layer": 0,
     "maturity": "experimental",

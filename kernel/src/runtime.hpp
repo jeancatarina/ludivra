@@ -3,10 +3,12 @@
 #include "command_buffer.hpp"
 #include "lua_sandbox.hpp"
 #include "random_streams.hpp"
+#include "region_storage.hpp"
 #include "statechart_runtime.hpp"
 
 #include <cstdint>
 #include <map>
+#include <optional>
 #include <span>
 #include <string>
 #include <string_view>
@@ -18,6 +20,14 @@ struct RuntimeConfig final {
   std::uint32_t tick_rate_hz;
   std::uint32_t max_pending_inputs;
   std::uint64_t seed;
+};
+
+/** Configuration for the opt-in regional persistence owned by Runtime. The
+ * generator identity is checked before restored deltas ever reach gameplay. */
+struct RuntimeRegionStorageConfig final {
+  RegionStorageConfig storage;
+  std::string generator_id;
+  std::uint32_t generator_version;
 };
 
 struct LogicalInput final {
@@ -73,6 +83,9 @@ enum class RuntimeError : std::uint8_t {
   presentation_limit
   , statechart_invalid
   , statechart_event_unhandled
+  , region_storage_unconfigured
+  , region_storage_failure
+  , region_identity_mismatch
 };
 
 class Runtime final {
@@ -85,6 +98,7 @@ class Runtime final {
   [[nodiscard]] std::uint64_t state_hash() const noexcept;
   [[nodiscard]] RuntimeError load_gameplay(std::string_view source);
   [[nodiscard]] RuntimeError load_content_pack(std::string_view bytes);
+  [[nodiscard]] RuntimeError configure_region_storage(RuntimeRegionStorageConfig config);
   /// Declares the semantic name of an integer state, so gameplay stops repeating
   /// the numeric keys the manifest already owns. Declaring twice with different
   /// keys is a defect, not a redefinition.
@@ -115,6 +129,9 @@ class Runtime final {
   [[nodiscard]] std::optional<bool> evaluate_statechart_guard(std::uint32_t guard, const StatechartTransition& transition);
   [[nodiscard]] std::string timer_name(std::uint32_t key) const;
   [[nodiscard]] RuntimeError apply_commands();
+  [[nodiscard]] RuntimeError configure_region_storage(RuntimeRegionStorageConfig config, bool writable);
+  [[nodiscard]] RuntimeError restore_region_references(std::span<const RegionSaveReference> references);
+  [[nodiscard]] RuntimeError apply_region_deltas(std::uint64_t& hash);
 
   RuntimeConfig config_;
   std::uint64_t tick_{0};
@@ -135,6 +152,11 @@ class Runtime final {
   LuaSandbox lua_;
   std::string gameplay_source_;
   std::string content_pack_source_;
+  std::optional<RuntimeRegionStorageConfig> region_storage_config_;
+  std::optional<RegionStorage> region_storage_;
+  std::map<StoredRegionKey, StoredRegion> loaded_regions_;
+  std::map<StoredRegionKey, RegionSaveReference> region_references_;
+  bool region_storage_writable_{true};
   SavedState replay_initial_state_;
   std::vector<ReplayFrame> replay_frames_;
   std::vector<PresentationEvent> presentation_events_;

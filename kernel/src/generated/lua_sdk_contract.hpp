@@ -21,7 +21,7 @@ inline constexpr std::uint32_t lua_sdk_version = 1U;
 inline constexpr std::size_t lua_sdk_maximum_query_fields = 64U;
 inline constexpr std::string_view lua_sdk_query_cost_unit = "state_reads";
 inline constexpr std::string_view lua_sdk_query_cost_formula = "fieldCount";
-inline constexpr std::array<LuaSdkSymbol, 25> lua_sdk_symbols{{
+inline constexpr std::array<LuaSdkSymbol, 26> lua_sdk_symbols{{
     {"ctx.commands.add", 1U, LuaSdkMaturity::experimental, "examples/card-roguelite/scripts/gameplay.lua"},
     {"ctx.commands.add_i64", 0U, LuaSdkMaturity::deprecated, "tests/fixtures/counter.lua"},
     {"ctx.commands.play_audio", 0U, LuaSdkMaturity::experimental, "examples/first-game/scripts/gameplay.lua"},
@@ -39,6 +39,7 @@ inline constexpr std::array<LuaSdkSymbol, 25> lua_sdk_symbols{{
     {"ctx.timers.cancel", 1U, LuaSdkMaturity::experimental, "tests/fixtures/timers.lua"},
     {"ctx.timers.remaining", 1U, LuaSdkMaturity::experimental, "tests/fixtures/timers.lua"},
     {"ctx.timers.start", 1U, LuaSdkMaturity::experimental, "tests/fixtures/timers.lua"},
+    {"ctx.world.set_delta", 1U, LuaSdkMaturity::experimental, "tests/fixtures/region-storage.lua"},
     {"event.action_id", 0U, LuaSdkMaturity::experimental, "examples/first-game/scripts/gameplay.lua"},
     {"event.timer", 1U, LuaSdkMaturity::experimental, "tests/fixtures/timers.lua"},
     {"event.value_milli", 0U, LuaSdkMaturity::experimental, "examples/first-game/scripts/gameplay.lua"},

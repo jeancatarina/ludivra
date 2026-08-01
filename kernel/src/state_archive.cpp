@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <string>
 #include <array>
+#include <limits>
 #include <stdexcept>
 #include <utility>
 
@@ -11,7 +12,9 @@ namespace {
 
 constexpr std::array<std::uint8_t, 4> save_magic{'L', 'D', 'S', 'V'};
 constexpr std::array<std::uint8_t, 4> replay_magic{'L', 'D', 'R', 'P'};
-constexpr std::uint32_t archive_version = 5;
+constexpr std::uint32_t archive_version = 6;
+/// Version 5 had no logical references to external region storage.
+constexpr std::uint32_t archive_version_without_regions = 5;
 /// Version 4 saved the active state and history but not elapsed statechart time.
 constexpr std::uint32_t archive_version_without_statechart_ticks = 4;
 constexpr std::uint32_t archive_version_without_statechart = 3;
@@ -148,7 +151,7 @@ class ArchiveReader final {
 
 bool read_header(ArchiveReader& reader, const std::array<std::uint8_t, 4>& magic, std::uint32_t& version) {
   return reader.verify_checksum() && reader.magic(magic) && reader.u32(version) &&
-      (version == archive_version || version == archive_version_without_statechart_ticks || version == archive_version_without_statechart || version == archive_version_without_timers ||
+      (version == archive_version || version == archive_version_without_regions || version == archive_version_without_statechart_ticks || version == archive_version_without_statechart || version == archive_version_without_timers ||
        version == archive_version_without_streams);
 }
 
@@ -194,6 +197,58 @@ bool read_statechart(ArchiveReader& reader, const std::uint32_t version, std::op
   snapshot.shallow_history.reserve(count);
   for (std::uint32_t index = 0; index < count; ++index) { std::uint32_t parent = 0; std::uint32_t child = 0; if (!reader.u32(parent) || !reader.u32(child)) return false; snapshot.shallow_history.emplace_back(parent, child); }
   statechart = std::move(snapshot);
+  return true;
+}
+
+bool region_reference_less(const RegionSaveReference& left, const RegionSaveReference& right) noexcept {
+  return left.key < right.key;
+}
+
+void write_regions(ArchiveWriter& writer, const std::vector<RegionSaveReference>& regions) {
+  require_encodable_size(regions.size());
+  std::vector<RegionSaveReference> ordered = regions;
+  std::sort(ordered.begin(), ordered.end(), region_reference_less);
+  for (std::size_t index = 1U; index < ordered.size(); ++index) {
+    if (!(ordered[index - 1U].key < ordered[index].key)) {
+      throw std::length_error("region references must have unique keys");
+    }
+  }
+  writer.u32(static_cast<std::uint32_t>(ordered.size()));
+  for (const auto& region : ordered) {
+    writer.u32(region.key.dimension);
+    writer.u32(static_cast<std::uint32_t>(region.key.x));
+    writer.u32(static_cast<std::uint32_t>(region.key.y));
+    writer.u32(static_cast<std::uint32_t>(region.key.z));
+    writer.text(region.generator_id);
+    writer.u32(region.generator_version);
+    writer.u64(region.seed);
+    writer.u64(region.content_hash);
+  }
+}
+
+bool read_regions(ArchiveReader& reader, const std::uint32_t version, std::vector<RegionSaveReference>& regions) {
+  if (version < archive_version) return true;
+  std::uint32_t count = 0U;
+  if (!reader.u32(count) || count > maximum_archive_entries) return false;
+  regions.reserve(count);
+  for (std::uint32_t index = 0U; index < count; ++index) {
+    std::uint32_t dimension = 0U;
+    std::uint32_t x = 0U;
+    std::uint32_t y = 0U;
+    std::uint32_t z = 0U;
+    RegionSaveReference region{};
+    if (!reader.u32(dimension) || dimension > std::numeric_limits<std::uint16_t>::max() ||
+        !reader.u32(x) || !reader.u32(y) || !reader.u32(z) ||
+        !reader.text(region.generator_id, maximum_domain_bytes) || region.generator_id.empty() ||
+        !reader.u32(region.generator_version) || region.generator_version == 0U ||
+        !reader.u64(region.seed) || !reader.u64(region.content_hash)) {
+      return false;
+    }
+    region.key = {static_cast<std::uint16_t>(dimension), static_cast<std::int32_t>(x),
+        static_cast<std::int32_t>(y), static_cast<std::int32_t>(z)};
+    if (!regions.empty() && !(regions.back().key < region.key)) return false;
+    regions.push_back(std::move(region));
+  }
   return true;
 }
 
@@ -247,6 +302,7 @@ std::vector<std::uint8_t> encode_save(const SavedState& state) {
   write_streams(writer, state.streams);
   write_timers(writer, state.timers);
   write_statechart(writer, state.statechart);
+  write_regions(writer, state.regions);
   return writer.finish();
 }
 
@@ -271,7 +327,8 @@ bool decode_save(const std::span<const std::uint8_t> bytes, SavedState& state) {
     decoded.integers.emplace(key, static_cast<std::int64_t>(value));
   }
   if (!read_streams(reader, version, decoded.streams) ||
-      !read_timers(reader, version, decoded.timers) || !read_statechart(reader, version, decoded.statechart) || !reader.complete()) {
+      !read_timers(reader, version, decoded.timers) || !read_statechart(reader, version, decoded.statechart) ||
+      !read_regions(reader, version, decoded.regions) || !reader.complete()) {
     return false;
   }
   state = std::move(decoded);
@@ -300,6 +357,7 @@ std::vector<std::uint8_t> encode_replay(const ReplayState& replay) {
   write_streams(writer, replay.initial_state.streams);
   write_timers(writer, replay.initial_state.timers);
   write_statechart(writer, replay.initial_state.statechart);
+  write_regions(writer, replay.initial_state.regions);
   writer.u64(replay.expected_tick);
   writer.u64(replay.expected_hash);
   writer.u32(static_cast<std::uint32_t>(replay.frames.size()));
@@ -343,6 +401,7 @@ bool decode_replay(const std::span<const std::uint8_t> bytes, ReplayState& repla
   if (!read_streams(reader, version, decoded.initial_state.streams) ||
       !read_timers(reader, version, decoded.initial_state.timers) ||
       !read_statechart(reader, version, decoded.initial_state.statechart) ||
+      !read_regions(reader, version, decoded.initial_state.regions) ||
       !reader.u64(decoded.expected_tick) ||
       !reader.u64(decoded.expected_hash) || !reader.u32(frame_count) ||
       frame_count > maximum_archive_entries) {

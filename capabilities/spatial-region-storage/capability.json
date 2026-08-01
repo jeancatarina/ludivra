@@ -21,12 +21,8 @@
   ],
   "limitations": [
     {
-      "code": "WORLD_REGION_STORAGE_RUNTIME_BINDING_UNAVAILABLE",
-      "message": "O armazenamento nativo já preserva deltas e journal, mas o Runtime/Lua ainda não seleciona regiões para save ou replay de jogo."
-    },
-    {
       "code": "WORLD_REGION_STORAGE_WEB_UNAVAILABLE",
-      "message": "A CLI publica inspect, recover, compact e migrate para os envelopes nativos; ainda não há adapter Web nem binding de memória do runtime."
+      "message": "A CLI e o Runtime/Lua nativos publicam inspect, recovery e deltas transacionais; ainda não há adapter Web persistente nem binding de memória do runtime."
     }
   ]
 }

@@ -55,7 +55,7 @@ Códigos: `WORLD_SAVE_JOURNAL_INCOMPLETE`, `WORLD_SAVE_CHECKSUM_MISMATCH`, `WORL
 
 `RegionStorage` implementa o primeiro boundary nativo: `LDWR` armazena chave regional, identidade/versionamento do gerador e apenas deltas, entidades persistentes, resumo e Construction Graph — nunca uma base gerada. Cada blob possui FNV e tamanho limitado. Transações multi-região registram `LDWJ` antes dos arquivos regionais; `recover()` reaplica um journal completo, remove um temporário incompleto com relatório explícito e recusa checksum inválido. O formato v0, que não possuía resumo regional, migra explicitamente para v1 com resumo vazio. A ABI C v1 publica create/write/recover/inspect/compact/migrate para hosts nativos sem expor o formato de arquivo. A CLI publica `game storage inspect|recover|compact|migrate --root <diretório>` sobre esses mesmos envelopes; suas operações de leitura e reescrita validam FNV e preservam apenas a forma canônica v1.
 
-O vínculo desse boundary ao Runtime, Lua e adapter Web permanece uma entrega posterior da Fase 7; a existência do arquivo não concede persistência mundial automaticamente a um jogo.
+O Runtime pode configurar uma raiz, seed e identidade do gerador; `ctx.world:set_delta(...)` em Lua apenas enfileira bytes de delta. No commit autoritativo, o Runtime agrupa as regiões alteradas, grava uma transação e mistura a operação no hash lógico. `LDSV` e `LDRP` v6 armazenam chave, identidade e fingerprint canônico de cada região, não o payload nem a base gerada; restore recusa uma referência ausente, corrompida ou com gerador incompatível. Replay reexecuta os comandos em modo sem escrita. O adapter Web persistente e a seleção automática a partir de `RegionalWorld` continuam entregas posteriores da Fase 7.
 
 ## Consequências
 

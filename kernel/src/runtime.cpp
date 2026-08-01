@@ -14,6 +14,31 @@ namespace {
 constexpr std::uint64_t fnv_prime = 1099511628211ULL;
 constexpr std::uint8_t tick_marker = 0xA5U;
 
+RuntimeError to_runtime_error(const RegionStorageError error) noexcept {
+  return error == RegionStorageError::none ? RuntimeError::none : RuntimeError::region_storage_failure;
+}
+
+bool same_region_identity(const StoredRegion& region, const RuntimeRegionStorageConfig& config, const std::uint64_t seed) noexcept {
+  return region.generator_id == config.generator_id && region.generator_version == config.generator_version && region.seed == seed;
+}
+
+void mix_region_delta(std::uint64_t& hash, const RegionDeltaCommand& command) noexcept {
+  const auto mix_byte = [&hash](const std::uint8_t value) { hash = (hash ^ value) * fnv_prime; };
+  const auto mix_u32 = [&mix_byte](const std::uint32_t value) {
+    for (std::uint32_t shift = 0U; shift < 32U; shift += 8U) mix_byte(static_cast<std::uint8_t>((value >> shift) & 0xFFU));
+  };
+  mix_byte(0xE7U);
+  mix_u32(command.region.dimension);
+  mix_u32(static_cast<std::uint32_t>(command.region.x));
+  mix_u32(static_cast<std::uint32_t>(command.region.y));
+  mix_u32(static_cast<std::uint32_t>(command.region.z));
+  mix_u32(static_cast<std::uint32_t>(command.delta.chunk_x));
+  mix_u32(static_cast<std::uint32_t>(command.delta.chunk_y));
+  mix_u32(static_cast<std::uint32_t>(command.delta.chunk_z));
+  mix_u32(static_cast<std::uint32_t>(command.delta.payload.size()));
+  for (const auto byte : command.delta.payload) mix_byte(byte);
+}
+
 }  // namespace
 
 Runtime::Runtime(const RuntimeConfig config)
@@ -21,7 +46,7 @@ Runtime::Runtime(const RuntimeConfig config)
   mix_u32(state_hash_, config.tick_rate_hz);
   mix_u32(state_hash_, config.max_pending_inputs);
   mix_u64(state_hash_, config.seed);
-  replay_initial_state_ = {tick_, state_hash_, integer_state_, random_streams_.snapshot(), timers_.snapshot(), std::nullopt};
+  replay_initial_state_ = {tick_, state_hash_, integer_state_, random_streams_.snapshot(), timers_.snapshot(), std::nullopt, {}};
 }
 
 RuntimeError Runtime::submit_input(const LogicalInput input) {
@@ -67,6 +92,119 @@ RuntimeError Runtime::load_content_pack(const std::string_view bytes) {
   if (!lua_.load_content_pack(bytes)) return RuntimeError::content_pack_invalid;
   // Kept so replay verification rebuilds a runtime that sees the same content.
   content_pack_source_.assign(bytes);
+  return RuntimeError::none;
+}
+
+RuntimeError Runtime::configure_region_storage(RuntimeRegionStorageConfig config) {
+  return configure_region_storage(std::move(config), true);
+}
+
+RuntimeError Runtime::configure_region_storage(RuntimeRegionStorageConfig config, const bool writable) {
+  if (config.storage.root.empty() || config.storage.maximum_region_bytes < 128U ||
+      config.generator_id.empty() || config.generator_id.size() > 128U || config.generator_version == 0U) {
+    return RuntimeError::region_storage_failure;
+  }
+  try {
+    RegionStorage storage(config.storage);
+    if (writable) {
+      const auto recovery = storage.recover();
+      if (recovery.error != RegionStorageError::none && recovery.error != RegionStorageError::journal_incomplete) {
+        return to_runtime_error(recovery.error);
+      }
+    }
+    region_storage_config_ = std::move(config);
+    region_storage_ = std::move(storage);
+    region_storage_writable_ = writable;
+    loaded_regions_.clear();
+    region_references_.clear();
+    if (replay_frames_.empty() && tick_ == replay_initial_state_.tick) replay_initial_state_.regions.clear();
+    return RuntimeError::none;
+  } catch (...) {
+    return RuntimeError::region_storage_failure;
+  }
+}
+
+RuntimeError Runtime::restore_region_references(const std::span<const RegionSaveReference> references) {
+  if (references.empty()) {
+    loaded_regions_.clear();
+    region_references_.clear();
+    return RuntimeError::none;
+  }
+  if (!region_storage_.has_value() || !region_storage_config_.has_value()) {
+    return RuntimeError::region_storage_unconfigured;
+  }
+  std::map<StoredRegionKey, StoredRegion> restored_regions;
+  std::map<StoredRegionKey, RegionSaveReference> restored_references;
+  for (const auto& reference : references) {
+    if (!restored_references.emplace(reference.key, reference).second) return RuntimeError::archive_invalid;
+    StoredRegion region{};
+    if (const auto error = region_storage_->read_region(reference.key, region); error != RegionStorageError::none) {
+      return to_runtime_error(error);
+    }
+    if (!same_region_identity(region, *region_storage_config_, config_.seed) ||
+        region.generator_id != reference.generator_id || region.generator_version != reference.generator_version ||
+        region.seed != reference.seed || stored_region_hash(region) != reference.content_hash) {
+      return RuntimeError::region_identity_mismatch;
+    }
+    restored_regions.emplace(reference.key, std::move(region));
+  }
+  loaded_regions_ = std::move(restored_regions);
+  region_references_ = std::move(restored_references);
+  return RuntimeError::none;
+}
+
+RuntimeError Runtime::apply_region_deltas(std::uint64_t& hash) {
+  if (commands_.region_deltas().empty()) return RuntimeError::none;
+  if (!region_storage_.has_value() || !region_storage_config_.has_value()) {
+    return RuntimeError::region_storage_unconfigured;
+  }
+  std::map<StoredRegionKey, StoredRegion> next_regions = loaded_regions_;
+  std::map<StoredRegionKey, StoredRegion> changed;
+  for (const auto& command : commands_.region_deltas()) {
+    auto found = next_regions.find(command.region);
+    if (found == next_regions.end()) {
+      StoredRegion region{};
+      const auto error = region_storage_->read_region(command.region, region);
+      if (error == RegionStorageError::region_missing) {
+        region = {command.region, region_storage_config_->generator_id, region_storage_config_->generator_version,
+            config_.seed, {}, {}, {}, {}};
+      } else if (error != RegionStorageError::none) {
+        return to_runtime_error(error);
+      }
+      if (!same_region_identity(region, *region_storage_config_, config_.seed)) return RuntimeError::region_identity_mismatch;
+      found = next_regions.emplace(command.region, std::move(region)).first;
+    }
+    auto& deltas = found->second.deltas;
+    const auto existing = std::find_if(deltas.begin(), deltas.end(), [&command](const StoredChunkDelta& delta) {
+      return delta.chunk_x == command.delta.chunk_x && delta.chunk_y == command.delta.chunk_y && delta.chunk_z == command.delta.chunk_z;
+    });
+    if (existing == deltas.end()) deltas.push_back(command.delta);
+    else *existing = command.delta;
+    std::sort(deltas.begin(), deltas.end(), [](const StoredChunkDelta& left, const StoredChunkDelta& right) {
+      return std::tie(left.chunk_x, left.chunk_y, left.chunk_z) < std::tie(right.chunk_x, right.chunk_y, right.chunk_z);
+    });
+    changed.insert_or_assign(command.region, found->second);
+  }
+  if (region_storage_writable_) {
+    std::vector<StoredRegion> transaction;
+    transaction.reserve(changed.size());
+    for (const auto& [key, region] : changed) {
+      static_cast<void>(key);
+      transaction.push_back(region);
+    }
+    if (const auto error = region_storage_->write_transaction(transaction); error != RegionStorageError::none) {
+      return to_runtime_error(error);
+    }
+  }
+  std::map<StoredRegionKey, RegionSaveReference> next_references = region_references_;
+  for (const auto& [key, region] : changed) {
+    const auto content_hash = stored_region_hash(region);
+    if (content_hash == 0U) return RuntimeError::region_storage_failure;
+    next_references.insert_or_assign(key, RegionSaveReference{key, region.generator_id, region.generator_version, region.seed, content_hash});
+  }
+  for (const auto& command : commands_.region_deltas()) mix_region_delta(hash, command);
+  loaded_regions_ = std::move(next_regions);
+  region_references_ = std::move(next_references);
   return RuntimeError::none;
 }
 
@@ -154,8 +292,14 @@ void Runtime::clear_statechart_traces() noexcept {
 }
 
 std::vector<std::uint8_t> Runtime::save() const {
+  std::vector<RegionSaveReference> regions;
+  regions.reserve(region_references_.size());
+  for (const auto& [key, reference] : region_references_) {
+    static_cast<void>(key);
+    regions.push_back(reference);
+  }
   return encode_save({tick_, state_hash_, integer_state_, random_streams_.snapshot(), timers_.snapshot(),
-      statechart_initial_ == 0U ? std::nullopt : std::optional{statechart_.snapshot()}});
+      statechart_initial_ == 0U ? std::nullopt : std::optional{statechart_.snapshot()}, std::move(regions)});
 }
 
 RuntimeError Runtime::load_save(const std::span<const std::uint8_t> bytes) {
@@ -170,6 +314,9 @@ RuntimeError Runtime::load_save(const std::span<const std::uint8_t> bytes) {
   if (decoded.statechart.has_value() &&
       (statechart_initial_ == 0U || restored_statechart.restore(*decoded.statechart) != StatechartError::none)) {
     return RuntimeError::statechart_invalid;
+  }
+  if (const auto region_result = restore_region_references(decoded.regions); region_result != RuntimeError::none) {
+    return region_result;
   }
   SavedState next_replay_state = decoded;
   tick_ = decoded.tick;
@@ -203,6 +350,10 @@ RuntimeError Runtime::verify_replay(const std::span<const std::uint8_t> bytes) c
   verification.statechart_guards_ = statechart_guards_;
   verification.statechart_actions_ = statechart_actions_;
   if (statechart_initial_ != 0U && verification.install_statechart(statechart_states_, statechart_transitions_, statechart_initial_) != RuntimeError::none) return RuntimeError::statechart_invalid;
+  if (region_storage_config_.has_value() &&
+      verification.configure_region_storage(*region_storage_config_, false) != RuntimeError::none) {
+    return RuntimeError::replay_mismatch;
+  }
   if (!content_pack_source_.empty() &&
       verification.load_content_pack(content_pack_source_) != RuntimeError::none) {
     return RuntimeError::content_pack_invalid;
@@ -217,6 +368,7 @@ RuntimeError Runtime::verify_replay(const std::span<const std::uint8_t> bytes) c
   else verification.random_streams_.restore(decoded.initial_state.streams);
   verification.timers_.restore(decoded.initial_state.timers);
   if (decoded.initial_state.statechart.has_value() && verification.statechart_.restore(*decoded.initial_state.statechart) != StatechartError::none) return RuntimeError::replay_mismatch;
+  if (verification.restore_region_references(decoded.initial_state.regions) != RuntimeError::none) return RuntimeError::replay_mismatch;
   verification.replay_initial_state_ = decoded.initial_state;
   for (const auto& frame : decoded.frames) {
     for (const auto& input : frame.inputs) {
@@ -512,6 +664,7 @@ RuntimeError Runtime::apply_commands() {
       }
     }
   }
+  if (const auto result = apply_region_deltas(committed_hash); result != RuntimeError::none) return result;
   integer_state_.swap(committed);
   timers_ = committed_timers;
   presentation_events_.swap(committed_events);

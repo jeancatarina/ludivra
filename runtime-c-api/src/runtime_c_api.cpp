@@ -7,7 +7,9 @@
 #include <cstring>
 #include <limits>
 #include <new>
+#include <string>
 #include <type_traits>
+#include <utility>
 #include <vector>
 
 struct ludivra_runtime final {
@@ -46,6 +48,12 @@ ludivra_result to_public_result(const ludivra::kernel::RuntimeError error) noexc
       return LUDIVRA_ERROR_STATECHART_INVALID;
     case ludivra::kernel::RuntimeError::statechart_event_unhandled:
       return LUDIVRA_ERROR_STATECHART_EVENT_UNHANDLED;
+    case ludivra::kernel::RuntimeError::region_storage_unconfigured:
+      return LUDIVRA_ERROR_REGION_STORAGE_UNCONFIGURED;
+    case ludivra::kernel::RuntimeError::region_storage_failure:
+      return LUDIVRA_ERROR_REGION_STORAGE_FAILURE;
+    case ludivra::kernel::RuntimeError::region_identity_mismatch:
+      return LUDIVRA_ERROR_REGION_IDENTITY_MISMATCH;
   }
   return LUDIVRA_ERROR_INTERNAL;
 }
@@ -151,6 +159,12 @@ const char* ludivra_result_message(const ludivra_result result) {
       return "statechart definition or snapshot is invalid";
     case LUDIVRA_ERROR_STATECHART_EVENT_UNHANDLED:
       return "statechart event has no transition";
+    case LUDIVRA_ERROR_REGION_STORAGE_UNCONFIGURED:
+      return "region storage is not configured for this runtime";
+    case LUDIVRA_ERROR_REGION_STORAGE_FAILURE:
+      return "region storage operation failed";
+    case LUDIVRA_ERROR_REGION_IDENTITY_MISMATCH:
+      return "stored region generator identity does not match this runtime";
   }
   return "unknown result";
 }
@@ -345,6 +359,27 @@ ludivra_result ludivra_runtime_load_content_pack(
   }
   try {
     return to_public_result(runtime->value.load_content_pack({bytes, size}));
+  } catch (const std::bad_alloc&) {
+    return LUDIVRA_ERROR_ALLOCATION;
+  } catch (...) {
+    return LUDIVRA_ERROR_INTERNAL;
+  }
+}
+
+ludivra_result ludivra_runtime_configure_region_storage(
+    ludivra_runtime* runtime,
+    const ludivra_runtime_region_storage_config* config) {
+  if (runtime == nullptr || config == nullptr || config->struct_size != sizeof(ludivra_runtime_region_storage_config) ||
+      config->root_utf8 == nullptr || config->root_utf8_bytes == 0U || config->maximum_region_bytes < 128U ||
+      config->generator_id_utf8 == nullptr || config->generator_id_utf8_bytes == 0U ||
+      config->generator_id_utf8_bytes > 128U || config->generator_version == 0U) {
+    return LUDIVRA_ERROR_INVALID_ARGUMENT;
+  }
+  try {
+    ludivra::kernel::RuntimeRegionStorageConfig native{
+        {std::string(config->root_utf8, config->root_utf8_bytes), config->maximum_region_bytes},
+        std::string(config->generator_id_utf8, config->generator_id_utf8_bytes), config->generator_version};
+    return to_public_result(runtime->value.configure_region_storage(std::move(native)));
   } catch (const std::bad_alloc&) {
     return LUDIVRA_ERROR_ALLOCATION;
   } catch (...) {

@@ -8,7 +8,7 @@
 extern "C" {
 #endif
 
-#define LUDIVRA_RUNTIME_ABI_VERSION 5U
+#define LUDIVRA_RUNTIME_ABI_VERSION 6U
 #define LUDIVRA_STATECHART_TRACE_RECORD_SIZE 40U
 
 typedef struct ludivra_runtime ludivra_runtime;
@@ -30,7 +30,10 @@ typedef enum ludivra_result {
   LUDIVRA_ERROR_SYMBOL_CONFLICT = 13,
   LUDIVRA_ERROR_CONTENT_PACK_INVALID = 14,
   LUDIVRA_ERROR_STATECHART_INVALID = 15,
-  LUDIVRA_ERROR_STATECHART_EVENT_UNHANDLED = 16
+  LUDIVRA_ERROR_STATECHART_EVENT_UNHANDLED = 16,
+  LUDIVRA_ERROR_REGION_STORAGE_UNCONFIGURED = 17,
+  LUDIVRA_ERROR_REGION_STORAGE_FAILURE = 18,
+  LUDIVRA_ERROR_REGION_IDENTITY_MISMATCH = 19
 } ludivra_result;
 
 typedef struct ludivra_runtime_config {
@@ -43,6 +46,21 @@ typedef struct ludivra_runtime_config {
   /* Deterministic seed mixed into the initial state. */
   uint64_t seed;
 } ludivra_runtime_config;
+
+/* Runtime owns its region-store binding so Lua mutations commit at the same
+   authoritative boundary as integer state. Region payloads stay in LDWR; LDSV
+   and LDRP retain only canonical references and fingerprints. */
+typedef struct ludivra_runtime_region_storage_config {
+  /* Must be sizeof(ludivra_runtime_region_storage_config). */
+  uint32_t struct_size;
+  const char* root_utf8;
+  uint32_t root_utf8_bytes;
+  uint32_t reserved;
+  uint64_t maximum_region_bytes;
+  const char* generator_id_utf8;
+  uint32_t generator_id_utf8_bytes;
+  uint32_t generator_version;
+} ludivra_runtime_region_storage_config;
 
 typedef struct ludivra_logical_input {
   /* Must be sizeof(ludivra_logical_input). */
@@ -190,6 +208,12 @@ ludivra_result ludivra_runtime_load_content_pack(
     ludivra_runtime* runtime,
     const char* bytes,
     uint32_t size);
+
+/* Recovers a pending journal before enabling the declared generator identity.
+   Calling this replaces any previous runtime-owned binding. */
+ludivra_result ludivra_runtime_configure_region_storage(
+    ludivra_runtime* runtime,
+    const ludivra_runtime_region_storage_config* config);
 
 /* Replaces the current Lua gameplay module. Source must return a table with on_input(ctx, event). */
 ludivra_result ludivra_runtime_load_gameplay(

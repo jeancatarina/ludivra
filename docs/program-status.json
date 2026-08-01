@@ -4,7 +4,7 @@
   "currentFocus": {
     "phase": 7,
     "summary": "Persistir regiões regeneráveis com journal atômico, recovery e migrations sem duplicar o mundo procedural.",
-    "next": "Vincular region storage ao Runtime/Lua e save/replay, salvando somente deltas regionais no lifecycle do jogo."
+    "next": "Implementar salas loopback host-authoritative, protocolo N/N-1 e snapshots verificáveis antes dos adapters de rede."
   },
   "phases": [
     {
@@ -200,13 +200,12 @@
           "evidence": ["kernel/src/state_archive.cpp", "kernel/src/runtime.cpp", "tools/tests/wasm-equivalence.mjs"]
         },
         {
-          "summary": "Region storage nativo com blobs de deltas checksummed, substituição temporário+sync+rename, journal multi-região, recovery observável, compactação e migração v0→v1 sem salvar base procedural; ABI C v1 e CLI publicam write/recover/inspect/compact/migrate sem expor o arquivo.",
+          "summary": "Region storage nativo com blobs de deltas checksummed, substituição temporário+sync+rename, journal multi-região, recovery observável, compactação e migração v0→v1 sem salvar base procedural; ABI C, CLI e Runtime/Lua publicam escrita transacional, restore e referências checksummed em save/replay sem expor o arquivo.",
           "capabilities": ["spatial.region-storage"],
-          "evidence": ["kernel/src/region_storage.cpp", "runtime-c-api/include/ludivra/region_storage.h", "cli/src/commands/storage.ts", "tests/kernel/kernel_test.cpp", "tests/runtime/runtime_test.cpp", "cli/test/cli.test.mjs"]
+          "evidence": ["kernel/src/region_storage.cpp", "kernel/src/runtime.cpp", "runtime-c-api/include/ludivra/runtime.h", "cli/src/commands/storage.ts", "tests/kernel/kernel_test.cpp", "tests/runtime/runtime_test.cpp", "tests/fixtures/region-storage.lua", "cli/test/cli.test.mjs"]
         }
       ],
       "remaining": [
-        "Vincular region storage ao Runtime/Lua e save/replay, selecionando regiões por seed, generator version e deltas sem duplicar o mundo regenerável.",
         "Salas host-authoritative, transport adapters, late join, reconexão e host migration."
       ],
       "gate": "Save mundial sobrevive a crash e migration, replay localiza divergência e uma sala casual suporta seu lifecycle completo."
@@ -322,12 +321,12 @@
   ],
   "tasks": [
     {
-      "id": "PST-002",
+      "id": "NET-001",
       "priority": "high",
       "status": "in_progress",
       "phase": 7,
-      "work": "Vincular region storage ao Runtime/Lua e save/replay, selecionando e restaurando somente deltas regionais.",
-      "adrs": ["0023"]
+      "work": "Implementar salas loopback host-authoritative com handshake N/N-1, snapshots verificáveis e recusa explícita de estado enviado por cliente.",
+      "adrs": ["0024", "0038"]
     },
     {
       "id": "DESK-001",
