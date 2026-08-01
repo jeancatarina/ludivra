@@ -191,7 +191,7 @@ Preservar mundo e sessões player-hosted com compatibilidade e recuperação exp
 ### Entregue
 
 - Saves lógicos versionados, migrations básicas, replays, checkpoints e equivalência native/WASM. Capabilities: `runtime.save-replay`. Evidência: [kernel/src/state_archive.cpp](kernel/src/state_archive.cpp), [kernel/src/runtime.cpp](kernel/src/runtime.cpp), [tools/tests/wasm-equivalence.mjs](tools/tests/wasm-equivalence.mjs).
-- Region storage nativo com blobs de deltas checksummed, substituição temporário+sync+rename, journal multi-região, recovery observável, compactação e migração v0→v1 sem salvar base procedural. Capabilities: `spatial.region-storage`. Evidência: [kernel/src/region_storage.cpp](kernel/src/region_storage.cpp), [kernel/src/region_storage.hpp](kernel/src/region_storage.hpp), [tests/kernel/kernel_test.cpp](tests/kernel/kernel_test.cpp).
+- Region storage nativo com blobs de deltas checksummed, substituição temporário+sync+rename, journal multi-região, recovery observável, compactação e migração v0→v1 sem salvar base procedural; ABI C v1 publica operações sem expor o arquivo. Capabilities: `spatial.region-storage`. Evidência: [kernel/src/region_storage.cpp](kernel/src/region_storage.cpp), [runtime-c-api/include/ludivra/region_storage.h](runtime-c-api/include/ludivra/region_storage.h), [tests/kernel/kernel_test.cpp](tests/kernel/kernel_test.cpp), [tests/runtime/runtime_test.cpp](tests/runtime/runtime_test.cpp).
 
 ### Falta
 

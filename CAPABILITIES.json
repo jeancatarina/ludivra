@@ -665,6 +665,7 @@
       ],
       "contracts": [
         "kernel/src/region_storage.hpp",
+        "runtime-c-api/include/ludivra/region_storage.h",
         "docs/adr/0023-world-persistence-and-region-storage.md"
       ],
       "examples": [
@@ -685,7 +686,7 @@
         },
         {
           "code": "WORLD_REGION_STORAGE_CLI_UNAVAILABLE",
-          "message": "Inspect, compact e migrate existem no boundary nativo, mas os comandos CLI e o adapter C/Web ainda não foram publicados."
+          "message": "Inspect, compact e migrate existem nos boundaries kernel/C nativos, mas os comandos CLI e o adapter Web ainda não foram publicados."
         }
       ]
     },

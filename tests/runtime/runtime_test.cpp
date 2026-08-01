@@ -1,10 +1,12 @@
 #include "ludivra/runtime.h"
+#include "ludivra/region_storage.h"
 #include "ludivra/spatial.h"
 
 #include "lua_sandbox.hpp"
 
 #include <cinttypes>
 #include <cstdio>
+#include <filesystem>
 #include <fstream>
 #include <sstream>
 #include <string>
@@ -172,6 +174,48 @@ void check_regional_world(TestContext& context) {
   ludivra_spatial_world_destroy(world);
 }
 
+void check_region_storage_c_api(TestContext& context) {
+  const std::filesystem::path root = std::filesystem::temp_directory_path() / "ludivra-region-storage-c-api-test";
+  std::error_code filesystem_error;
+  std::filesystem::remove_all(root, filesystem_error);
+  const std::string root_text = root.string();
+  const ludivra_region_storage_config config{sizeof(ludivra_region_storage_config), root_text.data(),
+      static_cast<uint32_t>(root_text.size()), 0U, 1U * 1024U * 1024U};
+  ludivra_region_storage* storage = nullptr;
+  context.expect(ludivra_region_storage_abi_version() == 1U &&
+      ludivra_region_storage_create(&config, &storage) == LUDIVRA_REGION_STORAGE_OK && storage != nullptr,
+      "the native region-storage C boundary creates an opaque store");
+  const uint8_t delta_bytes[]{0x01U, 0x02U};
+  const uint8_t entities[]{0x10U};
+  const ludivra_region_storage_delta delta{0, 0, 0, {delta_bytes, 2U}};
+  const char generator[] = "ember-vault";
+  const ludivra_region_storage_record record{sizeof(ludivra_region_storage_record), {7U, 0U, 0, 0, 0}, generator, 11U,
+      3U, 41U, &delta, 1U, {entities, 1U}, {nullptr, 0U}, {nullptr, 0U}};
+  context.expect(ludivra_region_storage_write(storage, &record) == LUDIVRA_REGION_STORAGE_OK,
+      "the C boundary writes a typed regional delta without exposing generated base chunks");
+  uint32_t count = 0U;
+  context.expect(ludivra_region_storage_inspect_count(storage, &count) == LUDIVRA_REGION_STORAGE_OK && count == 1U,
+      "C inspection reports deterministic region count");
+  ludivra_region_storage_key short_buffer{};
+  context.expect(ludivra_region_storage_inspect_write(storage, &short_buffer, 0U, &count) == LUDIVRA_REGION_STORAGE_ERROR_BUFFER_TOO_SMALL &&
+      count == 1U,
+      "C inspection retains required count when the region-key output buffer is too short");
+  ludivra_region_storage_key key{};
+  context.expect(ludivra_region_storage_inspect_write(storage, &key, 1U, &count) == LUDIVRA_REGION_STORAGE_OK &&
+      key.dimension == 7U && key.x == 0,
+      "C inspection writes canonical regional keys");
+  uint32_t migrated = 1U;
+  context.expect(ludivra_region_storage_compact(storage, &key) == LUDIVRA_REGION_STORAGE_OK &&
+      ludivra_region_storage_migrate(storage, &key, &migrated) == LUDIVRA_REGION_STORAGE_OK && migrated == 0U,
+      "C compact and migrate execute the real native storage operations");
+  ludivra_region_storage_recovery recovery{sizeof(ludivra_region_storage_recovery), 0U, 0U};
+  context.expect(ludivra_region_storage_recover(storage, &recovery) == LUDIVRA_REGION_STORAGE_OK && recovery.replayed_regions == 0U,
+      "C recovery reports its journal result without silently changing a clean store");
+  ludivra_region_storage_destroy(storage);
+  std::filesystem::remove_all(root, filesystem_error);
+  context.expect(!filesystem_error, "region-storage C API fixture leaves no filesystem artifacts");
+}
+
 }  // namespace
 
 int main() {
@@ -181,6 +225,7 @@ int main() {
       "the reachable Lua SDK surface matches its versioned contract");
   context.expect(ludivra_runtime_abi_version() == 5U, "ABI version is stable");
   check_regional_world(context);
+  check_region_storage_c_api(context);
   context.expect(
       ludivra_runtime_create(nullptr, nullptr) == LUDIVRA_ERROR_INVALID_ARGUMENT,
       "invalid creation arguments are rejected");

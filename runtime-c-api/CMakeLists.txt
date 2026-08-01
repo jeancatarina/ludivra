@@ -1,5 +1,6 @@
 add_library(ludivra_runtime STATIC
   src/runtime_c_api.cpp
+  src/region_storage_c_api.cpp
   src/spatial_c_api.cpp
 )
 

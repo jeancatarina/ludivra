@@ -200,9 +200,9 @@
           "evidence": ["kernel/src/state_archive.cpp", "kernel/src/runtime.cpp", "tools/tests/wasm-equivalence.mjs"]
         },
         {
-          "summary": "Region storage nativo com blobs de deltas checksummed, substituição temporário+sync+rename, journal multi-região, recovery observável, compactação e migração v0→v1 sem salvar base procedural.",
+          "summary": "Region storage nativo com blobs de deltas checksummed, substituição temporário+sync+rename, journal multi-região, recovery observável, compactação e migração v0→v1 sem salvar base procedural; ABI C v1 publica operações sem expor o arquivo.",
           "capabilities": ["spatial.region-storage"],
-          "evidence": ["kernel/src/region_storage.cpp", "kernel/src/region_storage.hpp", "tests/kernel/kernel_test.cpp"]
+          "evidence": ["kernel/src/region_storage.cpp", "runtime-c-api/include/ludivra/region_storage.h", "tests/kernel/kernel_test.cpp", "tests/runtime/runtime_test.cpp"]
         }
       ],
       "remaining": [
