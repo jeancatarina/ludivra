@@ -17,6 +17,7 @@ export interface GameManifest {
   };
   statecharts?: {
     charts: Array<{ id: string; source: string }>;
+    events: Array<{ id: string; actionId: number }>;
     guards: Array<{ id: string }>;
     actions: Array<{ id: string }>;
   };

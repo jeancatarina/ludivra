@@ -84,7 +84,7 @@
     "statecharts": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["charts", "guards", "actions"],
+      "required": ["charts", "events", "guards", "actions"],
       "properties": {
         "charts": {
           "type": "array",
@@ -98,6 +98,7 @@
             }
           }
         },
+        "events": { "type": "array", "items": { "type": "object", "additionalProperties": false, "required": ["id", "actionId"], "properties": { "id": { "type": "string", "pattern": "^[a-z][a-z0-9.-]*$" }, "actionId": { "type": "integer", "minimum": 1 } } } },
         "guards": { "type": "array", "items": { "type": "object", "additionalProperties": false, "required": ["id"], "properties": { "id": { "type": "string", "pattern": "^[a-z][a-z0-9.-]*$" } } } },
         "actions": { "type": "array", "items": { "type": "object", "additionalProperties": false, "required": ["id"], "properties": { "id": { "type": "string", "pattern": "^[a-z][a-z0-9.-]*$" } } } }
       }

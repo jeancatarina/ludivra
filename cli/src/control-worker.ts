@@ -75,6 +75,7 @@ const contentPackBytes = await readFile(resolve(projectDirectory, ".ludivra/cont
 const contentHasher = createHash("sha256").update(manifestText).update("\0").update(gameplaySource);
 contentHasher.update("\0").update(contentPackBytes);
 const contentHash = contentHasher.digest("hex");
+const compiledDocuments = JSON.parse(new TextDecoder().decode(contentPackBytes)).sections.documents.value as Record<string, unknown>;
 const moduleUrl = pathToFileURL(resolve(engineRoot, "runtime-wasm/generated/ludivra-runtime.mjs")).href;
 const moduleFactory = (await import(moduleUrl)).default as RuntimeModuleFactory;
 let runtime: LudivraRuntime | undefined;
@@ -88,6 +89,29 @@ let timeline: TimelineEntry[] = [];
 let uiProjectors: UiInspectionProjector[] = [];
 let latestUiProjections = new Map<string, UiInspectionProjection>();
 let gameProjectorId: string | undefined;
+
+function installDeclaredStatechart(target: LudivraRuntime): void {
+  const declaration = manifest.statecharts;
+  if (declaration === undefined) return;
+  const graph = compiledDocuments["ludivra.statecharts"] as { charts?: Array<Record<string, unknown>> } | undefined;
+  const chart = graph?.charts?.[0];
+  if (graph?.charts?.length !== 1 || chart === undefined) throw new Error("STATECHART_SCHEMA_INVALID");
+  const states = chart.states as Array<{ id: string; parent?: string; history: boolean }>;
+  const transitions = chart.transitions as Array<{ id: string; from: string; to: string; event?: string; priority: number; kind: "external" | "internal" }>;
+  const stateIds = new Map(states.map(({ id }, index) => [id, index + 1]));
+  const eventIds = new Map(declaration.events.map(({ id, actionId }) => [id, actionId]));
+  target.installStatechart(
+    states.map((state) => state.parent === undefined
+      ? { id: stateIds.get(state.id)!, shallowHistory: state.history }
+      : { id: stateIds.get(state.id)!, parentId: stateIds.get(state.parent)!, shallowHistory: state.history }),
+    transitions.map((transition, index) => {
+      const eventActionId = transition.event === undefined ? undefined : eventIds.get(transition.event);
+      if (eventActionId === undefined || stateIds.get(transition.from) === undefined || stateIds.get(transition.to) === undefined) throw new Error("STATECHART_SCHEMA_INVALID");
+      return { id: index + 1, fromState: stateIds.get(transition.from)!, eventActionId, toState: stateIds.get(transition.to)!, priority: transition.priority, kind: transition.kind };
+    }),
+    stateIds.get(chart.initial as string)!
+  );
+}
 
 function logicalState(): LogicalStateSnapshot {
   if (runtime === undefined) throw new Error("CONTROL_SCENARIO_NOT_LOADED");
@@ -244,6 +268,7 @@ async function handle(request: ControlRequest): Promise<ControlResponse> {
       const payload = request.payload as { scenarioId: string; seed: number };
       runtime = await LudivraRuntime.create(moduleFactory, { tickRateHz: 60, maxPendingInputs: 4096, seed: BigInt(payload.seed) });
       runtime.loadContentPack(contentPackBytes);
+      installDeclaredStatechart(runtime);
       // Same declaration the BrowserHost makes: both hosts resolve the manifest
       // symbols, so a script behaves identically headless and on screen.
       for (const definition of manifest.inspection.integerStates) {

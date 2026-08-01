@@ -253,7 +253,9 @@ RuntimeError Runtime::commit_tick() {
   for (const auto& input : pending_inputs_) {
     if (statechart_initial_ != 0U) {
       const auto transition = statechart_.dispatch(input.action_id);
-      if (transition.error == StatechartError::event_unhandled) { commands_.clear(); return RuntimeError::statechart_event_unhandled; }
+      // Inputs outside this chart's declared event vocabulary remain available to
+      // gameplay; an explicit chart dispatch still reports event_unhandled.
+      if (transition.error == StatechartError::event_unhandled) continue;
       if (transition.error != StatechartError::none || !transition.chosen.has_value()) { commands_.clear(); return RuntimeError::statechart_invalid; }
       mix_byte(state_hash_, 0xF1U);
       mix_u32(state_hash_, transition.chosen->id);
