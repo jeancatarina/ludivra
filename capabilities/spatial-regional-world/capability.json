@@ -22,8 +22,8 @@
   ],
   "limitations": [
     {
-      "code": "SPATIAL_REGION_STORAGE_UNAVAILABLE",
-      "message": "A posição regional é uma superfície C/Web em memória; persistência de regiões, journal e recovery pertencem à Fase 7."
+      "code": "SPATIAL_REGION_STORAGE_BINDING_UNAVAILABLE",
+      "message": "O kernel possui region storage com journal e recovery, mas a superfície C/Web em memória ainda não o vincula ao runtime ou ao projeto."
     },
     {
       "code": "SPATIAL_MOTION_BINDING_UNAVAILABLE",

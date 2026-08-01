@@ -3,6 +3,7 @@
 #include "mass_reference.hpp"
 #include "navigation_reference.hpp"
 #include "physics_reference.hpp"
+#include "region_storage.hpp"
 #include "upstream_physics.hpp"
 #include "random_streams.hpp"
 #include "statechart_runtime.hpp"
@@ -15,6 +16,7 @@
 
 #include <cstdint>
 #include <cstdio>
+#include <filesystem>
 #include <fstream>
 #include <limits>
 #include <sstream>
@@ -84,6 +86,13 @@ using ludivra::kernel::RegionalWorldConfig;
 using ludivra::kernel::SpatialEntityLocation;
 using ludivra::kernel::SpatialGlobalPosition;
 using ludivra::kernel::RegionalWorldError;
+using ludivra::kernel::RegionRecoveryReport;
+using ludivra::kernel::RegionStorage;
+using ludivra::kernel::RegionStorageConfig;
+using ludivra::kernel::RegionStorageError;
+using ludivra::kernel::StoredChunkDelta;
+using ludivra::kernel::StoredRegion;
+using ludivra::kernel::StoredRegionKey;
 using ludivra::kernel::ReferencePhysics;
 using ludivra::kernel::PhysicsAuthority;
 using ludivra::kernel::PhysicsBodyDefinition;
@@ -659,6 +668,86 @@ void check_reference_mass(TestContext& context) {
       "only authoritative agents and their declared levels contribute to the Mass hash");
 }
 
+void check_region_storage(TestContext& context) {
+  const std::filesystem::path root = std::filesystem::temp_directory_path() / "ludivra-region-storage-kernel-test";
+  std::error_code filesystem_error;
+  std::filesystem::remove_all(root, filesystem_error);
+  RegionStorage storage({root, 1U * 1024U * 1024U});
+  const StoredRegion first{{7U, 0, 0, 0}, "ember-vault", 3U, 41U,
+      {{1, 0, 0, {0x01U}}, {0, 0, 0, {0x02U, 0x03U}}}, {0x10U}, {0x20U}, {0x30U}};
+  context.expect(storage.write_region(first) == RegionStorageError::none,
+      "a region persists only declared deltas and persistent payloads through an atomic replacement");
+  StoredRegion restored{};
+  context.expect(storage.read_region(first.key, restored) == RegionStorageError::none && restored.seed == 41U &&
+      restored.deltas.size() == 2U && restored.deltas[0].chunk_x == 0 && restored.construction_graph == std::vector<std::uint8_t>{0x30U},
+      "region reads preserve generator identity and canonicalize delta order without storing generated base data");
+  context.expect(storage.inspect().regions == std::vector<StoredRegionKey>{first.key},
+      "storage inspection discovers the persisted regional key deterministically");
+
+  const StoredRegion second{{7U, 1, 0, 0}, "ember-vault", 3U, 41U, {{0, 0, 0, {0x04U}}}, {}, {0x40U}, {}};
+  const StoredRegion third{{7U, 2, 0, 0}, "ember-vault", 3U, 41U, {{0, 0, 0, {0x05U}}}, {0x50U}, {}, {}};
+  const std::array transaction{second, third};
+  context.expect(storage.begin_transaction(transaction) == RegionStorageError::none && storage.inspect().pending_journal,
+      "a multi-region write records a complete intent journal before any region is applied");
+  RegionStorage reopened({root, 1U * 1024U * 1024U});
+  const RegionRecoveryReport recovery = reopened.recover();
+  context.expect(recovery.error == RegionStorageError::none && recovery.replayed_regions == 2U &&
+      reopened.read_region(second.key, restored) == RegionStorageError::none && reopened.read_region(third.key, restored) == RegionStorageError::none,
+      "opening after an interrupted transaction replays every journaled region and reports recovery");
+
+  {
+    std::ofstream incomplete(root / "journal.ldwj.tmp", std::ios::binary | std::ios::trunc);
+    incomplete.put('x');
+  }
+  const RegionRecoveryReport incomplete = reopened.recover();
+  context.expect(incomplete.error == RegionStorageError::journal_incomplete && incomplete.discarded_incomplete_journal,
+      "an uncommitted temporary journal is discarded with an observable recovery result");
+
+  std::vector<std::uint8_t> legacy{'L', 'D', 'W', 'R'};
+  const auto legacy_u32 = [&legacy](const std::uint32_t value) {
+    for (std::uint32_t shift = 0U; shift < 32U; shift += 8U) legacy.push_back(static_cast<std::uint8_t>(value >> shift));
+  };
+  const auto legacy_u64 = [&legacy](const std::uint64_t value) {
+    for (std::uint32_t shift = 0U; shift < 64U; shift += 8U) legacy.push_back(static_cast<std::uint8_t>(value >> shift));
+  };
+  legacy_u32(0U);
+  legacy_u32(7U);
+  legacy_u32(3U);
+  legacy_u32(0U);
+  legacy_u32(0U);
+  legacy_u32(11U);
+  legacy.insert(legacy.end(), {'e', 'm', 'b', 'e', 'r', '-', 'v', 'a', 'u', 'l', 't'});
+  legacy_u32(3U);
+  legacy_u64(41U);
+  legacy_u32(0U);
+  legacy_u32(1U);
+  legacy.push_back(0x60U);
+  legacy_u32(1U);
+  legacy.push_back(0x70U);
+  std::uint64_t checksum = 14695981039346656037ULL;
+  for (const std::uint8_t byte : legacy) checksum = (checksum ^ byte) * 1099511628211ULL;
+  legacy_u64(checksum);
+  {
+    std::ofstream legacy_file(root / "region-d7-x3-y0-z0.ldwr", std::ios::binary | std::ios::trunc);
+    legacy_file.write(reinterpret_cast<const char*>(legacy.data()), static_cast<std::streamsize>(legacy.size()));
+  }
+  bool migrated = false;
+  const StoredRegionKey legacy_key{7U, 3, 0, 0};
+  context.expect(reopened.migrate_region(legacy_key, migrated) == RegionStorageError::none && migrated &&
+      reopened.read_region(legacy_key, restored) == RegionStorageError::none && restored.summary.empty() &&
+      restored.persistent_entities == std::vector<std::uint8_t>{0x60U} && restored.construction_graph == std::vector<std::uint8_t>{0x70U},
+      "an explicit v0-to-v1 migration adds an empty summary without reinterpreting stored deltas or entities");
+
+  {
+    std::ofstream corrupt(root / "region-d7-x0-y0-z0.ldwr", std::ios::binary | std::ios::trunc);
+    corrupt.put('x');
+  }
+  context.expect(reopened.read_region(first.key, restored) == RegionStorageError::checksum_mismatch,
+      "a corrupt region is rejected by checksum instead of being interpreted as world content");
+  std::filesystem::remove_all(root, filesystem_error);
+  context.expect(!filesystem_error, "region-storage test artifacts are removed after the recovery fixture");
+}
+
 void check_generation(TestContext& context) {
   const auto origin = chunk_at(0, 0);
   context.expect(
@@ -830,6 +919,7 @@ int main() {
   check_reference_physics(context);
   check_upstream_physics(context);
   check_reference_mass(context);
+  check_region_storage(context);
   check_generation(context);
   check_streaming(context);
   check_statechart_runtime(context);

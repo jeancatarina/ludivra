@@ -51,6 +51,12 @@ O armazenamento mundial declara sua versão. Versão não suportada é `WORLD_SA
 
 Códigos: `WORLD_SAVE_JOURNAL_INCOMPLETE`, `WORLD_SAVE_CHECKSUM_MISMATCH`, `WORLD_SAVE_VERSION_UNSUPPORTED`, `WORLD_SAVE_GROWTH_BUDGET_EXCEEDED`, `WORLD_REGION_ORPHANED`, `WORLD_SAVE_WRITE_NOT_ATOMIC`.
 
+### Boundary nativo inicial
+
+`RegionStorage` implementa o primeiro boundary nativo: `LDWR` armazena chave regional, identidade/versionamento do gerador e apenas deltas, entidades persistentes, resumo e Construction Graph — nunca uma base gerada. Cada blob possui FNV e tamanho limitado. Transações multi-região registram `LDWJ` antes dos arquivos regionais; `recover()` reaplica um journal completo, remove um temporário incompleto com relatório explícito e recusa checksum inválido. O formato v0, que não possuía resumo regional, migra explicitamente para v1 com resumo vazio.
+
+O vínculo desse boundary ao Runtime, Lua, adapter C/Web e comandos CLI permanece uma entrega posterior da Fase 7; a existência do arquivo não concede persistência mundial automaticamente a um jogo.
+
 ## Consequências
 
 - o save lógico atual continua válido e não precisa de migração para o mundo existir;

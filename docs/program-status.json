@@ -198,10 +198,15 @@
           "summary": "Saves lógicos versionados, migrations básicas, replays, checkpoints e equivalência native/WASM.",
           "capabilities": ["runtime.save-replay"],
           "evidence": ["kernel/src/state_archive.cpp", "kernel/src/runtime.cpp", "tools/tests/wasm-equivalence.mjs"]
+        },
+        {
+          "summary": "Region storage nativo com blobs de deltas checksummed, substituição temporário+sync+rename, journal multi-região, recovery observável, compactação e migração v0→v1 sem salvar base procedural.",
+          "capabilities": ["spatial.region-storage"],
+          "evidence": ["kernel/src/region_storage.cpp", "kernel/src/region_storage.hpp", "tests/kernel/kernel_test.cpp"]
         }
       ],
       "remaining": [
-        "Region storage atômico com journal, compactação, recovery e migrations.",
+        "Vincular region storage ao Runtime/Lua, save/replay e comandos CLI de inspect, compact e migrate.",
         "Salvamento por seed, generator version e deltas sem duplicar o mundo regenerável.",
         "Salas host-authoritative, transport adapters, late join, reconexão e host migration."
       ],
@@ -323,7 +328,7 @@
       "status": "in_progress",
       "phase": 7,
       "work": "Implementar region storage atômico com journal, compactação, recovery e migrations versionadas.",
-      "adrs": ["0023", "0038"]
+      "adrs": ["0023"]
     },
     {
       "id": "DESK-001",

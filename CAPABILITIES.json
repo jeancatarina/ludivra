@@ -656,6 +656,40 @@
       ]
     },
     {
+      "id": "spatial.region-storage",
+      "status": "experimental",
+      "version": "0.1.0",
+      "owner": "kernel",
+      "targets": [
+        "native-headless"
+      ],
+      "contracts": [
+        "kernel/src/region_storage.hpp",
+        "docs/adr/0023-world-persistence-and-region-storage.md"
+      ],
+      "examples": [
+        "tests/kernel/kernel_test.cpp"
+      ],
+      "dependencies": [
+        "spatial.regional-world",
+        "runtime.save-replay"
+      ],
+      "verification": [
+        "pnpm test:native",
+        "pnpm build:wasm"
+      ],
+      "limitations": [
+        {
+          "code": "WORLD_REGION_STORAGE_RUNTIME_BINDING_UNAVAILABLE",
+          "message": "O armazenamento nativo já preserva deltas e journal, mas o Runtime/Lua ainda não seleciona regiões para save ou replay de jogo."
+        },
+        {
+          "code": "WORLD_REGION_STORAGE_CLI_UNAVAILABLE",
+          "message": "Inspect, compact e migrate existem no boundary nativo, mas os comandos CLI e o adapter C/Web ainda não foram publicados."
+        }
+      ]
+    },
+    {
       "id": "spatial.regional-world",
       "status": "experimental",
       "version": "0.1.0",
@@ -685,8 +719,8 @@
       ],
       "limitations": [
         {
-          "code": "SPATIAL_REGION_STORAGE_UNAVAILABLE",
-          "message": "A posição regional é uma superfície C/Web em memória; persistência de regiões, journal e recovery pertencem à Fase 7."
+          "code": "SPATIAL_REGION_STORAGE_BINDING_UNAVAILABLE",
+          "message": "O kernel possui region storage com journal e recovery, mas a superfície C/Web em memória ainda não o vincula ao runtime ou ao projeto."
         },
         {
           "code": "SPATIAL_MOTION_BINDING_UNAVAILABLE",

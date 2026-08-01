@@ -29,7 +29,7 @@
 | 4 | Autoria text-first de gameplay, UI e conteúdo | `CONCLUÍDA` | nenhuma no gate atual |
 | 5 | Runtime espacial e mundo procedural | `CONCLUÍDA` | nenhuma no gate atual |
 | 6 | Motion, física e Mass Simulation | `CONCLUÍDA` | nenhuma no gate atual |
-| 7 | Persistência, replays e multiplayer player-hosted | `EM ANDAMENTO` | Region storage atômico com journal, compactação, recovery e migrations. |
+| 7 | Persistência, replays e multiplayer player-hosted | `EM ANDAMENTO` | Vincular region storage ao Runtime/Lua, save/replay e comandos CLI de inspect, compact e migrate. |
 | 8 | Renderer, UI, áudio e apresentação escalável | `PARCIAL` | Perfis web-compatible, desktop-compatible e desktop-high com fallback gráfico observado. |
 | 9 | Procedural Construction Runtime | `PLANEJADA` | Construction Graph, comandos semânticos, undo/redo e replay. |
 | 10 | Procedural Forges | `PARCIAL` | Completar música, stems, previews gráficos e runtime/cooker do Audio Forge. |
@@ -191,10 +191,11 @@ Preservar mundo e sessões player-hosted com compatibilidade e recuperação exp
 ### Entregue
 
 - Saves lógicos versionados, migrations básicas, replays, checkpoints e equivalência native/WASM. Capabilities: `runtime.save-replay`. Evidência: [kernel/src/state_archive.cpp](kernel/src/state_archive.cpp), [kernel/src/runtime.cpp](kernel/src/runtime.cpp), [tools/tests/wasm-equivalence.mjs](tools/tests/wasm-equivalence.mjs).
+- Region storage nativo com blobs de deltas checksummed, substituição temporário+sync+rename, journal multi-região, recovery observável, compactação e migração v0→v1 sem salvar base procedural. Capabilities: `spatial.region-storage`. Evidência: [kernel/src/region_storage.cpp](kernel/src/region_storage.cpp), [kernel/src/region_storage.hpp](kernel/src/region_storage.hpp), [tests/kernel/kernel_test.cpp](tests/kernel/kernel_test.cpp).
 
 ### Falta
 
-- Region storage atômico com journal, compactação, recovery e migrations.
+- Vincular region storage ao Runtime/Lua, save/replay e comandos CLI de inspect, compact e migrate.
 - Salvamento por seed, generator version e deltas sem duplicar o mundo regenerável.
 - Salas host-authoritative, transport adapters, late join, reconexão e host migration.
 

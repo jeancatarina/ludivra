@@ -11,6 +11,7 @@ add_library(ludivra_kernel STATIC
   src/mass_reference.cpp
   src/random_streams.cpp
   src/regional_world.cpp
+  src/region_storage.cpp
   src/runtime.cpp
   src/state_archive.cpp
   src/statechart_runtime.cpp
