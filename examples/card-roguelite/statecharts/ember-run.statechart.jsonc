@@ -1,0 +1,18 @@
+{
+  "$schema": "https://ludivra.dev/schemas/statechart/v1",
+  "schemaVersion": 1,
+  "id": "statechart.ember-run",
+  "initial": "idle",
+  "events": ["start", "enemy-defeated", "reward-picked"],
+  "states": [
+    { "id": "idle", "entryActions": [], "exitActions": [], "history": false },
+    { "id": "combat", "entryActions": ["action.begin-combat"], "exitActions": [], "history": false },
+    { "id": "reward", "entryActions": ["action.grant-reward"], "exitActions": [], "history": false },
+    { "id": "victory", "entryActions": ["action.finish-run"], "exitActions": [], "history": false }
+  ],
+  "transitions": [
+    { "id": "start-run", "from": "idle", "to": "combat", "event": "start", "priority": 0, "kind": "external", "actions": [] },
+    { "id": "earn-reward", "from": "combat", "to": "reward", "event": "enemy-defeated", "priority": 0, "kind": "external", "guard": "guard.enemy-defeated", "actions": [] },
+    { "id": "finish-run", "from": "reward", "to": "victory", "event": "reward-picked", "priority": 0, "kind": "external", "actions": [] }
+  ]
+}

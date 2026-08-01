@@ -1,0 +1,53 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ludivra.dev/schemas/statechart/v1",
+  "title": "Ludivra deterministic gameplay statechart",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["$schema", "schemaVersion", "id", "initial", "events", "states", "transitions"],
+  "properties": {
+    "$schema": { "const": "https://ludivra.dev/schemas/statechart/v1" },
+    "schemaVersion": { "const": 1 },
+    "id": { "type": "string", "pattern": "^statechart\\.[a-z][a-z0-9.-]*$" },
+    "initial": { "$ref": "#/$defs/id" },
+    "events": { "type": "array", "items": { "$ref": "#/$defs/id" } },
+    "states": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/state" } },
+    "transitions": { "type": "array", "items": { "$ref": "#/$defs/transition" } }
+  },
+  "$defs": {
+    "id": { "type": "string", "pattern": "^[a-z][a-z0-9.-]*$" },
+    "actionIds": { "type": "array", "items": { "$ref": "#/$defs/id" } },
+    "state": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "entryActions", "exitActions", "history"],
+      "properties": {
+        "id": { "$ref": "#/$defs/id" },
+        "parent": { "$ref": "#/$defs/id" },
+        "entryActions": { "$ref": "#/$defs/actionIds" },
+        "exitActions": { "$ref": "#/$defs/actionIds" },
+        "history": { "type": "boolean" }
+      }
+    },
+    "transition": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "from", "to", "priority", "kind", "actions"],
+      "properties": {
+        "id": { "$ref": "#/$defs/id" },
+        "from": { "$ref": "#/$defs/id" },
+        "to": { "$ref": "#/$defs/id" },
+        "event": { "$ref": "#/$defs/id" },
+        "afterTicks": { "type": "integer", "minimum": 1 },
+        "priority": { "type": "integer", "minimum": 0 },
+        "kind": { "enum": ["external", "internal"] },
+        "guard": { "$ref": "#/$defs/id" },
+        "actions": { "$ref": "#/$defs/actionIds" }
+      },
+      "oneOf": [
+        { "required": ["event"], "not": { "required": ["afterTicks"] } },
+        { "required": ["afterTicks"], "not": { "required": ["event"] } }
+      ]
+    }
+  }
+}

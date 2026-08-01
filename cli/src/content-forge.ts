@@ -8,6 +8,9 @@ import {
   PREFAB_SCHEMA_ID,
   SCENE_GRAPH_DOCUMENT_ID,
   SCENE_SCHEMA_ID,
+  compileStatecharts,
+  STATECHART_SCHEMA_ID,
+  STATECHARTS_DOCUMENT_ID,
   type ContentDocumentInput,
   type SceneGraphSource,
   type SymbolOrigin
@@ -67,7 +70,7 @@ export async function ensureContentPack(project: string): Promise<ContentPackRes
   }
 
   const compositionSources = async (
-    kind: "scene" | "prefab",
+    kind: "scene" | "prefab" | "statechart",
     descriptors: ReadonlyArray<{ id: string; source: string }>,
     schema: string
   ): Promise<SceneGraphSource[]> => {
@@ -80,7 +83,7 @@ export async function ensureContentPack(project: string): Promise<ContentPackRes
         const value = parse(source, errors) as unknown;
         if (errors.length > 0) {
           diagnostics.push({
-            code: "SCENE_SCHEMA_INVALID",
+            code: kind === "statechart" ? "STATECHART_SCHEMA_INVALID" : "SCENE_SCHEMA_INVALID",
             severity: "error",
             message: `${descriptor.source} is not valid JSONC`,
             file: descriptor.source
@@ -91,7 +94,7 @@ export async function ensureContentPack(project: string): Promise<ContentPackRes
         documents.push({ id: descriptor.id, schema, file: descriptor.source, source, value });
       } catch (error) {
         diagnostics.push({
-          code: "SCENE_SCHEMA_INVALID",
+          code: kind === "statechart" ? "STATECHART_SCHEMA_INVALID" : "SCENE_SCHEMA_INVALID",
           severity: "error",
           message: error instanceof Error ? error.message : `Unable to read ${descriptor.source}`,
           file: descriptor.source
@@ -115,6 +118,21 @@ export async function ensureContentPack(project: string): Promise<ContentPackRes
     } catch (error) {
       const message = error instanceof Error ? error.message : "Scene graph compilation failed";
       const code = message.match(/^(?:SCENE|PREFAB)_[A-Z_]+/)?.[0] ?? "SCENE_SCHEMA_INVALID";
+      diagnostics.push({ code, severity: "error", message });
+    }
+  }
+  const charts = await compositionSources("statechart", manifest.statecharts?.charts ?? [], STATECHART_SCHEMA_ID);
+  if (manifest.statecharts !== undefined) {
+    try {
+      const statecharts = compileStatecharts({
+        charts,
+        guards: manifest.statecharts.guards.map(({ id }) => id),
+        actions: manifest.statecharts.actions.map(({ id }) => id)
+      });
+      documents.push({ id: STATECHARTS_DOCUMENT_ID, file: "generated:statecharts", source: new TextDecoder().decode(statecharts.bytes), value: statecharts.charts });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Statechart compilation failed";
+      const code = message.match(/^STATECHART_[A-Z_]+/)?.[0] ?? "STATECHART_SCHEMA_INVALID";
       diagnostics.push({ code, severity: "error", message });
     }
   }

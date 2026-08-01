@@ -15,6 +15,11 @@ export interface GameManifest {
     scenes: Array<{ id: string; source: string }>;
     prefabs: Array<{ id: string; source: string }>;
   };
+  statecharts?: {
+    charts: Array<{ id: string; source: string }>;
+    guards: Array<{ id: string }>;
+    actions: Array<{ id: string }>;
+  };
   inputs: Array<{ id: string; label: string; actionId: number; keys: string[] }>;
   timers?: Array<{ id: string; key: number }>;
   inspection: { integerStates: Array<{ id: string; label: string; key: number }> };

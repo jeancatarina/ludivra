@@ -25,6 +25,11 @@
       { "id": "prefab.ember-spark", "source": "prefabs/ember-spark.prefab.jsonc" }
     ]
   },
+  "statecharts": {
+    "charts": [{ "id": "statechart.ember-run", "source": "statecharts/ember-run.statechart.jsonc" }],
+    "guards": [{ "id": "guard.enemy-defeated" }],
+    "actions": [{ "id": "action.begin-combat" }, { "id": "action.grant-reward" }, { "id": "action.finish-run" }]
+  },
   "inputs": [
     { "id": "start-run", "label": "Iniciar expedição", "actionId": 1, "keys": ["Enter"] },
     { "id": "play-strike", "label": "Golpe · 1 energia", "actionId": 2, "keys": ["Digit1"] },

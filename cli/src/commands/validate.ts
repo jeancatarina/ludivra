@@ -46,6 +46,7 @@ const requiredFiles = [
   "schemas/prefab.schema.json",
   "schemas/scenario.schema.json",
   "schemas/scene.schema.json",
+  "schemas/statechart.schema.json",
   "schemas/texture-request.schema.json",
   "schemas/visual-forge-manifest.schema.json",
   "schemas/visual-style.schema.json",
@@ -77,6 +78,7 @@ const jsonFiles = [
   "schemas/prefab.schema.json",
   "schemas/scenario.schema.json",
   "schemas/scene.schema.json",
+  "schemas/statechart.schema.json",
   "schemas/texture-request.schema.json",
   "schemas/visual-forge-manifest.schema.json",
   "schemas/visual-style.schema.json",
@@ -102,6 +104,7 @@ const contractSchemaFiles = [
   "schemas/prefab.schema.json",
   "schemas/scenario.schema.json",
   "schemas/scene.schema.json",
+  "schemas/statechart.schema.json",
   "schemas/visual-forge-manifest.schema.json",
   "schemas/visual-style.schema.json"
 ] as const;
