@@ -85,6 +85,7 @@ const output = `// Generated from contracts/ui-view-model.schema.json and contra
 `  viewport: { width: number; height: number };\n` +
 `  textScale: number;\n` +
 `  locale: string;\n` +
+`  breakpoint: string;\n` +
 `  nodes: RenderedUiNode[];\n` +
 `}\n`;
 

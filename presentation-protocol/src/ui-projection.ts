@@ -35,6 +35,21 @@ export interface UiLocaleTable {
   entries: Record<string, string>;
 }
 
+/**
+ * Locale data belongs to the game manifest. The base table is synthesized from
+ * manifest labels only for authoring convenience; every declared translation is
+ * complete so a renderer never has permission to silently fall back.
+ */
+export interface UiLocaleCatalog {
+  defaultLocale: string;
+  locales: readonly UiLocaleTable[];
+}
+
+export interface UiLocaleSelection {
+  catalog: UiLocaleCatalog;
+  requestedLocale?: string | null;
+}
+
 const STATUS_NODE_ID = "runtime.status";
 const STATUS_LABEL_KEY = "runtime.status";
 const placeholderPattern = /\{([a-z][a-z0-9]*)\}/g;
@@ -51,11 +66,27 @@ function inputLabelKey(id: string): string {
  * Builds the base locale table from manifest labels. The view model carries only
  * keys and parameters, so this table is what a renderer resolves against.
  */
-export function createUiLocaleTable(input: UiProjectionInput): UiLocaleTable {
+export function createUiLocaleTable(
+  input: UiProjectionInput,
+  selection?: UiLocaleSelection
+): UiLocaleTable {
   const entries: Record<string, string> = { [STATUS_LABEL_KEY]: "Tick {tick}" };
   for (const integer of input.integers) entries[stateLabelKey(integer.id)] = `${integer.label}: {value}`;
   for (const definition of input.inputs) entries[inputLabelKey(definition.id)] = definition.label;
-  return { locale: BASE_LOCALE, entries };
+  if (selection === undefined) return { locale: BASE_LOCALE, entries };
+
+  const locale = selection.requestedLocale ?? selection.catalog.defaultLocale;
+  if (locale === BASE_LOCALE) return { locale, entries };
+  const declared = selection.catalog.locales.find((candidate) => candidate.locale === locale);
+  if (declared === undefined) throw new Error(`UI_LOCALE_UNDECLARED: ${locale}`);
+
+  const resolved: Record<string, string> = {};
+  for (const key of Object.keys(entries)) {
+    const value = declared.entries[key];
+    if (value === undefined) throw new Error(`UI_LOCALE_KEY_MISSING: ${locale}.${key}`);
+    resolved[key] = value;
+  }
+  return { locale, entries: resolved };
 }
 
 /**
@@ -100,7 +131,15 @@ export function createUiViewModel(input: UiProjectionInput): UiViewModel {
       intent: { actionId: definition.actionId, valueMilli: 1000 }
     });
   }
-  const focus = input.focus ?? null;
+  const actions = nodes.filter((node) => node.role === "button");
+  for (let index = 0; index < actions.length; index += 1) {
+    const node = actions[index];
+    const previous = actions[(index + actions.length - 1) % actions.length];
+    const next = actions[(index + 1) % actions.length];
+    if (node === undefined || previous === undefined || next === undefined) continue;
+    node.navigation = { previous: previous.id, next: next.id };
+  }
+  const focus = input.focus ?? actions[0]?.id ?? null;
   return { protocolVersion: UI_VIEW_MODEL_PROTOCOL_VERSION, screen: input.screen, focus, nodes };
 }
 

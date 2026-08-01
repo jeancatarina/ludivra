@@ -62,5 +62,6 @@ export interface RenderedUiSnapshot {
   viewport: { width: number; height: number };
   textScale: number;
   locale: string;
+  breakpoint: string;
   nodes: RenderedUiNode[];
 }

@@ -91,6 +91,8 @@ for (const row of rasterMatrix) {
   assert.equal(captured.data.baselinePresent, true);
   assert.equal(captured.data.textScale, Number(row.textScale));
   assert.equal(captured.data.deviceScale, Number(row.deviceScale));
+  assert.equal(captured.data.locale, "en-US");
+  assert.equal(captured.data.breakpoint, row.viewport.startsWith("390x") ? "compact" : "wide");
 }
 
 process.stdout.write("card_roguelite=PASS\n");

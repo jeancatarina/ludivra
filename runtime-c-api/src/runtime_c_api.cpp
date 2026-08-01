@@ -64,6 +64,8 @@ uint32_t to_public_event_type(const ludivra::kernel::PresentationEventKind kind)
 
 static_assert(sizeof(ludivra_presentation_event) == LUDIVRA_PRESENTATION_EVENT_RECORD_SIZE);
 static_assert(std::is_standard_layout_v<ludivra_presentation_event>);
+static_assert(sizeof(ludivra_statechart_trace) == LUDIVRA_STATECHART_TRACE_RECORD_SIZE);
+static_assert(std::is_standard_layout_v<ludivra_statechart_trace>);
 
 template <typename Producer>
 ludivra_result archive_size(const ludivra_runtime* runtime, uint32_t* out_size, Producer producer) {

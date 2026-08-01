@@ -22,6 +22,13 @@ export interface GameManifest {
     actions: Array<{ id: string }>;
   };
   inputs: Array<{ id: string; label: string; actionId: number; keys: string[] }>;
+  ui: {
+    defaultLocale: string;
+    locales: Array<{ locale: string; entries: Record<string, string> }>;
+    minimumTouchTargetPx: number;
+    minimumContrastRatio: number;
+    breakpoints: Array<{ id: string; minWidth: number; maxWidth?: number }>;
+  };
   timers?: Array<{ id: string; key: number }>;
   inspection: { integerStates: Array<{ id: string; label: string; key: number }> };
   projectors: UiInspectionProjectorDeclaration[];

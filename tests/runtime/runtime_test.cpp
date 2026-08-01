@@ -208,6 +208,16 @@ int main() {
     submit(context, charted, 7U, 0, 1U);
     context.expect(ludivra_runtime_step(charted, 1U) == LUDIVRA_OK, "guarded statechart transition commits");
     context.expect(integer_state(context, charted, 30U) == 11, "transition and entry actions commit through Lua commands");
+    uint32_t trace_count = 0U;
+    context.expect(ludivra_runtime_statechart_trace_count(charted, &trace_count) == LUDIVRA_OK && trace_count == 4U,
+        "guarded statechart exposes ordered event, guard and lifecycle action traces");
+    ludivra_statechart_trace traces[4]{};
+    uint32_t traces_written = 0U;
+    context.expect(ludivra_runtime_statechart_traces_write(charted, traces, 4U, &traces_written) == LUDIVRA_OK && traces_written == 4U &&
+        traces[1].kind == LUDIVRA_STATECHART_TRACE_GUARD && traces[1].guard_id == 1U && traces[1].guard_passed == 1U &&
+        traces[2].kind == LUDIVRA_STATECHART_TRACE_ACTION && traces[2].action_phase == 1U &&
+        traces[3].kind == LUDIVRA_STATECHART_TRACE_ACTION && traces[3].action_phase == 2U,
+        "statechart trace records retain guard outcome and action order across the C ABI");
     const auto replay = replay_archive(context, charted);
     context.expect(ludivra_runtime_verify_replay(charted, replay.data(), static_cast<uint32_t>(replay.size())) == LUDIVRA_OK,
         "guarded actions are replayed deterministically");

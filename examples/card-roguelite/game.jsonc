@@ -40,6 +40,39 @@
     { "id": "choose-reward", "label": "Aceitar brasa", "actionId": 6, "keys": ["KeyE"] },
     { "id": "restart", "label": "Reiniciar expedição", "actionId": 7, "keys": ["KeyR"] }
   ],
+  "ui": {
+    "defaultLocale": "en-US",
+    "locales": [
+      {
+        "locale": "en-US",
+        "entries": {
+          "runtime.status": "Tick {tick}",
+          "state.phase": "Phase: {value}",
+          "state.player.health": "Player health: {value}",
+          "state.enemy.health": "Enemy health: {value}",
+          "state.energy": "Energy: {value}",
+          "state.block": "Block: {value}",
+          "state.turn": "Turn: {value}",
+          "state.room": "Encounter: {value}",
+          "state.cards.played": "Cards played: {value}",
+          "state.card.last": "Last card: {value}",
+          "input.start-run": "Start expedition",
+          "input.play-strike": "Strike · 1 energy",
+          "input.play-guard": "Guard · 1 energy",
+          "input.play-surge": "Surge · 2 energy",
+          "input.end-turn": "End turn",
+          "input.choose-reward": "Accept ember",
+          "input.restart": "Restart expedition"
+        }
+      }
+    ],
+    "minimumTouchTargetPx": 48,
+    "minimumContrastRatio": 4.5,
+    "breakpoints": [
+      { "id": "compact", "minWidth": 320, "maxWidth": 599 },
+      { "id": "wide", "minWidth": 600 }
+    ]
+  },
   "inspection": {
     "integerStates": [
       { "id": "phase", "label": "Fase", "key": 1 },

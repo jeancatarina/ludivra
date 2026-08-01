@@ -90,7 +90,10 @@ const inputSize = 24;
 const statechartStateSize = 12;
 const statechartTransitionSize = 32;
 const statechartActionSize = 12;
-const statechartTraceSize = 36;
+// `ludivra_statechart_trace` contains a uint64_t and is therefore padded to the
+// public C ABI record size. Reading 36 bytes desynchronizes every trace after
+// the first record.
+const statechartTraceSize = 40;
 
 function call(
   module: RuntimeModule,

@@ -12,6 +12,7 @@ import {
   createUiViewModel,
   type UiInputProjection,
   type UiIntegerStateProjection,
+  type UiLocaleSelection,
   type UiLocaleTable,
   type UiProjectionInput
 } from "./ui-projection.js";
@@ -38,6 +39,7 @@ export interface UiInspectionInputDefinition {
 export interface UiInspectionProjectorSource {
   states: readonly UiInspectionStateDefinition[];
   inputs: readonly UiInspectionInputDefinition[];
+  locale?: UiLocaleSelection;
 }
 
 export interface UiInspectionProjectionMeasurement {
@@ -132,7 +134,7 @@ export function createUiInspectionProjector(
         integers,
         inputs: projectedInputs
       };
-      const localeTable = createUiLocaleTable(input);
+      const localeTable = createUiLocaleTable(input, source.locale);
       const viewModel = createUiViewModel(input);
       latest = {
         projectorId: declaration.id,

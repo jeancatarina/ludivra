@@ -14,6 +14,7 @@ export interface DomUiRendererOptions {
   status: HTMLElement;
   actions: HTMLElement;
   onIntent: (intent: UiIntent) => void;
+  breakpoint: () => string;
 }
 
 export interface DomUiRenderer {
@@ -117,6 +118,15 @@ function accessibleRole(element: HTMLElement): string {
 export function createDomUiRenderer(options: DomUiRendererOptions): DomUiRenderer {
   const tracked = new Map<string, TrackedNode>();
   let currentViewModel: UiViewModel | null = null;
+  let currentLocale = BASE_LOCALE;
+  let requestedFocus: string | null = null;
+
+  function moveFocus(node: UiNode, direction: "previous" | "next"): void {
+    const targetId = node.navigation?.[direction];
+    if (targetId === undefined) return;
+    const target = tracked.get(targetId)?.element;
+    if (target instanceof HTMLButtonElement && !target.disabled) target.focus();
+  }
 
   function create(node: UiNode): HTMLElement {
     if (node.role === "button") {
@@ -126,6 +136,16 @@ export function createDomUiRenderer(options: DomUiRendererOptions): DomUiRendere
       button.addEventListener("click", () => {
         const intent = tracked.get(node.id)?.node.intent;
         if (intent !== undefined) options.onIntent(intent);
+      });
+      button.addEventListener("keydown", (event) => {
+        if (event.repeat || event.altKey || event.ctrlKey || event.metaKey) return;
+        if (event.key === "ArrowLeft" || event.key === "ArrowUp") {
+          event.preventDefault();
+          moveFocus(tracked.get(node.id)?.node ?? node, "previous");
+        } else if (event.key === "ArrowRight" || event.key === "ArrowDown") {
+          event.preventDefault();
+          moveFocus(tracked.get(node.id)?.node ?? node, "next");
+        }
       });
       options.actions.append(button);
       return button;
@@ -163,6 +183,12 @@ export function createDomUiRenderer(options: DomUiRendererOptions): DomUiRendere
         }
       }
       currentViewModel = viewModel;
+      currentLocale = locale.locale;
+      if (requestedFocus !== viewModel.focus) {
+        requestedFocus = viewModel.focus;
+        const focusTarget = viewModel.focus === null ? undefined : tracked.get(viewModel.focus)?.element;
+        if (focusTarget instanceof HTMLButtonElement && !focusTarget.disabled) focusTarget.focus();
+      }
     },
     snapshot() {
       const viewModel = currentViewModel;
@@ -198,7 +224,8 @@ export function createDomUiRenderer(options: DomUiRendererOptions): DomUiRendere
           height: Math.round(document.documentElement.clientHeight)
         },
         textScale: Number((rootFontSize / 16).toFixed(3)),
-        locale: BASE_LOCALE,
+        locale: currentLocale,
+        breakpoint: options.breakpoint(),
         nodes
       };
     },
@@ -206,6 +233,7 @@ export function createDomUiRenderer(options: DomUiRendererOptions): DomUiRendere
       for (const entry of tracked.values()) entry.element.remove();
       tracked.clear();
       currentViewModel = null;
+      requestedFocus = null;
     }
   };
 }

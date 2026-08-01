@@ -11,8 +11,13 @@ import { writeCacheDecisions } from "./build-runner.js";
 import { hashArtifactPath } from "./artifact-hash.js";
 import { createContractValidator } from "./contract-validator.js";
 import type { Artifact, Diagnostic } from "./generated/cli-result.js";
+import {
+  validateRenderedUi,
+  type RenderedUiSnapshot,
+  type UiViewModel
+} from "@ludivra/presentation-protocol";
 import { runProcess } from "./process-runner.js";
-import { resolveProjectDirectory } from "./project.js";
+import { readGameManifest, resolveProjectDirectory } from "./project.js";
 import {
   compareRasterImages,
   decodePng,
@@ -148,6 +153,7 @@ export async function runRasterCapture(
   const request = parseRasterCaptureRequest(arguments_);
   const engineRoot = await findEngineRoot();
   const project = await resolveProjectDirectory(arguments_);
+  const manifest = await readGameManifest(project);
   const binary = resolveElectronBinary(engineRoot);
   if (binary === null) {
     return {
@@ -240,6 +246,33 @@ export async function runRasterCapture(
         severity: "error",
         message: `${kind} produced by the capture violates ${file}`,
         details: { errors: (validate.errors ?? []).map((error) => `${error.instancePath} ${error.message ?? ""}`.trim()) }
+      });
+    }
+  }
+  const declaredBreakpoint = manifest.ui.breakpoints.find(({ minWidth, maxWidth }) =>
+    request.width >= minWidth && (maxWidth === undefined || request.width <= maxWidth)
+  );
+  if (declaredBreakpoint === undefined) {
+    diagnostics.push({
+      code: "UI_BREAKPOINT_UNDECLARED",
+      severity: "error",
+      message: `Viewport width ${request.width} matches no declared UI breakpoint`
+    });
+  } else {
+    for (const issue of validateRenderedUi(
+      viewModel as unknown as UiViewModel,
+      snapshot as unknown as RenderedUiSnapshot,
+      {
+        minimumTouchTargetPx: manifest.ui.minimumTouchTargetPx,
+        minimumContrastRatio: manifest.ui.minimumContrastRatio,
+        breakpoint: declaredBreakpoint.id
+      }
+    )) {
+      diagnostics.push({
+        code: issue.code,
+        severity: "error",
+        message: issue.message,
+        ...(issue.nodeId === undefined ? {} : { details: { nodeId: issue.nodeId } })
       });
     }
   }
@@ -375,6 +408,8 @@ export async function runRasterCapture(
       ticks: request.ticks,
       textScale: metadata.textScale,
       deviceScale,
+      locale: snapshot.locale,
+      breakpoint: snapshot.breakpoint,
       capturePixelScale: metadata.capturePixelScale,
       baselinePresent: baseline !== null,
       projection: { visuals: projection.visuals.length, operations: projection.operations },

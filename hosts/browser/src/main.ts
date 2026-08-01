@@ -21,7 +21,8 @@ const title = document.querySelector<HTMLElement>("#game-title");
 const hostStatus = document.querySelector<HTMLElement>("#host-status");
 const gameStatus = document.querySelector<HTMLElement>("#game-status");
 const actions = document.querySelector<HTMLElement>("#game-actions");
-if (canvas === null || title === null || hostStatus === null || gameStatus === null || actions === null) {
+const app = document.querySelector<HTMLElement>("#app");
+if (canvas === null || title === null || hostStatus === null || gameStatus === null || actions === null || app === null) {
   throw new Error("browser host document is incomplete");
 }
 
@@ -41,9 +42,18 @@ if (textScaleParameter !== null) {
   if (!Number.isFinite(textScale) || textScale <= 0) throw new Error("CAPTURE_TEXT_SCALE_INVALID");
   document.documentElement.style.fontSize = `${16 * textScale}px`;
 }
+const requestedLocale = new URLSearchParams(window.location.search).get("ludivra-locale");
+if (
+  requestedLocale !== null &&
+  requestedLocale !== "base" &&
+  !manifest.ui.locales.some(({ locale }) => locale === requestedLocale)
+) {
+  throw new Error(`UI_LOCALE_UNDECLARED: ${requestedLocale}`);
+}
 
 title.textContent = manifest.name;
 document.title = manifest.name;
+document.documentElement.style.setProperty("--ui-min-touch-target", `${manifest.ui.minimumTouchTargetPx}px`);
 
 let runtimeStarted = false;
 const hostDiagnostics = createHostDiagnostics(() => (runtimeStarted ? runtime.tick().toString() : null));
@@ -79,7 +89,8 @@ const presentationState: PresentationState = {
 };
 const uiProjectors = manifest.projectors.map((declaration) => createUiInspectionProjector(declaration, {
   states: manifest.inspection.integerStates,
-  inputs: manifest.inputs
+  inputs: manifest.inputs,
+  locale: { catalog: manifest.ui, requestedLocale }
 }));
 const uiProjector = uiProjectors.find(({ declaration }) => declaration.screen === "game");
 if (uiProjector === undefined) throw new Error("UI_PROJECTOR_GAME_MISSING");
@@ -129,7 +140,8 @@ function submit(actionId: number): void {
 const ui = createDomUiRenderer({
   status: gameStatus,
   actions,
-  onIntent: (intent) => submit(intent.actionId)
+  onIntent: (intent) => submit(intent.actionId),
+  breakpoint: () => currentBreakpoint(document.documentElement.clientWidth)
 });
 
 function renderUi(): void {
@@ -149,6 +161,10 @@ window.ludivraUi = {
 };
 
 window.addEventListener("keydown", (event) => {
+  const target = event.target;
+  if (target instanceof HTMLElement && target.closest("button, input, select, textarea, [contenteditable='true']") !== null) {
+    return;
+  }
   const input = manifest.inputs.find((candidate) => candidate.keys.includes(event.code));
   if (input !== undefined && !event.repeat) {
     event.preventDefault();
@@ -156,9 +172,18 @@ window.addEventListener("keydown", (event) => {
   }
 });
 
+function currentBreakpoint(width: number): string {
+  const breakpoint = manifest.ui.breakpoints.find(({ minWidth, maxWidth }) =>
+    width >= minWidth && (maxWidth === undefined || width <= maxWidth)
+  );
+  if (breakpoint === undefined) throw new Error(`UI_BREAKPOINT_UNDECLARED: ${width}`);
+  return breakpoint.id;
+}
+
 function resize(): void {
   const bounds = canvas.getBoundingClientRect();
   renderer.resize(bounds.width, bounds.height, window.devicePixelRatio);
+  app.dataset.uiBreakpoint = currentBreakpoint(document.documentElement.clientWidth);
 }
 window.addEventListener("resize", resize);
 resize();

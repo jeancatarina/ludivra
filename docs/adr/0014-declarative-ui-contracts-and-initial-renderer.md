@@ -2,6 +2,7 @@
 
 - Status: aceito
 - Data: 2026-07-24
+- Revisado: 2026-08-01 para o gate executável de locale, navegação, foco, touch target, contraste e breakpoint
 - Revisão: antes de adicionar dependência de framework de UI ou um segundo backend de UI
 - Complementa: [ADR 0010](0010-local-control-protocol-and-scenario-harness.md) e [ADR 0011](0011-card-roguelite-content-and-authority.md)
 - Fecha: item "renderer de UI inicial" da seção 36 de [architecture.md](../../architecture.md)
@@ -74,6 +75,12 @@ O ViewModel transporta chave e parâmetros. A resolução ocorre no host e apare
 O renderer só emite intents declarados pelo nó em `actions`. Um intent é aplicado no próximo tick pelo kernel, que valida autoridade e pode recusá-lo com diagnóstico. O renderer nunca muta estado autoritativo e nunca antecipa o efeito de um intent no ViewModel.
 
 Códigos: `UI_NODE_ID_UNSTABLE`, `UI_INTENT_NOT_DECLARED`, `UI_LOCALE_KEY_MISSING`, `UI_NODE_NOT_RENDERED`, `UI_CONTRAST_BELOW_MINIMUM`, `UI_TOUCH_TARGET_TOO_SMALL`.
+
+### Gate integrado implementado
+
+Todo `game.jsonc` declara `ui.defaultLocale`, tabelas completas em `ui.locales`, contraste mínimo, touch target mínimo e faixas contíguas de breakpoint. O locale efetivo e o breakpoint selecionado entram no `RenderedUiSnapshot`; locale solicitado ausente e chave não traduzida falham com código estável, sem fallback silencioso.
+
+O projector fornece foco inicial e navegação circular para actions. O BrowserHost aplica essa intenção, mantém Tab nativo e oferece setas para a navegação declarada. A captura raster e o harness validam que cada nó semântico aparece, não está clipped, tem role e foco correspondentes, que botões atendem a área mínima, que o contraste medido passa e que o breakpoint medido corresponde à faixa do viewport. A matriz aprovada do card roguelite cobre as faixas compacta e larga em device scales e escalas de texto declarados.
 
 ## Consequências
 

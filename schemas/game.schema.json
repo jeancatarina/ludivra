@@ -4,7 +4,7 @@
   "title": "Ludivra game manifest",
   "type": "object",
   "additionalProperties": false,
-  "required": ["schemaVersion", "id", "name", "engine", "targets", "entrypoints", "inputs", "inspection", "projectors", "scenarios"],
+  "required": ["schemaVersion", "id", "name", "engine", "targets", "entrypoints", "inputs", "ui", "inspection", "projectors", "scenarios"],
   "properties": {
     "schemaVersion": { "const": 3 },
     "id": { "type": "string", "pattern": "^[a-z][a-z0-9-]*$" },
@@ -119,6 +119,47 @@
             "minItems": 1,
             "uniqueItems": true,
             "items": { "type": "string", "minLength": 1 }
+          }
+        }
+      }
+    },
+    "ui": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["defaultLocale", "locales", "minimumTouchTargetPx", "minimumContrastRatio", "breakpoints"],
+      "properties": {
+        "defaultLocale": { "type": "string", "minLength": 2, "pattern": "^[a-z]{2,3}(?:-[A-Z]{2})?$|^base$" },
+        "locales": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["locale", "entries"],
+            "properties": {
+              "locale": { "type": "string", "minLength": 2, "pattern": "^[a-z]{2,3}(?:-[A-Z]{2})?$" },
+              "entries": {
+                "type": "object",
+                "minProperties": 1,
+                "additionalProperties": { "type": "string", "minLength": 1 }
+              }
+            }
+          }
+        },
+        "minimumTouchTargetPx": { "type": "integer", "minimum": 44, "maximum": 128 },
+        "minimumContrastRatio": { "type": "number", "minimum": 4.5, "maximum": 21 },
+        "breakpoints": {
+          "type": "array",
+          "minItems": 2,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["id", "minWidth"],
+            "properties": {
+              "id": { "type": "string", "pattern": "^[a-z][a-z0-9-]*$" },
+              "minWidth": { "type": "integer", "minimum": 1 },
+              "maxWidth": { "type": "integer", "minimum": 1 }
+            }
           }
         }
       }

@@ -1,6 +1,6 @@
 import { mkdir, readFile, realpath, writeFile } from "node:fs/promises";
 import { isAbsolute, relative, resolve } from "node:path";
-import type { RenderedUiSnapshot, UiViewModel } from "@ludivra/presentation-protocol";
+import { validateRenderedUi, type RenderedUiSnapshot, type UiViewModel } from "@ludivra/presentation-protocol";
 import { parse, type ParseError } from "jsonc-parser";
 import { optionValue } from "./arguments.js";
 import { ensureFamilies, type CacheDecision } from "./artifact-cache.js";
@@ -10,7 +10,7 @@ import { LocalControlClient } from "./control-client.js";
 import { createContractValidator } from "./contract-validator.js";
 import type { Artifact, Diagnostic } from "./generated/cli-result.js";
 import type { ControlOperation, ControlPayload, ControlResponse } from "./generated/control-protocol.js";
-import { readGameManifest, resolveProjectDirectory } from "./project.js";
+import { readGameManifest, resolveProjectDirectory, type GameManifest } from "./project.js";
 import { findEngineRoot } from "./repository.js";
 import type { CommandContext, CommandOutcome } from "./result.js";
 
@@ -64,7 +64,12 @@ async function existingWithinProject(project: string, path: string): Promise<str
   return actualCandidate;
 }
 
-async function loadScenario(engineRoot: string, project: string, arguments_: string[]): Promise<{ scenario: ScenarioDefinition; path: string; source: string }> {
+async function loadScenario(engineRoot: string, project: string, arguments_: string[]): Promise<{
+  scenario: ScenarioDefinition;
+  path: string;
+  source: string;
+  manifest: GameManifest;
+}> {
   const manifest = await readGameManifest(project);
   const configured = optionValue(arguments_, "--scenario") ?? manifest.scenarios[0];
   if (configured === undefined) throw new Error("SCENARIO_NOT_CONFIGURED");
@@ -83,7 +88,7 @@ async function loadScenario(engineRoot: string, project: string, arguments_: str
   if (!validate(scenario)) {
     throw new Error(`SCENARIO_SCHEMA_INVALID:${validate.errors?.map((error) => `${error.instancePath} ${error.message}`).join("; ")}`);
   }
-  return { scenario, path, source };
+  return { scenario, path, source, manifest };
 }
 
 /**
@@ -93,7 +98,8 @@ async function loadScenario(engineRoot: string, project: string, arguments_: str
 async function validateUiContracts(
   engineRoot: string,
   inspection: InspectionData,
-  scenarioPath: string
+  scenarioPath: string,
+  uiPolicy: GameManifest["ui"]
 ): Promise<Diagnostic[]> {
   const diagnostics: Diagnostic[] = [];
   const ajv = createContractValidator();
@@ -123,6 +129,34 @@ async function validateUiContracts(
           errors: (validate.errors ?? []).map((error) => `${error.instancePath} ${error.message ?? ""}`.trim())
         }
       });
+    }
+  }
+  if (inspection.uiViewModel !== null && inspection.renderedUiSnapshot !== null) {
+    const breakpoint = uiPolicy.breakpoints.find(({ minWidth, maxWidth }) =>
+      inspection.renderedUiSnapshot!.viewport.width >= minWidth &&
+      (maxWidth === undefined || inspection.renderedUiSnapshot!.viewport.width <= maxWidth)
+    );
+    if (breakpoint === undefined) {
+      diagnostics.push({
+        code: "UI_BREAKPOINT_UNDECLARED",
+        severity: "error",
+        message: `Headless viewport ${inspection.renderedUiSnapshot.viewport.width} matches no declared breakpoint`,
+        file: scenarioPath
+      });
+    } else {
+      for (const issue of validateRenderedUi(inspection.uiViewModel, inspection.renderedUiSnapshot, {
+        minimumTouchTargetPx: uiPolicy.minimumTouchTargetPx,
+        minimumContrastRatio: uiPolicy.minimumContrastRatio,
+        breakpoint: breakpoint.id
+      })) {
+        diagnostics.push({
+          code: issue.code,
+          severity: "error",
+          message: issue.message,
+          file: scenarioPath,
+          ...(issue.nodeId === undefined ? {} : { details: { nodeId: issue.nodeId } })
+        });
+      }
     }
   }
   return diagnostics;
@@ -168,7 +202,7 @@ async function writeJson(path: string, value: unknown): Promise<void> {
 export async function runScenarioCommand(context: CommandContext, arguments_: string[], forceCapture: boolean): Promise<CommandOutcome> {
   const engineRoot = await findEngineRoot();
   const project = await resolveProjectDirectory(arguments_);
-  const { scenario, path: scenarioPath, source } = await loadScenario(engineRoot, project, arguments_);
+  const { scenario, path: scenarioPath, source, manifest } = await loadScenario(engineRoot, project, arguments_);
   await prepareHarness(engineRoot);
   // The worker loads the compiled pack, so it must exist before the session starts.
   await ensureContentPack(project);
@@ -210,7 +244,7 @@ export async function runScenarioCommand(context: CommandContext, arguments_: st
     inspection = inspected.data as InspectionData;
     const measured = await client.request("metrics", {});
     if (measured.status === "PASS") metrics = measured.data as Record<string, unknown>;
-    diagnostics.push(...(await validateUiContracts(engineRoot, inspection, scenarioPath)));
+    diagnostics.push(...(await validateUiContracts(engineRoot, inspection, scenarioPath, manifest.ui)));
     if (forceCapture && captures.length === 0) {
       const captured = await client.request("capture", { name: "final" });
       if (captured.status !== "PASS") throw new Error(captured.diagnostic?.code ?? "SCENARIO_CAPTURE_FAILED");

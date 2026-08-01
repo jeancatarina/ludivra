@@ -264,7 +264,7 @@ test("scene validation rejects an unresolved required prefab slot", () => {
 
 test("declared UI projector validates the view model and reports deterministic reads", async () => {
   const root = fileURLToPath(new URL("../..", import.meta.url));
-  const { BASE_LOCALE, createUiInspectionProjector, resolveUiLabel } = await import(
+  const { BASE_LOCALE, createUiInspectionProjector, resolveUiLabel, validateRenderedUi } = await import(
     "@ludivra/presentation-protocol"
   );
   const validator = createContractValidator();
@@ -329,6 +329,8 @@ test("declared UI projector validates the view model and reports deterministic r
   const button = viewModel.nodes.find(({ role }) => role === "button");
   assert.deepEqual(button.actions, ["act"]);
   assert.equal(button.intent.actionId, 1);
+  assert.equal(viewModel.focus, button.id);
+  assert.deepEqual(button.navigation, { previous: button.id, next: button.id });
 
   const snapshot = {
     protocolVersion: 1,
@@ -336,18 +338,24 @@ test("declared UI projector validates the view model and reports deterministic r
     viewport: { width: 1280, height: 720 },
     textScale: 1,
     locale: BASE_LOCALE,
+    breakpoint: "wide",
     nodes: viewModel.nodes.map((node) => ({
       id: node.id,
-      bounds: { x: 0, y: 0, width: 100, height: 20 },
+      bounds: { x: 0, y: 0, width: 100, height: node.role === "button" ? 48 : 20 },
       visible: true,
       clipped: false,
-      focused: false,
+      focused: node.id === viewModel.focus,
       text: resolveUiLabel(locale, node.labelKey, node.labelParams),
       accessibleRole: node.role === "button" ? "button" : "status",
       contrastRatio: 7.4
     }))
   };
   assert.ok(validateSnapshot(snapshot), JSON.stringify(validateSnapshot.errors));
+  assert.deepEqual(validateRenderedUi(viewModel, snapshot, {
+    minimumTouchTargetPx: 48,
+    minimumContrastRatio: 4.5,
+    breakpoint: "wide"
+  }), []);
 
   // An unknown renderer must be refused so headless evidence is never read as browser evidence.
   assert.equal(validateSnapshot({ ...snapshot, renderer: "unknown-v1" }), false);

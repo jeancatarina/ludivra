@@ -9,6 +9,7 @@ extern "C" {
 #endif
 
 #define LUDIVRA_RUNTIME_ABI_VERSION 5U
+#define LUDIVRA_STATECHART_TRACE_RECORD_SIZE 40U
 
 typedef struct ludivra_runtime ludivra_runtime;
 
@@ -158,6 +159,9 @@ typedef struct ludivra_statechart_trace {
   uint8_t action_phase;
   uint8_t error;
 } ludivra_statechart_trace;
+
+/* The trailing padding required by the uint64_t tick is part of the ABI. Hosts
+   allocating trace arrays must use LUDIVRA_STATECHART_TRACE_RECORD_SIZE. */
 
 /* Ordered causal records are transient like presentation events. */
 ludivra_result ludivra_runtime_statechart_trace_count(

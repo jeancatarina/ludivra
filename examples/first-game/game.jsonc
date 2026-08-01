@@ -12,6 +12,26 @@
     { "id": "charge", "label": "Carregar núcleo", "actionId": 1, "keys": ["Space", "Enter"] },
     { "id": "reset", "label": "Reiniciar", "actionId": 2, "keys": ["KeyR"] }
   ],
+  "ui": {
+    "defaultLocale": "en-US",
+    "locales": [
+      {
+        "locale": "en-US",
+        "entries": {
+          "runtime.status": "Tick {tick}",
+          "state.core.charge": "Core charge: {value}",
+          "input.charge": "Charge core",
+          "input.reset": "Reset"
+        }
+      }
+    ],
+    "minimumTouchTargetPx": 48,
+    "minimumContrastRatio": 4.5,
+    "breakpoints": [
+      { "id": "compact", "minWidth": 320, "maxWidth": 599 },
+      { "id": "wide", "minWidth": 600 }
+    ]
+  },
   "inspection": {
     "integerStates": [
       { "id": "core.charge", "label": "Carga do núcleo", "key": 1 }

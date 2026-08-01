@@ -16,6 +16,13 @@ interface GameManifest {
     actionId: number;
     keys: string[];
   }>;
+  ui: {
+    defaultLocale: string;
+    locales: Array<{ locale: string; entries: Record<string, string> }>;
+    minimumTouchTargetPx: number;
+    minimumContrastRatio: number;
+    breakpoints: Array<{ id: string; minWidth: number; maxWidth?: number }>;
+  };
   audio?: Array<{ eventId: number; source?: string; recipe?: string }>;
 }
 

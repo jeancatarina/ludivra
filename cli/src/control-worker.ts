@@ -6,7 +6,6 @@ import { createInterface } from "node:readline";
 import { isAbsolute, relative, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 import {
-  BASE_LOCALE,
   createUiInspectionProjector,
   RENDERED_UI_SNAPSHOT_PROTOCOL_VERSION,
   resolveUiLabel,
@@ -155,7 +154,8 @@ function renderedUiSnapshot(viewModel: UiViewModel, locale: UiLocaleTable): Rend
     renderer: "headless-semantic-v1",
     viewport: { width: 1280, height: 720 },
     textScale: 1,
-    locale: BASE_LOCALE,
+    locale: locale.locale,
+    breakpoint: declaredBreakpoint(1280),
     nodes: viewModel.nodes.map((node) => {
       const isButton = node.role === "button";
       const index = isButton ? buttonIndex++ : statusIndex++;
@@ -172,6 +172,14 @@ function renderedUiSnapshot(viewModel: UiViewModel, locale: UiLocaleTable): Rend
       };
     })
   };
+}
+
+function declaredBreakpoint(width: number): string {
+  const breakpoint = manifest.ui.breakpoints.find(({ minWidth, maxWidth }) =>
+    width >= minWidth && (maxWidth === undefined || width <= maxWidth)
+  );
+  if (breakpoint === undefined) throw new Error(`UI_BREAKPOINT_UNDECLARED: ${width}`);
+  return breakpoint.id;
 }
 
 function escapeXml(value: string): string {
@@ -316,7 +324,8 @@ async function handle(request: ControlRequest): Promise<ControlResponse> {
       timeline = [];
       uiProjectors = manifest.projectors.map((declaration) => createUiInspectionProjector(declaration, {
         states: manifest.inspection.integerStates,
-        inputs: manifest.inputs
+        inputs: manifest.inputs,
+        locale: { catalog: manifest.ui }
       }));
       gameProjectorId = uiProjectors.find(({ declaration }) => declaration.screen === "game")?.declaration.id;
       if (gameProjectorId === undefined) throw new Error("UI_PROJECTOR_GAME_MISSING");

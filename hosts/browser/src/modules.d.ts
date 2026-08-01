@@ -18,6 +18,13 @@ declare module "virtual:ludivra-game" {
       guards: Array<{ id: string }>;
       actions: Array<{ id: string }>;
     };
+    ui: {
+      defaultLocale: string;
+      locales: Array<{ locale: string; entries: Record<string, string> }>;
+      minimumTouchTargetPx: number;
+      minimumContrastRatio: number;
+      breakpoints: Array<{ id: string; minWidth: number; maxWidth?: number }>;
+    };
     timers?: Array<{ id: string; key: number }>;
     inputs: Array<{
       id: string;

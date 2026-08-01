@@ -5,8 +5,8 @@
 | Campo | Valor |
 |---|---|
 | Release atual | 0.7.0 |
-| Foco atual | Fase 4 — Fechar o gate integrado de UI, localização, navegação, foco, touch targets e breakpoints. |
-| Próxima entrega | Implementar e validar o gate de UI por teclado, controle e touch em todos os breakpoints declarados. |
+| Foco atual | Fase 5 — Concluir a fundação espacial com jobs assíncronos, Simulation LOD e inspeção de regiões. |
+| Próxima entrega | Implementar WORLD-001: jobs assíncronos determinísticos, Simulation LOD e inspeção espacial. |
 | Fonte editável de progresso | [docs/program-status.json](docs/program-status.json) |
 | Decisão do modelo documental | [ADR 0046](docs/adr/0046-generated-program-documentation.md) |
 
@@ -26,8 +26,8 @@
 | 1 | Estado canônico e catálogo de capacidades | `CONCLUÍDA` | nenhuma no gate atual |
 | 2 | Context Engine, CLI e Development Runner | `CONCLUÍDA` | nenhuma no gate atual |
 | 3 | AI Control Plane e observabilidade causal | `CONCLUÍDA` | nenhuma no gate atual |
-| 4 | Autoria text-first de gameplay, UI e conteúdo | `EM ANDAMENTO` | Gate integrado de UI, localização, navegação, foco, touch targets e breakpoints. |
-| 5 | Runtime espacial e mundo procedural | `PARCIAL` | Jobs assíncronos reais sem alterar a ordem de commit. |
+| 4 | Autoria text-first de gameplay, UI e conteúdo | `CONCLUÍDA` | nenhuma no gate atual |
+| 5 | Runtime espacial e mundo procedural | `EM ANDAMENTO` | Jobs assíncronos reais sem alterar a ordem de commit. |
 | 6 | Motion, física e Mass Simulation | `PLANEJADA` | Motion por tempo declarado e comandos semânticos. |
 | 7 | Persistência, replays e multiplayer player-hosted | `PARCIAL` | Region storage atômico com journal, compactação, recovery e migrations. |
 | 8 | Renderer, UI, áudio e apresentação escalável | `PARCIAL` | Perfis web-compatible, desktop-compatible e desktop-high com fallback gráfico observado. |
@@ -111,7 +111,7 @@ Um defeito nos pixels é correlacionado a estado, ação, evento, projector e or
 
 | Campo | Valor |
 |---|---|
-| Estado | `EM ANDAMENTO` |
+| Estado | `CONCLUÍDA` |
 | Owners | kernel, Lua SDK, content compiler, presentation protocol |
 | Dependências | Fase 3 |
 | ADRs | [ADR 0004](docs/adr/0004-lua-sandbox.md), [ADR 0014](docs/adr/0014-declarative-ui-contracts-and-initial-renderer.md), [ADR 0016](docs/adr/0016-public-lua-sdk-layers-and-escape-hatches.md), [ADR 0017](docs/adr/0017-content-pack-compilation-and-migrations.md), [ADR 0018](docs/adr/0018-numeric-determinism-and-rng-streams.md), [ADR 0044](docs/adr/0044-approved-native-extension-process.md), [ADR 0048](docs/adr/0048-textual-scene-prefab-and-resource-graph.md), [ADR 0053](docs/adr/0053-deterministic-gameplay-statecharts.md) |
@@ -126,10 +126,7 @@ Permitir que jogos sejam criados por APIs públicas textuais sem alterar interna
 - Migrations de conteúdo ordenadas, idempotentes e registradas no pack v2, com fixture de entrada/saída e recusa de container legado no kernel. Capabilities: `runtime.content-binding`. Evidência: [contracts/content-migrations-v1.json](contracts/content-migrations-v1.json), [content-compiler/src/migrations.ts](content-compiler/src/migrations.ts), [content-compiler/test/fixtures/migrations/card-roguelite-v1.input.json](content-compiler/test/fixtures/migrations/card-roguelite-v1.input.json).
 - Grafo text-first de scenes, prefabs e recursos compilado por IDs explícitos, com ciclos, overrides e slots rejeitados antes do build e inspeção rastreável pelo CLI. Capabilities: `authoring.scene-graph`. Evidência: [schemas/scene.schema.json](schemas/scene.schema.json), [schemas/prefab.schema.json](schemas/prefab.schema.json), [content-compiler/src/scene-graph.ts](content-compiler/src/scene-graph.ts), [examples/card-roguelite/scenes/ember-vault.scene.jsonc](examples/card-roguelite/scenes/ember-vault.scene.jsonc).
 - Statecharts textuais de uma região com hierarquia, history shallow, guards Lua read-only, actions via command buffer, afterTicks lógicos, save/replay/hash e trace causal no control harness. Capabilities: `runtime.statecharts`. Evidência: [schemas/statechart.schema.json](schemas/statechart.schema.json), [kernel/src/statechart_runtime.cpp](kernel/src/statechart_runtime.cpp), [runtime-c-api/include/ludivra/runtime.h](runtime-c-api/include/ludivra/runtime.h), [cli/src/control-worker.ts](cli/src/control-worker.ts), [tests/runtime/runtime_test.cpp](tests/runtime/runtime_test.cpp).
-
-### Falta
-
-- Gate integrado de UI, localização, navegação, foco, touch targets e breakpoints.
+- Gate de UI declarativo com locale efetivo e traduções completas, foco e navegação por teclado, touch targets, contraste e breakpoint medido tanto no harness quanto na captura raster. Capabilities: `presentation.readonly-projectors`. Evidência: [schemas/game.schema.json](schemas/game.schema.json), [presentation-protocol/src/ui-projection.ts](presentation-protocol/src/ui-projection.ts), [presentation-protocol/src/ui-validation.ts](presentation-protocol/src/ui-validation.ts), [hosts/browser/src/ui-renderer.ts](hosts/browser/src/ui-renderer.ts), [tools/tests/card-roguelite.mjs](tools/tests/card-roguelite.mjs).
 
 ### Gate de saída
 
@@ -139,7 +136,7 @@ Uma sessão nova cria regra, conteúdo, tela, apresentação e cenário usando a
 
 | Campo | Valor |
 |---|---|
-| Estado | `PARCIAL` |
+| Estado | `EM ANDAMENTO` |
 | Owners | kernel spatial runtime, world runtime, job system |
 | Dependências | Fase 4 |
 | ADRs | [ADR 0018](docs/adr/0018-numeric-determinism-and-rng-streams.md), [ADR 0019](docs/adr/0019-spatial-model-chunk-lifecycle-and-job-commit.md), [ADR 0039](docs/adr/0039-entity-component-layer.md), [ADR 0045](docs/adr/0045-wasm-threads-and-shared-memory.md), [ADR 0054](docs/adr/0054-navigation-regions-pathfinding-and-avoidance.md) |

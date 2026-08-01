@@ -356,6 +356,80 @@ export async function validateCmakeGraph(root: string, diagnostics: Diagnostic[]
   return targets.size;
 }
 
+interface UiManifestPolicy {
+  defaultLocale: string;
+  locales: Array<{ locale: string; entries: Record<string, string> }>;
+  minimumTouchTargetPx: number;
+  minimumContrastRatio: number;
+  breakpoints: Array<{ id: string; minWidth: number; maxWidth?: number }>;
+}
+
+/** Validates declarative UI data before a host can consume it. */
+export function validateUiManifestPolicy(
+  policy: UiManifestPolicy,
+  inputs: Array<{ id: string }>,
+  states: Array<{ id: string }>,
+  diagnostics: Diagnostic[],
+  file: string
+): void {
+  const localeIds = new Set<string>();
+  for (const locale of policy.locales) {
+    if (localeIds.has(locale.locale)) {
+      diagnostics.push({ code: "UI_LOCALE_DUPLICATE", severity: "error", message: `Locale is duplicated: ${locale.locale}`, file });
+    }
+    localeIds.add(locale.locale);
+  }
+  if (policy.defaultLocale !== "base" && !localeIds.has(policy.defaultLocale)) {
+    diagnostics.push({
+      code: "UI_LOCALE_UNDECLARED",
+      severity: "error",
+      message: `Default locale is not declared: ${policy.defaultLocale}`,
+      file
+    });
+  }
+  const requiredKeys = [
+    "runtime.status",
+    ...states.map(({ id }) => `state.${id}`),
+    ...inputs.map(({ id }) => `input.${id}`)
+  ];
+  for (const locale of policy.locales) {
+    for (const key of requiredKeys) {
+      if (locale.entries[key] === undefined) {
+        diagnostics.push({
+          code: "UI_LOCALE_KEY_MISSING",
+          severity: "error",
+          message: `Locale ${locale.locale} is missing ${key}`,
+          file
+        });
+      }
+    }
+  }
+
+  const breakpointIds = new Set<string>();
+  let previousMax: number | undefined;
+  for (const [index, breakpoint] of policy.breakpoints.entries()) {
+    if (breakpointIds.has(breakpoint.id)) {
+      diagnostics.push({ code: "UI_BREAKPOINT_DUPLICATE", severity: "error", message: `Breakpoint is duplicated: ${breakpoint.id}`, file });
+    }
+    breakpointIds.add(breakpoint.id);
+    if (breakpoint.maxWidth !== undefined && breakpoint.maxWidth < breakpoint.minWidth) {
+      diagnostics.push({ code: "UI_BREAKPOINT_INVALID", severity: "error", message: `Breakpoint ${breakpoint.id} has maxWidth below minWidth`, file });
+    }
+    if (index > 0 && (previousMax === undefined || breakpoint.minWidth !== previousMax + 1)) {
+      diagnostics.push({
+        code: "UI_BREAKPOINT_INVALID",
+        severity: "error",
+        message: `Breakpoint ${breakpoint.id} must continue immediately after the preceding range`,
+        file
+      });
+    }
+    previousMax = breakpoint.maxWidth;
+  }
+  if (policy.breakpoints.at(-1)?.maxWidth !== undefined) {
+    diagnostics.push({ code: "UI_BREAKPOINT_INVALID", severity: "error", message: "The final breakpoint must be open-ended", file });
+  }
+}
+
 export async function runValidate(arguments_: string[] = []): Promise<CommandOutcome> {
   const root = await findEngineRoot();
   const diagnostics: Diagnostic[] = [];
@@ -561,6 +635,7 @@ export async function runValidate(arguments_: string[] = []): Promise<CommandOut
               prefabs: Array<{ id: string; source: string }>;
             };
             inputs: Array<{ id: string; actionId: number }>;
+            ui: UiManifestPolicy;
             inspection: { integerStates: Array<{ id: string; key: number }> };
             projectors: Array<{ id: string; states: string[]; inputs: string[] }>;
             scenarios: string[];
@@ -577,6 +652,7 @@ export async function runValidate(arguments_: string[] = []): Promise<CommandOut
           if (new Set(stateIds).size !== stateIds.length || declaredStateKeys.size !== manifest.inspection.integerStates.length) {
             diagnostics.push({ code: "INSPECTION_STATE_DUPLICATE", severity: "error", message: "Inspection state IDs and keys must be unique", file: gamePath });
           }
+          validateUiManifestPolicy(manifest.ui, manifest.inputs, manifest.inspection.integerStates, diagnostics, gamePath);
           const projectorIds = new Set<string>();
           const declaredStateIds = new Set(stateIds);
           const declaredInputIds = new Set(manifest.inputs.map(({ id }) => id));

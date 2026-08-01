@@ -2,11 +2,10 @@
 
 > Gerado de `docs/program-status.json` por `tools/program-status/generate.mjs`. Não edite manualmente.
 
-Foco atual: **Fase 4 — Fechar o gate integrado de UI, localização, navegação, foco, touch targets e breakpoints.**
+Foco atual: **Fase 5 — Concluir a fundação espacial com jobs assíncronos, Simulation LOD e inspeção de regiões.**
 
 | ID | Prioridade | Estado | Fase | Trabalho | ADRs |
 |---|---|---|---:|---|---|
-| OBS-002 | alta | em andamento | 4 | Implementar o gate integrado de UI, localização, navegação, foco, touch targets e breakpoints. | [ADR 0014](docs/adr/0014-declarative-ui-contracts-and-initial-renderer.md), [ADR 0015](docs/adr/0015-raster-capture-and-visual-baselines.md) |
 | NAV-001 | alta | planejado | 5 | Implementar contratos de regiões, pathfinding, links, obstacles, agents e avoidance com fixture de benchmark. | [ADR 0054](docs/adr/0054-navigation-regions-pathfinding-and-avoidance.md) |
 | WORLD-001 | alta | planejado | 5 | Adicionar jobs assíncronos, Simulation LOD e inspeção espacial após o gate da Fase 4. | [ADR 0019](docs/adr/0019-spatial-model-chunk-lifecycle-and-job-commit.md), [ADR 0045](docs/adr/0045-wasm-threads-and-shared-memory.md) |
 | ANM-001 | alta | planejado | 8 | Implementar grafo de animação, retarget, IK, layers, masks e root motion controlado. | [ADR 0051](docs/adr/0051-animation-graph-and-skeletal-runtime.md) |
