@@ -89,6 +89,7 @@ let timeline: TimelineEntry[] = [];
 let uiProjectors: UiInspectionProjector[] = [];
 let latestUiProjections = new Map<string, UiInspectionProjection>();
 let gameProjectorId: string | undefined;
+let statechartStateNames = new Map<number, string>();
 
 function installDeclaredStatechart(target: LudivraRuntime): void {
   const declaration = manifest.statecharts;
@@ -99,6 +100,7 @@ function installDeclaredStatechart(target: LudivraRuntime): void {
   const states = chart.states as Array<{ id: string; parent?: string; history: boolean }>;
   const transitions = chart.transitions as Array<{ id: string; from: string; to: string; event?: string; priority: number; kind: "external" | "internal" }>;
   const stateIds = new Map(states.map(({ id }, index) => [id, index + 1]));
+  statechartStateNames = new Map([...stateIds.entries()].map(([id, numeric]) => [numeric, id]));
   const eventIds = new Map(declaration.events.map(({ id, actionId }) => [id, actionId]));
   target.installStatechart(
     states.map((state) => state.parent === undefined
@@ -204,9 +206,18 @@ function step(count = 1): void {
   if (runtime === undefined) throw new Error("CONTROL_SCENARIO_NOT_LOADED");
   for (let index = 0; index < count; index += 1) {
     const before = logicalState();
+    const beforeStatechart = runtime.statechartActive();
     runtime.step(1);
     steppedTicks += 1;
     const after = logicalState();
+    const afterStatechart = runtime.statechartActive();
+    if (beforeStatechart !== afterStatechart) {
+      append("command", "statechart-transition", {
+        chart: manifest.statecharts?.charts[0]?.id ?? "unknown",
+        previous: statechartStateNames.get(beforeStatechart) ?? String(beforeStatechart),
+        active: statechartStateNames.get(afterStatechart) ?? String(afterStatechart)
+      });
+    }
     for (const next of after.integers) {
       const previous = before.integers.find(({ key }) => key === next.key);
       if (previous?.value !== next.value) {

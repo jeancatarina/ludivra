@@ -255,12 +255,13 @@ RuntimeError Runtime::commit_tick() {
       const auto transition = statechart_.dispatch(input.action_id);
       // Inputs outside this chart's declared event vocabulary remain available to
       // gameplay; an explicit chart dispatch still reports event_unhandled.
-      if (transition.error == StatechartError::event_unhandled) continue;
-      if (transition.error != StatechartError::none || !transition.chosen.has_value()) { commands_.clear(); return RuntimeError::statechart_invalid; }
-      mix_byte(state_hash_, 0xF1U);
-      mix_u32(state_hash_, transition.chosen->id);
-      mix_u32(state_hash_, transition.previous);
-      mix_u32(state_hash_, transition.active);
+      if (transition.error != StatechartError::event_unhandled) {
+        if (transition.error != StatechartError::none || !transition.chosen.has_value()) { commands_.clear(); return RuntimeError::statechart_invalid; }
+        mix_byte(state_hash_, 0xF1U);
+        mix_u32(state_hash_, transition.chosen->id);
+        mix_u32(state_hash_, transition.previous);
+        mix_u32(state_hash_, transition.active);
+      }
     }
     if (!lua_.on_input(
             {input.action_id, input.value_milli, input.sequence},
