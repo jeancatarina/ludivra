@@ -41,9 +41,14 @@ export interface LogicalInput {
   sequence: bigint;
 }
 
+export interface StatechartState { id: number; parentId?: number; shallowHistory?: boolean; }
+export interface StatechartTransition { id: number; fromState: number; eventActionId: number; toState: number; priority: number; kind: "external" | "internal"; }
+
 const ok = 0;
 const configSize = 24;
 const inputSize = 24;
+const statechartStateSize = 12;
+const statechartTransitionSize = 24;
 
 function call(
   module: RuntimeModule,
@@ -204,6 +209,33 @@ export class LudivraRuntime {
       call(this.module, "ludivra_runtime_step", [this.liveHandle(), tickCount]),
       this.handle
     );
+  }
+
+  installStatechart(states: readonly StatechartState[], transitions: readonly StatechartTransition[], initialState: number): void {
+    if (states.length === 0) throw new Error("statechart requires at least one state");
+    const statesPointer = this.module._malloc(states.length * statechartStateSize);
+    const transitionsPointer = transitions.length === 0 ? 0 : this.module._malloc(transitions.length * statechartTransitionSize);
+    try {
+      const view = new DataView(this.module.HEAPU8.buffer);
+      states.forEach((state, index) => {
+        const offset = statesPointer + index * statechartStateSize;
+        view.setUint32(offset, state.id, true); view.setUint32(offset + 4, state.parentId ?? 0, true);
+        view.setUint8(offset + 8, state.parentId === undefined ? 0 : 1); view.setUint8(offset + 9, state.shallowHistory === true ? 1 : 0);
+      });
+      transitions.forEach((transition, index) => {
+        const offset = transitionsPointer + index * statechartTransitionSize;
+        view.setUint32(offset, transition.id, true); view.setUint32(offset + 4, transition.fromState, true);
+        view.setUint32(offset + 8, transition.eventActionId, true); view.setUint32(offset + 12, transition.toState, true);
+        view.setUint32(offset + 16, transition.priority, true); view.setUint8(offset + 20, transition.kind === "external" ? 0 : 1);
+      });
+      requireOk(this.module, "statechart installation", call(this.module, "ludivra_runtime_install_statechart", [this.liveHandle(), statesPointer, states.length, transitionsPointer, transitions.length, initialState]), this.handle);
+    } finally { if (transitionsPointer !== 0) this.module._free(transitionsPointer); this.module._free(statesPointer); }
+  }
+
+  statechartActive(): number {
+    const pointer = this.module._malloc(4);
+    try { requireOk(this.module, "statechart inspection", call(this.module, "ludivra_runtime_statechart_active", [this.liveHandle(), pointer]), this.handle); return new DataView(this.module.HEAPU8.buffer).getUint32(pointer, true); }
+    finally { this.module._free(pointer); }
   }
 
   tick(): bigint {
