@@ -16,7 +16,7 @@ Duas restrições delimitam a escolha. O jogo roda em navegador e em Electron, p
 
 ### Três transportes, nesta ordem
 
-**1. Loopback local.** Em processo ou por par de streams locais. É o único obrigatório, é o que roda em CI e é o que cenários usam para provar late join, reconexão, migração de host e divergência sem tocar a rede.
+**1. Loopback local.** Em processo ou por par de streams locais. É o único obrigatório, roda em CI e já prova handshake N/N-1, autoridade do host, late join, reconexão, snapshot e recusa de estado vindo de cliente. Migração de host e localização de divergência continuam gates próprios antes de um adapter externo.
 
 **2. WebRTC DataChannel.** Disponível nativamente em navegador e em Electron, sem dependência nova no repositório. Canal não confiável e não ordenado para snapshot, canal confiável e ordenado para handshake, deltas de chunk e correções.
 

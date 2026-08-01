@@ -5,6 +5,7 @@ add_library(ludivra_kernel STATIC
   src/logical_timers.cpp
   src/motion_reference.cpp
   src/navigation_reference.cpp
+  src/network_session.cpp
   src/physics_reference.cpp
   src/upstream_physics.cpp
   src/lua_sandbox.cpp

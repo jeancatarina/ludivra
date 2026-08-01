@@ -2,6 +2,7 @@
 #include "motion_reference.hpp"
 #include "mass_reference.hpp"
 #include "navigation_reference.hpp"
+#include "network_session.hpp"
 #include "physics_reference.hpp"
 #include "region_storage.hpp"
 #include "upstream_physics.hpp"
@@ -72,6 +73,13 @@ using ludivra::kernel::NavigationLink;
 using ludivra::kernel::NavigationObstacle;
 using ludivra::kernel::NavigationPathQuery;
 using ludivra::kernel::NavigationRegion;
+using ludivra::kernel::NetworkClientInput;
+using ludivra::kernel::NetworkError;
+using ludivra::kernel::NetworkPeerHello;
+using ludivra::kernel::NetworkRoomConfig;
+using ludivra::kernel::NetworkSnapshot;
+using ludivra::kernel::NetworkWorldIdentity;
+using ludivra::kernel::LoopbackRoom;
 using ludivra::kernel::ReferenceNavigation;
 using ludivra::kernel::ReferenceMotion;
 using ludivra::kernel::MotionCancelCause;
@@ -94,6 +102,8 @@ using ludivra::kernel::StoredChunkDelta;
 using ludivra::kernel::StoredRegion;
 using ludivra::kernel::StoredRegionKey;
 using ludivra::kernel::ReferencePhysics;
+using ludivra::kernel::Runtime;
+using ludivra::kernel::RuntimeConfig;
 using ludivra::kernel::PhysicsAuthority;
 using ludivra::kernel::PhysicsBodyDefinition;
 using ludivra::kernel::PhysicsBodyKind;
@@ -903,6 +913,60 @@ void check_statechart_runtime(TestContext& context) {
       "guards evaluate in priority order and fall through deterministically");
 }
 
+void check_loopback_room(TestContext& context) {
+  const NetworkWorldIdentity world{42U, "ember-vault", 3U, 0x44aabbccU};
+  const NetworkRoomConfig config{{60U, 16U, 42U}, world, 2U, 2U, 2U};
+  LoopbackRoom room(config);
+  const NetworkPeerHello current{2U, world};
+  const NetworkPeerHello previous{1U, world};
+  std::uint32_t first_client = 0U;
+  std::uint32_t second_client = 0U;
+  NetworkSnapshot first_snapshot{};
+  NetworkSnapshot second_snapshot{};
+  context.expect(room.connect(current, first_client, first_snapshot) == NetworkError::none && first_client == 1U &&
+      first_snapshot.tick == 0U && first_snapshot.archive.size() > 8U,
+      "loopback room admits protocol N and emits a checksummed late-join snapshot");
+  context.expect(room.connect(previous, second_client, second_snapshot) == NetworkError::none && second_client == 2U,
+      "loopback room admits protocol N-1 through the same logical handshake");
+  auto unsupported = current;
+  unsupported.protocol_version = 0U;
+  std::uint32_t ignored_client = 0U;
+  NetworkSnapshot ignored_snapshot{};
+  context.expect(room.connect(unsupported, ignored_client, ignored_snapshot) == NetworkError::protocol_version_unsupported,
+      "handshake rejects protocol versions older than N-1 explicitly");
+  auto mismatched = current;
+  mismatched.world.content_hash += 1U;
+  context.expect(room.connect(mismatched, ignored_client, ignored_snapshot) == NetworkError::world_identity_mismatch,
+      "handshake refuses a different procedural world identity before simulation");
+  const std::uint8_t forged[]{0x01U};
+  context.expect(room.submit_client_state(first_client, forged) == NetworkError::client_sent_state,
+      "a client attempting to send authoritative state is rejected instead of decoded");
+  context.expect(room.submit_input(first_client, {7U, 1000, 9U}) == NetworkError::none &&
+      room.submit_input(second_client, {8U, -500, 3U}) == NetworkError::none,
+      "connected peers submit logical input only");
+  context.expect(room.submit_input(first_client, {9U, 1, 10U}) == NetworkError::none &&
+      room.submit_input(first_client, {10U, 1, 11U}) == NetworkError::client_input_backlog,
+      "per-client input backlog is bounded rather than growing unbounded");
+  const auto advanced = room.advance();
+  context.expect(advanced.error == NetworkError::none && advanced.snapshot.tick == 1U &&
+      advanced.snapshot.state_hash == room.host_runtime().state_hash(),
+      "host commits ordered peer inputs once and distributes its authoritative snapshot");
+  Runtime client({60U, 16U, 42U});
+  context.expect(room.apply_snapshot(client, advanced.snapshot) == NetworkError::none &&
+      client.state_hash() == room.host_runtime().state_hash(),
+      "a client accepts only a snapshot whose archive, tick and hash agree");
+  auto corrupt = advanced.snapshot;
+  corrupt.archive.back() ^= 0xFFU;
+  context.expect(room.apply_snapshot(client, corrupt) == NetworkError::snapshot_mismatch,
+      "a corrupt host snapshot never mutates a client as valid state");
+  context.expect(room.disconnect(first_client) == NetworkError::none &&
+      room.reconnect(first_client, current, first_snapshot) == NetworkError::none && first_snapshot.tick == 1U,
+      "reconnection returns the current host snapshot and retains client identity");
+  const auto inspection = room.inspect();
+  context.expect(inspection.clients.size() == 2U && inspection.clients[0].reconnects == 1U && inspection.clients[1].pending_inputs == 0U,
+      "room inspection reports peer lifecycle and drained input queues deterministically");
+}
+
 }  // namespace
 
 int main() {
@@ -923,6 +987,7 @@ int main() {
   check_generation(context);
   check_streaming(context);
   check_statechart_runtime(context);
+  check_loopback_room(context);
   if (context.failures > 0) {
     std::fprintf(stderr, "%d kernel determinism checks failed\n", context.failures);
     return 1;
