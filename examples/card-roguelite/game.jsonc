@@ -4,6 +4,7 @@
   "name": "Cofre das Brasas",
   "engine": { "version": "0.7.0" },
   "targets": ["browser", "desktop", "native-headless"],
+  "capabilities": ["spatial.regional-world"],
   "entrypoints": {
     "gameplay": "scripts/gameplay.lua",
     "presentation": "presentation/index.ts"
@@ -18,8 +19,14 @@
       "id": "navigation.ember-vault",
       "schema": "https://ludivra.dev/schemas/navigation-map/v1",
       "source": "navigation/ember-vault.navigation.jsonc"
+    },
+    {
+      "id": "world.ember-vault",
+      "schema": "https://ludivra.dev/schemas/spatial-world/v1",
+      "source": "worlds/ember-vault.world.jsonc"
     }
   ],
+  "spatial": { "worldContentId": "world.ember-vault" },
   "composition": {
     "scenes": [
       { "id": "scene.ember-vault", "source": "scenes/ember-vault.scene.jsonc" }

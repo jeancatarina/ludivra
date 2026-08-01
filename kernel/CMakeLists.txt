@@ -6,6 +6,7 @@ add_library(ludivra_kernel STATIC
   src/navigation_reference.cpp
   src/lua_sandbox.cpp
   src/random_streams.cpp
+  src/regional_world.cpp
   src/runtime.cpp
   src/state_archive.cpp
   src/statechart_runtime.cpp

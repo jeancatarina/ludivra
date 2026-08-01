@@ -24,8 +24,8 @@
       "message": "Geração e meshing são jobs cooperativos com orçamento por tick, commit determinístico, Simulation LOD e snapshot de inspeção; adapter de worker por cópia e persistência de regiões ainda não existem."
     },
     {
-      "code": "SPATIAL_NOT_EXPOSED_TO_LUA",
-      "message": "The foundation is kernel-internal: no gameplay surface exists until a game declares the capability."
+      "code": "SPATIAL_RUNTIME_BINDING_UNAVAILABLE",
+      "message": "O consumidor regional público usa um adapter C/Web separado; vínculo direto com o runtime Lua, save e replay ainda não existe."
     }
   ]
 }

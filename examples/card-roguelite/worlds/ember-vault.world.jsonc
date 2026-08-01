@@ -1,0 +1,11 @@
+{
+  "$schema": "https://ludivra.dev/schemas/spatial-world/v1",
+  "schemaVersion": 1,
+  "id": "world.ember-vault",
+  "dimension": 7,
+  "regionExtentChunks": 2,
+  "entities": [
+    { "id": 1, "position": { "xMilli": 63500, "yMilli": 0, "zMilli": 0 } },
+    { "id": 2, "position": { "xMilli": 65000, "yMilli": 0, "zMilli": 0 } }
+  ]
+}

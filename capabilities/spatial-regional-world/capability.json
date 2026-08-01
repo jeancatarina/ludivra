@@ -1,0 +1,33 @@
+{
+  "id": "spatial.regional-world",
+  "status": "experimental",
+  "version": "0.1.0",
+  "owner": "kernel",
+  "targets": ["native-headless", "browser", "electron"],
+  "contracts": [
+    "schemas/spatial-world.schema.json",
+    "schemas/game.schema.json",
+    "runtime-c-api/include/ludivra/spatial.h"
+  ],
+  "examples": [
+    "examples/card-roguelite/worlds/ember-vault.world.jsonc",
+    "tests/runtime/runtime_test.cpp",
+    "tools/tests/spatial-wasm.mjs"
+  ],
+  "dependencies": ["spatial.runtime-foundation"],
+  "verification": [
+    "pnpm test:native",
+    "pnpm test:spatial-wasm",
+    "pnpm game validate --project examples/card-roguelite --format json"
+  ],
+  "limitations": [
+    {
+      "code": "SPATIAL_REGION_STORAGE_UNAVAILABLE",
+      "message": "A posição regional é uma superfície C/Web em memória; persistência de regiões, journal e recovery pertencem à Fase 7."
+    },
+    {
+      "code": "SPATIAL_MOTION_BINDING_UNAVAILABLE",
+      "message": "A capability move e consulta posições semânticas, mas não substitui Motion, física ou autoridade de corpo."
+    }
+  ]
+}

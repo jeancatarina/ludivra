@@ -28,7 +28,8 @@ test("program source validates and renders every public index", async () => {
   const backlog = renderBacklog(program, adrs);
   assert.doesNotMatch(backlog, /OBS-001/);
   assert.doesNotMatch(backlog, /OBS-002/);
-  assert.match(renderRoadmap(program, adrs), /\| Foco atual \| Fase 5/);
+  assert.match(renderRoadmap(program, adrs), /\| Foco atual \| Fase 6/);
+  assert.match(renderRoadmap(program, adrs), /Capabilities: `spatial\.regional-world`/);
 });
 
 test("completed phases cannot retain work and task IDs cannot collide", async () => {

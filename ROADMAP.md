@@ -5,8 +5,8 @@
 | Campo | Valor |
 |---|---|
 | Release atual | 0.7.0 |
-| Foco atual | Fase 5 — Expor a fundação espacial a um consumidor com posição regional e partitioning interno comprovado. |
-| Próxima entrega | Implementar SPATIAL-002 com fixture de consumidor e inspeção de posição regional. |
+| Foco atual | Fase 6 — Implementar Motion por tempo declarado e comandos semânticos sobre o runtime espacial concluído. |
+| Próxima entrega | Implementar MOT-001 com contrato de movimento, fixture e verificação determinística. |
 | Fonte editável de progresso | [docs/program-status.json](docs/program-status.json) |
 | Decisão do modelo documental | [ADR 0046](docs/adr/0046-generated-program-documentation.md) |
 
@@ -27,8 +27,8 @@
 | 2 | Context Engine, CLI e Development Runner | `CONCLUÍDA` | nenhuma no gate atual |
 | 3 | AI Control Plane e observabilidade causal | `CONCLUÍDA` | nenhuma no gate atual |
 | 4 | Autoria text-first de gameplay, UI e conteúdo | `CONCLUÍDA` | nenhuma no gate atual |
-| 5 | Runtime espacial e mundo procedural | `EM ANDAMENTO` | Posição com região e partitioning interno comprovado pelo consumidor. |
-| 6 | Motion, física e Mass Simulation | `PLANEJADA` | Motion por tempo declarado e comandos semânticos. |
+| 5 | Runtime espacial e mundo procedural | `CONCLUÍDA` | nenhuma no gate atual |
+| 6 | Motion, física e Mass Simulation | `EM ANDAMENTO` | Motion por tempo declarado e comandos semânticos. |
 | 7 | Persistência, replays e multiplayer player-hosted | `PARCIAL` | Region storage atômico com journal, compactação, recovery e migrations. |
 | 8 | Renderer, UI, áudio e apresentação escalável | `PARCIAL` | Perfis web-compatible, desktop-compatible e desktop-high com fallback gráfico observado. |
 | 9 | Procedural Construction Runtime | `PLANEJADA` | Construction Graph, comandos semânticos, undo/redo e replay. |
@@ -136,7 +136,7 @@ Uma sessão nova cria regra, conteúdo, tela, apresentação e cenário usando a
 
 | Campo | Valor |
 |---|---|
-| Estado | `EM ANDAMENTO` |
+| Estado | `CONCLUÍDA` |
 | Owners | kernel spatial runtime, world runtime, job system |
 | Dependências | Fase 4 |
 | ADRs | [ADR 0018](docs/adr/0018-numeric-determinism-and-rng-streams.md), [ADR 0019](docs/adr/0019-spatial-model-chunk-lifecycle-and-job-commit.md), [ADR 0039](docs/adr/0039-entity-component-layer.md), [ADR 0045](docs/adr/0045-wasm-threads-and-shared-memory.md), [ADR 0054](docs/adr/0054-navigation-regions-pathfinding-and-avoidance.md) |
@@ -149,11 +149,7 @@ Criar uma fundação opt-in para mapas pequenos, mundos extensos e sandboxes vir
 - Janela de streaming com residência estável e regeneração idêntica ao revisitar. Evidência: [kernel/src/world_streaming.cpp](kernel/src/world_streaming.cpp), [capabilities/spatial-runtime-foundation/capability.json](capabilities/spatial-runtime-foundation/capability.json).
 - Runtime cooperativo de geração e meshing com orçamento por tick, commit ordenado, Simulation LOD com catch-up lógico e snapshot de chunks, jobs e LOD. Capabilities: `spatial.runtime-foundation`. Evidência: [kernel/src/world_runtime.hpp](kernel/src/world_runtime.hpp), [kernel/src/world_runtime.cpp](kernel/src/world_runtime.cpp), [tests/kernel/kernel_test.cpp](tests/kernel/kernel_test.cpp).
 - Adapter de navegação por grid determinístico com regiões, perfis, layers, A* limitado por budget, links, obstacles, intenção de avoidance e fixture compilada no content pack. Capabilities: `navigation.reference-adapter`. Evidência: [schemas/navigation-map.schema.json](schemas/navigation-map.schema.json), [kernel/src/navigation_reference.cpp](kernel/src/navigation_reference.cpp), [examples/card-roguelite/navigation/ember-vault.navigation.jsonc](examples/card-roguelite/navigation/ember-vault.navigation.jsonc), [tests/kernel/kernel_test.cpp](tests/kernel/kernel_test.cpp).
-
-### Falta
-
-- Posição com região e partitioning interno comprovado pelo consumidor.
-- Superfície pública apenas quando um jogo declarar a capability.
+- Consumidor regional público com posição global fixed-point, consulta ordenada de região e partitioning interno, declarado pelo card roguelite e executável nas fronteiras native e WASM. Capabilities: `spatial.regional-world`. Evidência: [schemas/spatial-world.schema.json](schemas/spatial-world.schema.json), [runtime-c-api/include/ludivra/spatial.h](runtime-c-api/include/ludivra/spatial.h), [examples/card-roguelite/worlds/ember-vault.world.jsonc](examples/card-roguelite/worlds/ember-vault.world.jsonc), [tools/tests/spatial-wasm.mjs](tools/tests/spatial-wasm.mjs).
 
 ### Gate de saída
 
@@ -163,7 +159,7 @@ O runtime gera, carrega, descarta e regenera chunks determinísticos com memóri
 
 | Campo | Valor |
 |---|---|
-| Estado | `PLANEJADA` |
+| Estado | `EM ANDAMENTO` |
 | Owners | motion runtime, physics adapters, Mass Runtime |
 | Dependências | Fase 5 |
 | ADRs | [ADR 0021](docs/adr/0021-motion-and-physics-adapter-authority.md), [ADR 0022](docs/adr/0022-mass-runtime-storage-levels-and-budgets.md), [ADR 0037](docs/adr/0037-physics-solver-selection.md), [ADR 0045](docs/adr/0045-wasm-threads-and-shared-memory.md) |

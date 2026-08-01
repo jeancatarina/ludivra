@@ -25,6 +25,11 @@
         "enum": ["browser", "desktop", "android", "ios", "native-headless"]
       }
     },
+    "capabilities": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": { "type": "string", "pattern": "^[a-z][a-z0-9.-]*$" }
+    },
     "entrypoints": {
       "type": "object",
       "additionalProperties": false,
@@ -46,6 +51,14 @@
           "schema": { "type": "string", "pattern": "^https://ludivra\\.dev/schemas/[a-z0-9-]+/v[0-9]+$" },
           "source": { "type": "string", "minLength": 1 }
         }
+      }
+    },
+    "spatial": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["worldContentId"],
+      "properties": {
+        "worldContentId": { "type": "string", "pattern": "^world\\.[a-z][a-z0-9.-]*$" }
       }
     },
     "composition": {
@@ -292,5 +305,21 @@
         }
       }
     }
-  }
+  },
+  "allOf": [
+    {
+      "if": {
+        "required": ["capabilities"],
+        "properties": { "capabilities": { "contains": { "const": "spatial.regional-world" } } }
+      },
+      "then": { "required": ["spatial"] }
+    },
+    {
+      "if": { "required": ["spatial"] },
+      "then": {
+        "required": ["capabilities"],
+        "properties": { "capabilities": { "contains": { "const": "spatial.regional-world" } } }
+      }
+    }
+  ]
 }

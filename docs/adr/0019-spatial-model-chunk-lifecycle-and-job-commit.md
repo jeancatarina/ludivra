@@ -2,8 +2,8 @@
 
 - Status: provisório
 - Data: 2026-07-24
-- Revisado: 2026-08-01 para o runtime cooperativo, Simulation LOD e inspeção espacial iniciais
-- Revisão: antes de habilitar a capability espacial em qualquer jogo de prova
+- Revisado: 2026-08-01 para runtime cooperativo, Simulation LOD, inspeção e o primeiro consumidor regional
+- Revisão: antes de vincular posição espacial ao runtime Lua, save/replay ou rede
 - Depende de: [ADR 0018](0018-numeric-determinism-and-rng-streams.md)
 - Complementa: [ADR 0008](0008-mandatory-scale-and-procedural-capabilities.md)
 - Fase: 5
@@ -51,6 +51,12 @@ Essa é a propriedade que o cenário de ordem permutada verifica: com as mesmas 
 A estrutura de particionamento — grid, sparse grid, quadtree, octree, BVH ou region index — é interna, substituível e escolhida por benchmark por capability. Ela não vaza para o contrato público.
 
 O LOD de simulação tem níveis ativo, simplificado, agregado e não carregado. Catch-up usa tempo lógico e regras agregadas, e o resultado do catch-up é reproduzível a partir do tempo decorrido, não do tempo de parede.
+
+### Consumidor regional público
+
+`spatial.regional-world` é a primeira capability consumidora, declarada no manifesto do jogo e descrita por um documento `spatial-world` versionado. Sua API C/Web recebe posição global fixed-point, move entidade e consulta região e membros ordenados. O registry traduz internamente para `WorldPosition` e particiona por região; nem coordenada de chunk nem packing local passam pela fronteira pública.
+
+O card roguelite declara um mundo com região e entidades de fixture no content pack. As fronteiras native e WASM verificam a travessia de region, a ordem de membros e os erros de dimensão/buffer. A API continua em memória: persistência, Lua, replay, motion e física não são implicados por esta capability.
 
 ### Runtime cooperativo inicial
 

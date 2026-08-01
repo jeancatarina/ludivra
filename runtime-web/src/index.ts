@@ -90,6 +90,11 @@ const inputSize = 24;
 const statechartStateSize = 12;
 const statechartTransitionSize = 32;
 const statechartActionSize = 12;
+const spatialWorldConfigurationSize = 12;
+const spatialPositionSize = 32;
+const spatialOffsetSize = 32;
+const spatialRegionSize = 16;
+const spatialLocationSize = 48;
 // `ludivra_statechart_trace` contains a uint64_t and is therefore padded to the
 // public C ABI record size. Reading 36 bytes desynchronizes every trace after
 // the first record.
@@ -129,6 +134,176 @@ function requireOk(module: RuntimeModule, operation: string, result: number, han
 /** Failure carrying the stable code the kernel reported, when there is one. */
 export class RuntimeFailure extends Error {
   code?: string;
+}
+
+export interface SpatialWorldConfiguration {
+  dimension: number;
+  regionExtentChunks: number;
+}
+
+export interface SpatialGlobalPosition {
+  dimension: number;
+  xMilli: bigint;
+  yMilli: bigint;
+  zMilli: bigint;
+}
+
+export interface SpatialOffset {
+  xMilli: bigint;
+  yMilli: bigint;
+  zMilli: bigint;
+}
+
+export interface SpatialRegion {
+  dimension: number;
+  x: number;
+  y: number;
+  z: number;
+}
+
+export interface SpatialLocation {
+  entityId: number;
+  region: SpatialRegion;
+  position: SpatialGlobalPosition;
+}
+
+/** Failure returned by the independent semantic spatial boundary. */
+export class SpatialFailure extends Error {}
+
+function requireSpatialOk(module: RuntimeModule, operation: string, result: number): void {
+  if (result === ok) return;
+  const message = module.ccall("ludivra_spatial_result_message", "string", ["number"], [result]) as string;
+  throw new SpatialFailure(`${operation} failed: ${message}`);
+}
+
+/**
+ * Public spatial consumer surface. It takes global fixed-point positions and
+ * region queries; chunk/local packing remains inside the kernel.
+ */
+export class LudivraSpatialWorld {
+  static create(module: RuntimeModule, configuration: SpatialWorldConfiguration): LudivraSpatialWorld {
+    const configPointer = module._malloc(spatialWorldConfigurationSize);
+    const outputPointer = module._malloc(4);
+    try {
+      module.HEAPU8.fill(0, configPointer, configPointer + spatialWorldConfigurationSize);
+      const view = new DataView(module.HEAPU8.buffer);
+      view.setUint32(configPointer, spatialWorldConfigurationSize, true);
+      view.setUint16(configPointer + 4, configuration.dimension, true);
+      view.setUint32(configPointer + 8, configuration.regionExtentChunks, true);
+      requireSpatialOk(module, "spatial world creation", call(module, "ludivra_spatial_world_create", [configPointer, outputPointer]));
+      const handle = module.HEAPU32[outputPointer >>> 2];
+      if (handle === undefined || handle === 0) throw new Error("spatial world creation returned an empty handle");
+      return new LudivraSpatialWorld(module, handle);
+    } finally {
+      module._free(outputPointer);
+      module._free(configPointer);
+    }
+  }
+
+  private constructor(private readonly module: RuntimeModule, private handle: number) {}
+
+  put(entityId: number, position: SpatialGlobalPosition): void {
+    const pointer = this.module._malloc(spatialPositionSize);
+    try {
+      const view = new DataView(this.module.HEAPU8.buffer);
+      this.module.HEAPU8.fill(0, pointer, pointer + spatialPositionSize);
+      view.setUint32(pointer, spatialPositionSize, true);
+      view.setUint16(pointer + 4, position.dimension, true);
+      view.setBigInt64(pointer + 8, position.xMilli, true);
+      view.setBigInt64(pointer + 16, position.yMilli, true);
+      view.setBigInt64(pointer + 24, position.zMilli, true);
+      requireSpatialOk(this.module, "spatial entity placement", call(this.module, "ludivra_spatial_world_put", [this.liveHandle(), entityId, pointer]));
+    } finally {
+      this.module._free(pointer);
+    }
+  }
+
+  translate(entityId: number, offset: SpatialOffset): void {
+    const pointer = this.module._malloc(spatialOffsetSize);
+    try {
+      const view = new DataView(this.module.HEAPU8.buffer);
+      this.module.HEAPU8.fill(0, pointer, pointer + spatialOffsetSize);
+      view.setUint32(pointer, spatialOffsetSize, true);
+      view.setBigInt64(pointer + 8, offset.xMilli, true);
+      view.setBigInt64(pointer + 16, offset.yMilli, true);
+      view.setBigInt64(pointer + 24, offset.zMilli, true);
+      requireSpatialOk(this.module, "spatial entity translation", call(this.module, "ludivra_spatial_world_translate", [this.liveHandle(), entityId, pointer]));
+    } finally {
+      this.module._free(pointer);
+    }
+  }
+
+  locate(entityId: number): SpatialLocation {
+    const pointer = this.module._malloc(spatialLocationSize);
+    try {
+      const view = new DataView(this.module.HEAPU8.buffer);
+      this.module.HEAPU8.fill(0, pointer, pointer + spatialLocationSize);
+      view.setUint32(pointer, spatialLocationSize, true);
+      requireSpatialOk(this.module, "spatial location inspection", call(this.module, "ludivra_spatial_world_locate", [this.liveHandle(), entityId, pointer]));
+      const dimension = view.getUint16(pointer + 8, true);
+      return {
+        entityId: view.getUint32(pointer + 4, true),
+        region: {
+          dimension,
+          x: view.getInt32(pointer + 12, true),
+          y: view.getInt32(pointer + 16, true),
+          z: view.getInt32(pointer + 20, true)
+        },
+        position: {
+          dimension,
+          xMilli: view.getBigInt64(pointer + 24, true),
+          yMilli: view.getBigInt64(pointer + 32, true),
+          zMilli: view.getBigInt64(pointer + 40, true)
+        }
+      };
+    } finally {
+      this.module._free(pointer);
+    }
+  }
+
+  entitiesIn(region: SpatialRegion): number[] {
+    const regionPointer = this.module._malloc(spatialRegionSize);
+    const countPointer = this.module._malloc(4);
+    try {
+      this.writeRegion(regionPointer, region);
+      requireSpatialOk(this.module, "spatial region count", call(this.module, "ludivra_spatial_world_entities_in_count", [this.liveHandle(), regionPointer, countPointer]));
+      const count = new DataView(this.module.HEAPU8.buffer).getUint32(countPointer, true);
+      if (count === 0) return [];
+      const entitiesPointer = this.module._malloc(count * 4);
+      try {
+        requireSpatialOk(this.module, "spatial region read", call(this.module, "ludivra_spatial_world_entities_in_write", [
+          this.liveHandle(), regionPointer, entitiesPointer, count, countPointer
+        ]));
+        const written = new DataView(this.module.HEAPU8.buffer).getUint32(countPointer, true);
+        return Array.from(this.module.HEAPU32.slice(entitiesPointer >>> 2, (entitiesPointer >>> 2) + written));
+      } finally {
+        this.module._free(entitiesPointer);
+      }
+    } finally {
+      this.module._free(countPointer);
+      this.module._free(regionPointer);
+    }
+  }
+
+  destroy(): void {
+    if (this.handle === 0) return;
+    call(this.module, "ludivra_spatial_world_destroy", [this.handle]);
+    this.handle = 0;
+  }
+
+  private writeRegion(pointer: number, region: SpatialRegion): void {
+    const view = new DataView(this.module.HEAPU8.buffer);
+    this.module.HEAPU8.fill(0, pointer, pointer + spatialRegionSize);
+    view.setUint16(pointer, region.dimension, true);
+    view.setInt32(pointer + 4, region.x, true);
+    view.setInt32(pointer + 8, region.y, true);
+    view.setInt32(pointer + 12, region.z, true);
+  }
+
+  private liveHandle(): number {
+    if (this.handle === 0) throw new Error("spatial world has been destroyed");
+    return this.handle;
+  }
 }
 
 export class LudivraRuntime {

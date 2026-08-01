@@ -1,4 +1,5 @@
 #include "ludivra/runtime.h"
+#include "ludivra/spatial.h"
 
 #include "lua_sandbox.hpp"
 
@@ -121,6 +122,56 @@ std::vector<uint8_t> replay_archive(TestContext& context, ludivra_runtime* runti
   return archive;
 }
 
+void check_regional_world(TestContext& context) {
+  context.expect(ludivra_spatial_abi_version() == 1U, "spatial ABI version is stable");
+  ludivra_spatial_world* invalid = nullptr;
+  const ludivra_spatial_world_config invalid_config{sizeof(ludivra_spatial_world_config), 7U, 0U, 0U};
+  context.expect(
+      ludivra_spatial_world_create(&invalid_config, &invalid) == LUDIVRA_SPATIAL_ERROR_CONFIGURATION_INVALID && invalid == nullptr,
+      "a spatial world rejects a zero region extent");
+
+  const ludivra_spatial_world_config config{sizeof(ludivra_spatial_world_config), 7U, 0U, 2U};
+  ludivra_spatial_world* world = nullptr;
+  context.expect(ludivra_spatial_world_create(&config, &world) == LUDIVRA_SPATIAL_OK && world != nullptr,
+      "a consumer creates a semantic regional world");
+  const ludivra_spatial_global_position first{sizeof(ludivra_spatial_global_position), 7U, 0U, 63'500, 0, 0};
+  context.expect(ludivra_spatial_world_put(world, 1U, &first) == LUDIVRA_SPATIAL_OK,
+      "a semantic global position enters the internal partition");
+  const ludivra_spatial_offset east{sizeof(ludivra_spatial_offset), 0U, 1'000, 0, 0};
+  context.expect(ludivra_spatial_world_translate(world, 1U, &east) == LUDIVRA_SPATIAL_OK,
+      "translation crosses an internal chunk without exposing it");
+
+  ludivra_spatial_location location{sizeof(ludivra_spatial_location), 0U, 0U, 0U, 0, 0, 0, 0, 0, 0};
+  context.expect(ludivra_spatial_world_locate(world, 1U, &location) == LUDIVRA_SPATIAL_OK,
+      "consumer inspection returns a semantic position");
+  context.expect(location.entity_id == 1U && location.dimension == 7U && location.x_milli == 64'500 && location.region_x == 1,
+      "region assignment follows a deterministic internal partition");
+
+  const ludivra_spatial_global_position second{sizeof(ludivra_spatial_global_position), 7U, 0U, 65'000, 0, 0};
+  context.expect(ludivra_spatial_world_put(world, 2U, &second) == LUDIVRA_SPATIAL_OK,
+      "a second consumer entity enters the same region");
+  const ludivra_spatial_region region{7U, 0U, 1, 0, 0};
+  uint32_t count = 0U;
+  context.expect(ludivra_spatial_world_entities_in_count(world, &region, &count) == LUDIVRA_SPATIAL_OK && count == 2U,
+      "region query reports deterministic membership");
+  uint32_t one_entity = 0U;
+  context.expect(
+      ludivra_spatial_world_entities_in_write(world, &region, &one_entity, 1U, &count) == LUDIVRA_SPATIAL_ERROR_BUFFER_TOO_SMALL && count == 2U,
+      "partition inspection rejects a short output buffer");
+  uint32_t entities[2]{};
+  context.expect(
+      ludivra_spatial_world_entities_in_write(world, &region, entities, 2U, &count) == LUDIVRA_SPATIAL_OK &&
+          entities[0] == 1U && entities[1] == 2U,
+      "region membership is sorted by semantic entity id");
+  const ludivra_spatial_global_position wrong_dimension{sizeof(ludivra_spatial_global_position), 8U, 0U, 0, 0, 0};
+  context.expect(ludivra_spatial_world_put(world, 3U, &wrong_dimension) == LUDIVRA_SPATIAL_ERROR_DIMENSION_MISMATCH,
+      "a consumer cannot mix dimensions in one world");
+  const ludivra_spatial_offset no_op{sizeof(ludivra_spatial_offset), 0U, 0, 0, 0};
+  context.expect(ludivra_spatial_world_translate(world, 99U, &no_op) == LUDIVRA_SPATIAL_ERROR_ENTITY_UNKNOWN,
+      "unknown spatial entities are observable errors");
+  ludivra_spatial_world_destroy(world);
+}
+
 }  // namespace
 
 int main() {
@@ -129,6 +180,7 @@ int main() {
       ludivra::kernel::LuaSandbox::sdk_contract_boundary_valid(),
       "the reachable Lua SDK surface matches its versioned contract");
   context.expect(ludivra_runtime_abi_version() == 5U, "ABI version is stable");
+  check_regional_world(context);
   context.expect(
       ludivra_runtime_create(nullptr, nullptr) == LUDIVRA_ERROR_INVALID_ARGUMENT,
       "invalid creation arguments are rejected");

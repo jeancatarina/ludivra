@@ -2,9 +2,9 @@
   "schemaVersion": 1,
   "release": "0.7.0",
   "currentFocus": {
-    "phase": 5,
-    "summary": "Expor a fundação espacial a um consumidor com posição regional e partitioning interno comprovado.",
-    "next": "Implementar SPATIAL-002 com fixture de consumidor e inspeção de posição regional."
+    "phase": 6,
+    "summary": "Implementar Motion por tempo declarado e comandos semânticos sobre o runtime espacial concluído.",
+    "next": "Implementar MOT-001 com contrato de movimento, fixture e verificação determinística."
   },
   "phases": [
     {
@@ -118,7 +118,7 @@
     {
       "id": 5,
       "title": "Runtime espacial e mundo procedural",
-      "status": "active",
+      "status": "completed",
       "owners": ["kernel spatial runtime", "world runtime", "job system"],
       "dependencies": [4],
       "adrs": ["0018", "0019", "0039", "0045", "0054"],
@@ -142,18 +142,20 @@
           "summary": "Adapter de navegação por grid determinístico com regiões, perfis, layers, A* limitado por budget, links, obstacles, intenção de avoidance e fixture compilada no content pack.",
           "capabilities": ["navigation.reference-adapter"],
           "evidence": ["schemas/navigation-map.schema.json", "kernel/src/navigation_reference.cpp", "examples/card-roguelite/navigation/ember-vault.navigation.jsonc", "tests/kernel/kernel_test.cpp"]
+        },
+        {
+          "summary": "Consumidor regional público com posição global fixed-point, consulta ordenada de região e partitioning interno, declarado pelo card roguelite e executável nas fronteiras native e WASM.",
+          "capabilities": ["spatial.regional-world"],
+          "evidence": ["schemas/spatial-world.schema.json", "runtime-c-api/include/ludivra/spatial.h", "examples/card-roguelite/worlds/ember-vault.world.jsonc", "tools/tests/spatial-wasm.mjs"]
         }
       ],
-      "remaining": [
-        "Posição com região e partitioning interno comprovado pelo consumidor.",
-        "Superfície pública apenas quando um jogo declarar a capability."
-      ],
+      "remaining": [],
       "gate": "O runtime gera, carrega, descarta e regenera chunks determinísticos com memória estabilizada em viagens longas."
     },
     {
       "id": 6,
       "title": "Motion, física e Mass Simulation",
-      "status": "planned",
+      "status": "active",
       "owners": ["motion runtime", "physics adapters", "Mass Runtime"],
       "dependencies": [5],
       "adrs": ["0021", "0022", "0037", "0045"],
@@ -299,12 +301,12 @@
   ],
   "tasks": [
     {
-      "id": "SPATIAL-002",
+      "id": "MOT-001",
       "priority": "high",
       "status": "planned",
-      "phase": 5,
-      "work": "Expor posição regional e partitioning interno a um jogo consumidor com fixture e inspeção determinística.",
-      "adrs": ["0019"]
+      "phase": 6,
+      "work": "Implementar Motion por tempo declarado e comandos semânticos com fixture e verificação determinística.",
+      "adrs": ["0021"]
     },
     {
       "id": "DESK-001",

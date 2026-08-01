@@ -2,11 +2,11 @@
 
 > Gerado de `docs/program-status.json` por `tools/program-status/generate.mjs`. Não edite manualmente.
 
-Foco atual: **Fase 5 — Expor a fundação espacial a um consumidor com posição regional e partitioning interno comprovado.**
+Foco atual: **Fase 6 — Implementar Motion por tempo declarado e comandos semânticos sobre o runtime espacial concluído.**
 
 | ID | Prioridade | Estado | Fase | Trabalho | ADRs |
 |---|---|---|---:|---|---|
-| SPATIAL-002 | alta | planejado | 5 | Expor posição regional e partitioning interno a um jogo consumidor com fixture e inspeção determinística. | [ADR 0019](docs/adr/0019-spatial-model-chunk-lifecycle-and-job-commit.md) |
+| MOT-001 | alta | planejado | 6 | Implementar Motion por tempo declarado e comandos semânticos com fixture e verificação determinística. | [ADR 0021](docs/adr/0021-motion-and-physics-adapter-authority.md) |
 | ANM-001 | alta | planejado | 8 | Implementar grafo de animação, retarget, IK, layers, masks e root motion controlado. | [ADR 0051](docs/adr/0051-animation-graph-and-skeletal-runtime.md) |
 | AST-001 | alta | planejado | 8 | Implementar ingestão, cooking, variantes, residência e streaming de assets por target. | [ADR 0049](docs/adr/0049-asset-ingest-cooking-and-residency.md) |
 | DESK-001 | alta | planejado | 8 | Implementar perfis gráficos desktop-compatible e desktop-high, seleção de backend e fallback observável. | [ADR 0047](docs/adr/0047-desktop-rendering-profiles-and-backend-policy.md) |

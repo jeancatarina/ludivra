@@ -44,6 +44,7 @@ const requiredFiles = [
   "schemas/card-roguelite-v1.schema.json",
   "schemas/character-spec.schema.json",
   "schemas/navigation-map.schema.json",
+  "schemas/spatial-world.schema.json",
   "schemas/prefab.schema.json",
   "schemas/scenario.schema.json",
   "schemas/scene.schema.json",
@@ -52,6 +53,7 @@ const requiredFiles = [
   "schemas/visual-forge-manifest.schema.json",
   "schemas/visual-style.schema.json",
   "runtime-c-api/include/ludivra/runtime.h",
+  "runtime-c-api/include/ludivra/spatial.h",
   "toolchain.lock"
 ] as const;
 
@@ -77,6 +79,7 @@ const jsonFiles = [
   "schemas/character-spec.schema.json",
   "schemas/game.schema.json",
   "schemas/navigation-map.schema.json",
+  "schemas/spatial-world.schema.json",
   "schemas/prefab.schema.json",
   "schemas/scenario.schema.json",
   "schemas/scene.schema.json",
@@ -104,6 +107,7 @@ const contractSchemaFiles = [
   "schemas/character-spec.schema.json",
   "schemas/game.schema.json",
   "schemas/navigation-map.schema.json",
+  "schemas/spatial-world.schema.json",
   "schemas/prefab.schema.json",
   "schemas/scenario.schema.json",
   "schemas/scene.schema.json",
@@ -632,6 +636,8 @@ export async function runValidate(arguments_: string[] = []): Promise<CommandOut
           const manifest = game as {
             id: string;
             name: string;
+            capabilities?: string[];
+            spatial?: { worldContentId: string };
             content?: Array<{ id: string; schema: string; source: string }>;
             composition?: {
               scenes: Array<{ id: string; source: string }>;
@@ -747,8 +753,27 @@ export async function runValidate(arguments_: string[] = []): Promise<CommandOut
               if (new Set(roomIds).size !== roomIds.length) {
                 diagnostics.push({ code: "CONTENT_ROOM_ID_DUPLICATE", severity: "error", message: "Room IDs must be unique", file: contentPath });
               }
+              if (descriptor.schema === "https://ludivra.dev/schemas/spatial-world/v1") {
+                const entities = (migratedDocument as { entities?: Array<{ id: number }> }).entities ?? [];
+                if (new Set(entities.map(({ id }) => id)).size !== entities.length) {
+                  diagnostics.push({ code: "SPATIAL_ENTITY_ID_DUPLICATE", severity: "error", message: "Spatial entity IDs must be unique", file: contentPath });
+                }
+              }
             } catch (error) {
               diagnostics.push({ code: "CONTENT_UNREADABLE", severity: "error", message: error instanceof Error ? error.message : `Unable to read ${descriptor.source}`, file: contentPath });
+            }
+          }
+          const declaresRegionalWorld = manifest.capabilities?.includes("spatial.regional-world") === true;
+          if (declaresRegionalWorld || manifest.spatial !== undefined) {
+            const worldId = manifest.spatial?.worldContentId;
+            const descriptor = (manifest.content ?? []).find(({ id }) => id === worldId);
+            if (worldId === undefined || descriptor?.schema !== "https://ludivra.dev/schemas/spatial-world/v1") {
+              diagnostics.push({
+                code: "SPATIAL_WORLD_CONTENT_MISSING",
+                severity: "error",
+                message: "The declared regional spatial capability requires a spatial-world content descriptor",
+                file: gamePath
+              });
             }
           }
           if (manifest.composition !== undefined) {
