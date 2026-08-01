@@ -4,7 +4,7 @@
   "currentFocus": {
     "phase": 7,
     "summary": "Persistir regiões regeneráveis com journal atômico, recovery e migrations sem duplicar o mundo procedural.",
-    "next": "Implementar migração de host verificada por hash sobre o loopback e preparar os adapters WebRTC/Steam sem duplicar a simulação."
+    "next": "Publicar boundaries dos adapters WebRTC/Steam sobre o protocolo lógico, mantendo loopback como prova CI obrigatória."
   },
   "phases": [
     {
@@ -205,13 +205,13 @@
           "evidence": ["kernel/src/region_storage.cpp", "kernel/src/runtime.cpp", "runtime-c-api/include/ludivra/runtime.h", "cli/src/commands/storage.ts", "tests/kernel/kernel_test.cpp", "tests/runtime/runtime_test.cpp", "tests/fixtures/region-storage.lua", "cli/test/cli.test.mjs"]
         },
         {
-          "summary": "Sala loopback host-authoritative com protocolo N/N-1, identidade procedural no handshake, inputs de cliente ordenados e limitados, snapshots checksummed, late join, reconexão e recusa de estado enviado por cliente.",
+          "summary": "Sala loopback host-authoritative com protocolo N/N-1, identidade procedural no handshake, inputs de cliente ordenados e limitados, snapshots checksummed, late join, reconexão, migração de host verificada por hash e recusa de estado enviado por cliente.",
           "capabilities": ["network.loopback-room"],
           "evidence": ["kernel/src/network_session.cpp", "tests/kernel/kernel_test.cpp"]
         }
       ],
       "remaining": [
-        "Migração de host verificada por hash e adapters WebRTC/Steam sem duplicar a simulação host-authoritative."
+        "Adapters WebRTC/Steam sobre o protocolo lógico, sem duplicar a simulação host-authoritative."
       ],
       "gate": "Save mundial sobrevive a crash e migration, replay localiza divergência e uma sala casual suporta seu lifecycle completo."
     },
@@ -326,11 +326,11 @@
   ],
   "tasks": [
     {
-      "id": "NET-002",
+      "id": "NET-003",
       "priority": "high",
       "status": "in_progress",
       "phase": 7,
-      "work": "Implementar migração de host verificada por hash sobre loopback e boundaries dos adapters WebRTC/Steam.",
+      "work": "Publicar boundaries dos adapters WebRTC/Steam sobre o protocolo lógico, mantendo loopback como prova CI obrigatória.",
       "adrs": ["0024", "0038"]
     },
     {

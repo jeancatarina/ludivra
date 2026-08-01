@@ -75,6 +75,7 @@ using ludivra::kernel::NavigationPathQuery;
 using ludivra::kernel::NavigationRegion;
 using ludivra::kernel::NetworkClientInput;
 using ludivra::kernel::NetworkError;
+using ludivra::kernel::NetworkHostMigration;
 using ludivra::kernel::NetworkPeerHello;
 using ludivra::kernel::NetworkRoomConfig;
 using ludivra::kernel::NetworkSnapshot;
@@ -962,7 +963,24 @@ void check_loopback_room(TestContext& context) {
   context.expect(room.disconnect(first_client) == NetworkError::none &&
       room.reconnect(first_client, current, first_snapshot) == NetworkError::none && first_snapshot.tick == 1U,
       "reconnection returns the current host snapshot and retains client identity");
-  const auto inspection = room.inspect();
+  context.expect(room.submit_input(second_client, {11U, 1, 12U}) == NetworkError::none,
+      "a reconnected room continues to accept logical peer input");
+  NetworkHostMigration migration{};
+  context.expect(room.prepare_host_migration(migration) == NetworkError::migration_pending_inputs,
+      "host migration refuses to transfer authority while a peer input remains uncommitted");
+  context.expect(room.advance().error == NetworkError::none && room.prepare_host_migration(migration) == NetworkError::none,
+      "a clean authoritative tick exports a migration envelope");
+  LoopbackRoom replacement(config);
+  context.expect(replacement.adopt_host_migration(migration) == NetworkError::none &&
+      replacement.host_runtime().state_hash() == room.host_runtime().state_hash() && replacement.inspect().clients.size() == 2U,
+      "candidate host adopts the checked snapshot and peer lifecycle without a second simulation");
+  auto corrupt_migration = migration;
+  corrupt_migration.snapshot.state_hash ^= 1U;
+  LoopbackRoom rejected(config);
+  context.expect(rejected.adopt_host_migration(corrupt_migration) == NetworkError::host_migration_failed &&
+      rejected.host_runtime().tick() == 0U,
+      "host migration rejects an envelope with mismatched snapshot metadata without advancing the candidate");
+  const auto inspection = replacement.inspect();
   context.expect(inspection.clients.size() == 2U && inspection.clients[0].reconnects == 1U && inspection.clients[1].pending_inputs == 0U,
       "room inspection reports peer lifecycle and drained input queues deterministically");
 }

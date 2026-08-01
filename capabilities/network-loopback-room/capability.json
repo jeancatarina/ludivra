@@ -18,10 +18,6 @@
   ],
   "limitations": [
     {
-      "code": "NETWORK_HOST_MIGRATION_UNAVAILABLE",
-      "message": "Loopback cobre host-authority, late join e reconexão; transferência verificada de autoridade entre hosts ainda não foi publicada."
-    },
-    {
       "code": "NETWORK_EXTERNAL_TRANSPORT_UNAVAILABLE",
       "message": "O protocolo lógico só possui adapter loopback. WebRTC DataChannel e Steam Networking continuam indisponíveis até seus boundaries declarados."
     }

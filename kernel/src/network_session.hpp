@@ -56,7 +56,9 @@ enum class NetworkError : std::uint8_t {
   client_input_backlog,
   client_sent_state,
   runtime_failure,
-  snapshot_mismatch
+  snapshot_mismatch,
+  migration_pending_inputs,
+  host_migration_failed
 };
 
 struct NetworkClientInspection final {
@@ -78,6 +80,16 @@ struct NetworkAdvance final {
   NetworkSnapshot snapshot;
 };
 
+/** A handoff carries an authoritative snapshot and only peer lifecycle data;
+ * generated world data and client-owned state are never transferred. */
+struct NetworkHostMigration final {
+  NetworkRoomConfig config;
+  NetworkSnapshot snapshot;
+  std::vector<NetworkClientInspection> clients;
+  std::uint32_t next_client_id;
+  std::uint64_t next_host_sequence;
+};
+
 /** Deterministic in-process transport. It owns the sole authoritative Runtime:
  * peers supply logical input only, while snapshots are checked logical saves.
  * Its wire-neutral semantics are the reference adapter for future WebRTC and
@@ -96,6 +108,8 @@ class LoopbackRoom final {
   [[nodiscard]] NetworkError submit_client_state(std::uint32_t client_id, std::span<const std::uint8_t> state) const;
   [[nodiscard]] NetworkAdvance advance();
   [[nodiscard]] NetworkError apply_snapshot(Runtime& client, const NetworkSnapshot& snapshot) const;
+  [[nodiscard]] NetworkError prepare_host_migration(NetworkHostMigration& migration) const;
+  [[nodiscard]] NetworkError adopt_host_migration(const NetworkHostMigration& migration);
   [[nodiscard]] NetworkRoomInspection inspect() const;
 
  private:
