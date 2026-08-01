@@ -236,6 +236,7 @@ export async function runContentCommand(
 
   if (action === "inspect") {
     const sceneId = optionValue(arguments_, "--scene");
+    const statechartId = optionValue(arguments_, "--statechart");
     if (sceneId !== undefined) {
       const pack = readContentPack(await readFile(resolve(project, CONTENT_PACK_FILE)));
       const documents = (pack.pack.sections.documents.value ?? {}) as Record<string, unknown>;
@@ -252,6 +253,24 @@ export async function runContentCommand(
         diagnostics,
         data: { project, action, scene },
         nextActions: [`Run game content explain --symbol ${sceneId} to trace the authored scene`]
+      };
+    }
+    if (statechartId !== undefined) {
+      const pack = readContentPack(await readFile(resolve(project, CONTENT_PACK_FILE)));
+      const documents = (pack.pack.sections.documents.value ?? {}) as Record<string, unknown>;
+      const charts = documents[STATECHARTS_DOCUMENT_ID] as { charts?: Array<{ id: string }> } | undefined;
+      const statechart = charts?.charts?.find(({ id }) => id === statechartId);
+      if (statechart === undefined) {
+        return {
+          diagnostics: [{ code: "STATECHART_SCHEMA_INVALID", severity: "error", message: `No compiled statechart named ${statechartId}` }],
+          data: { project, statechartId },
+          nextActions: ["Run game content inspect to list the declared symbols"]
+        };
+      }
+      return {
+        diagnostics,
+        data: { project, action, statechart },
+        nextActions: [`Run game content explain --symbol ${statechartId} to trace the authored chart`]
       };
     }
   }

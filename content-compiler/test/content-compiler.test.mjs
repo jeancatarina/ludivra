@@ -7,6 +7,7 @@ import {
   CONTENT_MIGRATIONS,
   canonicalJson,
   compileSceneGraph,
+  compileStatecharts,
   compileContentPack,
   contentPackCacheKey,
   collectOrigins,
@@ -229,6 +230,35 @@ test("scene graphs keep explicit identities stable and reject unresolved prefab 
   cycle.prefabs[0].value.base = "prefab.spark";
   cycle.prefabs[1].value.base = "prefab.hero";
   assert.throws(() => compileSceneGraph(cycle), /SCENE_REFERENCE_CYCLE/);
+});
+
+test("statecharts order by stable ids and reject ambiguous or unregistered behavior", () => {
+  const chart = {
+    $schema: "https://ludivra.dev/schemas/statechart/v1",
+    schemaVersion: 1,
+    id: "statechart.duel",
+    initial: "idle",
+    events: ["start", "win"],
+    states: [
+      { id: "won", entryActions: ["action.reward"], exitActions: [], history: false },
+      { id: "idle", entryActions: [], exitActions: [], history: false },
+      { id: "combat", parent: "idle", entryActions: ["action.begin"], exitActions: [], history: true }
+    ],
+    transitions: [
+      { id: "win", from: "combat", to: "won", event: "win", priority: 0, kind: "external", guard: "guard.ready", actions: [] },
+      { id: "start", from: "idle", to: "combat", event: "start", priority: 0, kind: "external", actions: ["action.begin"] }
+    ]
+  };
+  const input = { charts: [{ id: chart.id, file: "statecharts/duel.statechart.jsonc", value: chart }], guards: ["guard.ready"], actions: ["action.begin", "action.reward"] };
+  const compiled = compileStatecharts(input);
+  assert.deepEqual(compiled.charts.charts[0].states.map(({ id }) => id), ["combat", "idle", "won"]);
+  assert.deepEqual(compiled.charts.charts[0].transitions.map(({ id }) => id), ["start", "win"]);
+  const ambiguous = structuredClone(input);
+  ambiguous.charts[0].value.transitions.push({ id: "also-start", from: "idle", to: "won", event: "start", priority: 0, kind: "external", actions: [] });
+  assert.throws(() => compileStatecharts(ambiguous), /STATECHART_TRANSITION_AMBIGUOUS/);
+  const unregistered = structuredClone(input);
+  unregistered.charts[0].value.transitions[0].guard = "guard.missing";
+  assert.throws(() => compileStatecharts(unregistered), /STATECHART_GUARD_UNREGISTERED/);
 });
 
 test("duplicate symbols are refused instead of overwriting each other", () => {
