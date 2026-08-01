@@ -666,6 +666,7 @@
       "contracts": [
         "kernel/src/region_storage.hpp",
         "runtime-c-api/include/ludivra/region_storage.h",
+        "cli/src/commands/storage.ts",
         "docs/adr/0023-world-persistence-and-region-storage.md"
       ],
       "examples": [
@@ -677,6 +678,7 @@
       ],
       "verification": [
         "pnpm test:native",
+        "pnpm test:cli",
         "pnpm build:wasm"
       ],
       "limitations": [
@@ -685,8 +687,8 @@
           "message": "O armazenamento nativo já preserva deltas e journal, mas o Runtime/Lua ainda não seleciona regiões para save ou replay de jogo."
         },
         {
-          "code": "WORLD_REGION_STORAGE_CLI_UNAVAILABLE",
-          "message": "Inspect, compact e migrate existem nos boundaries kernel/C nativos, mas os comandos CLI e o adapter Web ainda não foram publicados."
+          "code": "WORLD_REGION_STORAGE_WEB_UNAVAILABLE",
+          "message": "A CLI publica inspect, recover, compact e migrate para os envelopes nativos; ainda não há adapter Web nem binding de memória do runtime."
         }
       ]
     },

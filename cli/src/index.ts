@@ -17,6 +17,7 @@ import { runContent } from "./commands/content.js";
 import { runContext } from "./commands/context.js";
 import { runReplay } from "./commands/replay.js";
 import { runReport } from "./commands/report.js";
+import { runStorage } from "./commands/storage.js";
 import { runSimulate } from "./commands/simulate.js";
 import { optionValue } from "./arguments.js";
 import {
@@ -79,10 +80,12 @@ async function dispatch(command: string, context: CommandContext, arguments_: st
       return runReplay(context, arguments_);
     case "report":
       return runReport(context, arguments_);
+    case "storage":
+      return runStorage(context, arguments_);
     case "help":
       return {
         diagnostics: [],
-        data: { commands: ["audio", "build", "content", "capture", "context", "doctor", "inspect", "new", "package", "replay", "report", "run", "simulate", "status", "test", "validate", "visual"] },
+        data: { commands: ["audio", "build", "content", "capture", "context", "doctor", "inspect", "new", "package", "replay", "report", "run", "simulate", "status", "storage", "test", "validate", "visual"] },
         nextActions: ["Run game doctor --format json"]
       };
     default:

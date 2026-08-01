@@ -18,6 +18,60 @@ function runCli(arguments_) {
   return { execution, result: JSON.parse(execution.stdout) };
 }
 
+function storageChecksum(bytes) {
+  let value = 14695981039346656037n;
+  for (const byte of bytes) value = BigInt.asUintN(64, (value ^ BigInt(byte)) * 1099511628211n);
+  return value;
+}
+
+function storageBytes(parts) {
+  const content = Buffer.concat(parts);
+  const checksum = Buffer.alloc(8);
+  checksum.writeBigUInt64LE(storageChecksum(content));
+  return Buffer.concat([content, checksum]);
+}
+
+function storageU32(value) {
+  const bytes = Buffer.alloc(4);
+  bytes.writeUInt32LE(value >>> 0);
+  return bytes;
+}
+
+function storageI32(value) {
+  const bytes = Buffer.alloc(4);
+  bytes.writeInt32LE(value);
+  return bytes;
+}
+
+function storageU64(value) {
+  const bytes = Buffer.alloc(8);
+  bytes.writeBigUInt64LE(BigInt(value));
+  return bytes;
+}
+
+function storageBlob(bytes) {
+  return Buffer.concat([storageU32(bytes.length), bytes]);
+}
+
+function storageRegion({ version, key, seed = 42n }) {
+  const generator = Buffer.from("procedural-test", "utf8");
+  const delta = Buffer.from([7, 8, 9]);
+  const common = [
+    Buffer.from("LDWR", "ascii"), storageU32(version), storageU32(key.dimension), storageI32(key.x), storageI32(key.y), storageI32(key.z),
+    storageBlob(generator), storageU32(3), storageU64(seed), storageU32(1), storageI32(-1), storageI32(0), storageI32(1), storageBlob(delta),
+    storageBlob(Buffer.from([1, 2]))
+  ];
+  if (version === 1) common.push(storageBlob(Buffer.from([3])));
+  common.push(storageBlob(Buffer.from([4, 5])));
+  return storageBytes(common);
+}
+
+function storageJournal(regions) {
+  return storageBytes([
+    Buffer.from("LDWJ", "ascii"), storageU32(1), storageU32(regions.length), ...regions.map(storageBlob)
+  ]);
+}
+
 test("pnpm argument separator is ignored", () => {
   const { execution, result } = runCli(["--", "help", "--format", "json"]);
   assert.equal(execution.status, 0);
@@ -51,6 +105,38 @@ test("unknown command returns a structured failure", () => {
   assert.equal(execution.status, 2);
   assert.equal(result.status, "failed");
   assert.equal(result.diagnostics[0].code, "COMMAND_UNKNOWN");
+});
+
+test("storage inspects, migrates, compacts and recovers canonical region files", () => {
+  const root = mkdtempSync(resolve(tmpdir(), "ludivra-storage-"));
+  const legacyKey = { dimension: 7, x: -2, y: 3, z: -4 };
+  const recoveredKey = { dimension: 7, x: 6, y: 0, z: 9 };
+  const legacyPath = resolve(root, "region-d7-x-2-y3-z-4.ldwr");
+  try {
+    writeFileSync(legacyPath, storageRegion({ version: 0, key: legacyKey }));
+    const inspectedLegacy = runCli(["storage", "inspect", "--root", root, "--format", "json"]);
+    assert.equal(inspectedLegacy.execution.status, 0);
+    assert.equal(inspectedLegacy.result.data.regions[0].sourceVersion, 0);
+    assert.deepEqual(inspectedLegacy.result.data.regions[0].key, legacyKey);
+
+    const migrated = runCli(["storage", "migrate", "--root", root, "--format", "json"]);
+    assert.equal(migrated.execution.status, 0);
+    assert.equal(migrated.result.data.migratedRegions, 1);
+    assert.equal(readFileSync(legacyPath).readUInt32LE(4), 1);
+
+    const compacted = runCli(["storage", "compact", "--root", root, "--format", "json"]);
+    assert.equal(compacted.execution.status, 0);
+    assert.equal(compacted.result.data.compactedRegions, 1);
+
+    writeFileSync(resolve(root, "journal.ldwj"), storageJournal([storageRegion({ version: 1, key: recoveredKey, seed: 99n })]));
+    const recovered = runCli(["storage", "recover", "--root", root, "--format", "json"]);
+    assert.equal(recovered.execution.status, 0);
+    assert.equal(recovered.result.data.replayedRegions, 1);
+    assert.equal(existsSync(resolve(root, "journal.ldwj")), false);
+    assert.equal(existsSync(resolve(root, "region-d7-x6-y0-z9.ldwr")), true);
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
 });
 
 test("an invalid project target is not created for evidence output", () => {
