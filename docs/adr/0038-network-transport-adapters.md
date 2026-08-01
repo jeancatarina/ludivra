@@ -18,7 +18,7 @@ Duas restrições delimitam a escolha. O jogo roda em navegador e em Electron, p
 
 **1. Loopback local.** Em processo ou por par de streams locais. É o único obrigatório, roda em CI e já prova handshake N/N-1, autoridade do host, late join, reconexão, snapshot, migração verificada e recusa de estado vindo de cliente. Localização de divergência continua gate próprio antes de um adapter externo.
 
-**2. WebRTC DataChannel.** Disponível nativamente em navegador e em Electron, sem dependência nova no repositório. Canal não confiável e não ordenado para snapshot, canal confiável e ordenado para handshake, deltas de chunk e correções.
+**2. WebRTC DataChannel.** Disponível nativamente em navegador e em Electron, sem dependência nova no repositório. O boundary `WebRtcDataChannelTransport` publica envelope binário v1, mantendo canal confiável para handshake, snapshots, migração e correções e canal de tempo real para input — sem fallback silencioso entre eles. Offer/answer possuem serialização copiável validada; ainda falta conectar esses envelopes ao lifecycle de uma sala no host.
 
 A sinalização é responsabilidade do jogador, não da engine: a primeira implementação troca oferta e resposta por **texto copiável** — o mesmo código que o jogador manda para o amigo por qualquer canal. Isso mantém a promessa de player-hosted sem que a Ludivra opere servidor. Servidor de sinalização é adapter opcional futuro, nunca requisito.
 

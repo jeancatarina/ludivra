@@ -18,8 +18,8 @@
   ],
   "limitations": [
     {
-      "code": "NETWORK_EXTERNAL_TRANSPORT_UNAVAILABLE",
-      "message": "O protocolo lógico só possui adapter loopback. WebRTC DataChannel e Steam Networking continuam indisponíveis até seus boundaries declarados."
+      "code": "NETWORK_STEAM_TRANSPORT_UNAVAILABLE",
+      "message": "WebRTC DataChannel já possui boundary browser/Electron; Steam Networking permanece indisponível até que a API nativa seja declarada e validada."
     }
   ]
 }

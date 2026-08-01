@@ -1,0 +1,28 @@
+{
+  "id": "network.webrtc-datachannel",
+  "status": "experimental",
+  "version": "0.1.0",
+  "owner": "hosts/browser",
+  "targets": ["browser", "electron"],
+  "contracts": [
+    "hosts/browser/src/network/webrtc-transport.ts",
+    "docs/adr/0038-network-transport-adapters.md"
+  ],
+  "examples": [
+    "hosts/browser/src/network/webrtc-transport.ts"
+  ],
+  "dependencies": ["network.loopback-room"],
+  "verification": [
+    "pnpm --filter @ludivra/browser-host build"
+  ],
+  "limitations": [
+    {
+      "code": "NETWORK_SIGNALING_PLAYER_OWNED",
+      "message": "O adapter serializa offer/answer copiáveis, mas troca de signaling é uma decisão do jogador e nunca serviço operado pela engine."
+    },
+    {
+      "code": "NETWORK_WEBRTC_ROOM_BINDING_UNAVAILABLE",
+      "message": "DataChannels já validam e roteiam envelopes lógicos; o bridge do host para LoopbackRoom ainda não está publicado."
+    }
+  ]
+}

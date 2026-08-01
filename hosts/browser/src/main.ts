@@ -14,6 +14,7 @@ import { createDesktopCheckpointManager } from "./desktop-checkpoint";
 import { presentEffect } from "./effect-feedback";
 import { createHostDiagnostics } from "./host-diagnostics";
 import { createDomUiRenderer } from "./ui-renderer";
+export { WebRtcDataChannelTransport, decodeNetworkPacket, decodeSignalingDescription, encodeNetworkPacket, encodeSignalingDescription } from "./network/webrtc-transport";
 import "./style.css";
 
 const canvas = document.querySelector<HTMLCanvasElement>("#game-canvas");
