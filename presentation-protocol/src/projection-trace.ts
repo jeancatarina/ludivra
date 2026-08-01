@@ -1,4 +1,5 @@
 import type {
+  AssetVisualDefinition,
   CameraView,
   ParticleBurst,
   PresentationRenderer,
@@ -14,10 +15,12 @@ export interface ProjectedVisual {
   color: number;
   visible: boolean;
   transform: VisualTransform | null;
+  assetId?: string;
 }
 
 export interface ProjectionOperationCounts {
   createVisual: number;
+  createAssetVisual: number;
   setTransform: number;
   setColor: number;
   setVisible: number;
@@ -47,6 +50,7 @@ export interface RecordingRenderer {
 function emptyCounts(): ProjectionOperationCounts {
   return {
     createVisual: 0,
+    createAssetVisual: 0,
     setTransform: 0,
     setColor: 0,
     setVisible: 0,
@@ -83,6 +87,19 @@ export function createRecordingRenderer(inner: PresentationRenderer): RecordingR
         transform: null
       });
       inner.createVisual(definition);
+    },
+    createAssetVisual(definition: AssetVisualDefinition) {
+      operations.createAssetVisual += 1;
+      visuals.set(definition.id, {
+        id: definition.id,
+        shape: "asset",
+        surface: "asset",
+        color: 0,
+        visible: true,
+        transform: null,
+        assetId: definition.assetId
+      });
+      inner.createAssetVisual(definition);
     },
     setTransform(id: string, transform: VisualTransform) {
       operations.setTransform += 1;

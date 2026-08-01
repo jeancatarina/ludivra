@@ -7,6 +7,7 @@ const scoreKey = 1;
 
 export const createGamePresenter: CreateGamePresenter = (renderer) => {
   renderer.createVisual({ id: "core", shape: "sphere", color: 0x9b7cff });
+  renderer.createAssetVisual({ id: "reference-triangle", assetId: "model.reference-triangle", scale: [0.8, 0.8, 0.8] });
   renderer.createVisual({
     id: "orbit",
     shape: "ring",
@@ -27,6 +28,10 @@ export const createGamePresenter: CreateGamePresenter = (renderer) => {
       renderer.setTransform("orbit", {
         position: [0, 0, -0.4],
         rotation: [0, 0, tick * -0.004]
+      });
+      renderer.setTransform("reference-triangle", {
+        position: [-2.1, -1.1, -0.8],
+        rotation: [0, 0, tick * 0.002]
       });
       renderer.setColor("core", score % 2 === 0 ? 0x9b7cff : 0xff78bd);
     },

@@ -14,6 +14,8 @@ export type RendererDiagnosticCode =
   | "RENDER_FEATURE_REQUIRED_UNAVAILABLE"
   | "RENDER_GPU_PROFILE_UNVERIFIED"
   | "RENDER_GPU_TIMESTAMPS_UNAVAILABLE"
+  | "RENDER_ASSET_UNDECLARED"
+  | "RENDER_ASSET_LOAD_FAILED"
   | "SHADER_COMPILE_FAILED";
 
 export type RendererDiagnosticReporter = (code: RendererDiagnosticCode, message: string, source: string) => void;

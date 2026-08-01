@@ -8,7 +8,7 @@ import { createThreeRenderer } from "@ludivra/renderer-three";
 import { installCompiledStatechart, LudivraRuntime, type CompiledStatechartDocument } from "@ludivra/runtime-web";
 import { createGamePresenter } from "@game/presentation";
 import createLudivraModule from "@ludivra/runtime-module";
-import { audioSources, contentPackSource, gameplaySource, manifest } from "virtual:ludivra-game";
+import { assetSources, audioSources, contentPackSource, gameplaySource, manifest } from "virtual:ludivra-game";
 import { createAudioFeedback } from "./audio-feedback";
 import { createDesktopCheckpointManager } from "./desktop-checkpoint";
 import { presentEffect } from "./effect-feedback";
@@ -187,7 +187,8 @@ const recording = createRecordingRenderer(await createThreeRenderer(gameCanvas, 
   },
   onGpuTiming: (metrics) => {
     rendererProfileReport.gpuTiming = { ...metrics };
-  }
+  },
+  assetSources
 }));
 // Host diagnostics stay outside the UI contract: they describe the host, not the game.
 hostStatus.textContent = `Kernel WASM${desktop === null ? "" : " · autosave desktop"} · ${rendererProfileReport.effectiveProfile}`;

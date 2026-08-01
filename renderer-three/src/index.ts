@@ -1,4 +1,5 @@
 import type {
+  AssetVisualDefinition,
   CameraView,
   PresentationRenderer,
   ParticleBurst,
@@ -18,6 +19,7 @@ import {
   DirectionalLight,
   DoubleSide,
   FogExp2,
+  Group,
   Mesh,
   MeshStandardMaterial,
   OctahedronGeometry,
@@ -30,6 +32,7 @@ import {
   Scene,
   SphereGeometry,
   TorusGeometry,
+  Object3D,
   WebGLRenderer,
   SRGBColorSpace
 } from "three";
@@ -73,6 +76,7 @@ export interface ThreeRendererOptions {
   backends?: RendererBackendAvailability;
   onProfileSelected?: (selection: RendererProfileSelection) => void;
   onGpuTiming?: (metrics: GpuTimingMetrics) => void;
+  assetSources?: Readonly<Record<string, string>>;
 }
 
 interface ActiveBurst {
@@ -128,6 +132,27 @@ function createParticleBurst(definition: ParticleBurst): ActiveBurst {
     ageSeconds: 0,
     lifetimeSeconds: Math.max(definition.lifetimeMs / 1000, 0.016)
   };
+}
+
+function cloneAssetTemplate(template: Object3D): Object3D {
+  const instance = template.clone(true);
+  instance.traverse((object) => {
+    if (!(object instanceof Mesh)) return;
+    object.geometry = object.geometry.clone();
+    object.material = Array.isArray(object.material)
+      ? object.material.map((entry) => entry.clone())
+      : object.material.clone();
+  });
+  return instance;
+}
+
+function disposeVisual(root: Object3D): void {
+  root.traverse((object) => {
+    if (!(object instanceof Mesh)) return;
+    object.geometry.dispose();
+    if (Array.isArray(object.material)) object.material.forEach((entry) => entry.dispose());
+    else object.material.dispose();
+  });
 }
 
 type SupportedGeometry =
@@ -372,7 +397,8 @@ export async function createThreeRenderer(
   const rimLight = new PointLight(0xd35cff, 18, 16, 2);
   rimLight.position.set(-5, 1.5, -5);
   scene.add(rimLight);
-  const visuals = new Map<string, Mesh>();
+  const visuals = new Map<string, Object3D>();
+  const assetTemplates = new Map<string, Promise<Object3D>>();
   const bursts: ActiveBurst[] = [];
   const cinematicPipeline = renderer instanceof WebGLRenderer
     ? rendererOperation(
@@ -434,6 +460,24 @@ export async function createThreeRenderer(
     }
   }
 
+  function assetTemplate(assetId: string): Promise<Object3D> {
+    const source = options.assetSources?.[assetId];
+    if (source === undefined) {
+      throw new RendererFailure(
+        "RENDER_ASSET_UNDECLARED",
+        `cooked asset source is unavailable: ${assetId}`,
+        "renderer-three:asset"
+      );
+    }
+    const cached = assetTemplates.get(assetId);
+    if (cached !== undefined) return cached;
+    const loading = import("three/addons/loaders/GLTFLoader.js")
+      .then(({ GLTFLoader }) => new GLTFLoader().loadAsync(source))
+      .then(({ scene: loaded }) => loaded);
+    assetTemplates.set(assetId, loading);
+    return loading;
+  }
+
   return {
     createVisual(definition) {
       rendererOperation("RENDER_OPERATION_FAILED", "renderer-three:create-visual", () => {
@@ -455,6 +499,33 @@ export async function createThreeRenderer(
         scene.add(mesh);
       });
     },
+    createAssetVisual(definition: AssetVisualDefinition) {
+      rendererOperation("RENDER_OPERATION_FAILED", "renderer-three:create-asset-visual", () => {
+        if (visuals.has(definition.id)) {
+          throw new RendererFailure(
+            "RENDER_VISUAL_DUPLICATE",
+            `visual already exists: ${definition.id}`,
+            "renderer-three:create-asset-visual"
+          );
+        }
+        const root = new Group();
+        root.name = definition.assetId;
+        if (definition.scale !== undefined) root.scale.set(...definition.scale);
+        // Fail synchronously when the host omitted the cooked asset, while a
+        // decode/network failure stays an observable presentation diagnostic.
+        const template = assetTemplate(definition.assetId);
+        visuals.set(definition.id, root);
+        scene.add(root);
+        void template.then((loaded) => {
+          if (visuals.get(definition.id) !== root) return;
+          root.add(cloneAssetTemplate(loaded));
+        }).catch((error: unknown) => {
+          if (visuals.get(definition.id) !== root) return;
+          const detail = error instanceof Error ? error.message : String(error);
+          options.reportDiagnostic?.("RENDER_ASSET_LOAD_FAILED", detail, `renderer-three:asset:${definition.assetId}`);
+        });
+      });
+    },
     setTransform(id: string, transform: VisualTransform) {
       rendererOperation("RENDER_OPERATION_FAILED", "renderer-three:set-transform", () => {
         const visual = visuals.get(id);
@@ -474,16 +545,21 @@ export async function createThreeRenderer(
         if (visual === undefined) {
           throw new RendererFailure("RENDER_VISUAL_NOT_FOUND", `visual does not exist: ${id}`, "renderer-three:set-color");
         }
-        if (!(visual.material instanceof MeshStandardMaterial)) {
+        let recolored = false;
+        visual.traverse((object) => {
+          if (!(object instanceof Mesh) || !(object.material instanceof MeshStandardMaterial)) return;
+          object.material.color.setHex(color);
+          const emissiveScale = object.userData.surface === "emissive" ? 0.85 : 0.12;
+          object.material.emissive.setHex(color).multiplyScalar(emissiveScale);
+          recolored = true;
+        });
+        if (!recolored) {
           throw new RendererFailure(
             "RENDER_VISUAL_MATERIAL_UNSUPPORTED",
             `visual material is not supported: ${id}`,
             "renderer-three:set-color"
           );
         }
-        visual.material.color.setHex(color);
-        const emissiveScale = visual.userData.surface === "emissive" ? 0.85 : 0.12;
-        visual.material.emissive.setHex(color).multiplyScalar(emissiveScale);
       });
     },
     setVisible(id, visible) {
@@ -551,10 +627,7 @@ export async function createThreeRenderer(
     destroy() {
       rendererOperation("RENDER_DISPOSAL_FAILED", "renderer-three:destroy", () => {
         for (const visual of visuals.values()) {
-          visual.geometry.dispose();
-          if (visual.material instanceof MeshStandardMaterial) {
-            visual.material.dispose();
-          }
+          disposeVisual(visual);
         }
         visuals.clear();
         for (const burst of bursts) {

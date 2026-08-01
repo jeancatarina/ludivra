@@ -25,6 +25,13 @@ export interface VisualDefinition {
   opacity?: number;
 }
 
+/** A declarative reference to a cooked, target-owned model asset. */
+export interface AssetVisualDefinition {
+  id: string;
+  assetId: string;
+  scale?: readonly [number, number, number];
+}
+
 export interface VisualTransform {
   position: readonly [number, number, number];
   rotation: readonly [number, number, number];
@@ -61,6 +68,7 @@ export interface ParticleBurst {
 
 export interface PresentationRenderer {
   createVisual(definition: VisualDefinition): void;
+  createAssetVisual(definition: AssetVisualDefinition): void;
   setTransform(id: string, transform: VisualTransform): void;
   setColor(id: string, color: number): void;
   setVisible(id: string, visible: boolean): void;

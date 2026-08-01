@@ -9,6 +9,9 @@
     "cli/src/project.ts",
     "cli/src/asset-forge.ts",
     "cli/src/commands/build.ts",
+    "presentation-protocol/src/index.ts",
+    "renderer-three/src/index.ts",
+    "hosts/browser/vite.config.ts",
     "docs/adr/0049-asset-ingest-cooking-and-residency.md"
   ],
   "examples": [
@@ -25,7 +28,7 @@
   "limitations": [
     {
       "code": "ASSET_TARGET_VARIANT_MISSING",
-      "message": "O cooker v1 valida provenance e glTF/GLB, preservando a fonte no cache content-addressed; encoder/compressão, variantes por target, loader de cena, residência e streaming ainda não existem."
+      "message": "Browser/Electron carregam modelos glTF/GLB cozidos por URL estática, mas encoder/compressão, variantes por target, rewriting de dependências externas, residência e streaming ainda não existem."
     }
   ]
 }

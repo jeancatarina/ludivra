@@ -228,7 +228,9 @@ app.whenReady().then(() => {
               void smokeWindow.webContents.executeJavaScript(`JSON.stringify({
                 status: document.querySelector('#host-status')?.textContent ?? '',
                 ready: window.ludivraUi?.ready === true,
-                rendering: window.ludivraUi?.rendering?.() ?? null
+                rendering: window.ludivraUi?.rendering?.() ?? null,
+                projection: window.ludivraUi?.projection?.() ?? null,
+                diagnostics: window.ludivraUi?.diagnostics?.() ?? []
               })`).then((encoded) => {
                 const inspection = JSON.parse(encoded);
                 if (
@@ -243,13 +245,21 @@ app.whenReady().then(() => {
                     return;
                   }
                   if (rendererReadyAt === null) rendererReadyAt = Date.now();
+                  const elapsed = Date.now() - rendererReadyAt;
+                  if (inspection.diagnostics.some((entry) => entry.code === "RENDER_ASSET_LOAD_FAILED")) {
+                    clearTimeout(timeout);
+                    reject(new Error("desktop renderer smoke failed to load a cooked asset"));
+                    return;
+                  }
                   const timing = inspection.rendering.gpuTiming;
                   const timingReady = timing?.available !== true || timing.sampleCount >= 30;
+                  const assetRequested = inspection.projection?.visuals?.some((visual) => visual.shape === "asset") === true;
+                  const assetReady = !assetRequested || elapsed >= 500;
                   // Timestamp resolves are asynchronous. Give a supported device a
                   // short, bounded warm-up window, then retain the observable
                   // partial result instead of turning a measurement delay into a
                   // false renderer failure.
-                  if (!timingReady && Date.now() - rendererReadyAt < 3_000) {
+                  if ((!timingReady || !assetReady) && elapsed < 3_000) {
                     setTimeout(inspect, 100);
                     return;
                   }

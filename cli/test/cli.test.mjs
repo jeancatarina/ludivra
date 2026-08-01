@@ -676,6 +676,7 @@ test("the recording renderer links projector intent to the captured frame", asyn
 
   recording.beginFrame();
   recording.renderer.createVisual({ id: "core", shape: "sphere", color: 0x9b7cff, surface: "emissive" });
+  recording.renderer.createAssetVisual({ id: "reference-model", assetId: "model.reference" });
   recording.renderer.setTransform("core", { position: [1, 2, 3], rotation: [0, 0, 0] });
   recording.renderer.setVisible("core", false);
   recording.renderer.spawnParticles({
@@ -685,7 +686,7 @@ test("the recording renderer links projector intent to the captured frame", asyn
 
   const trace = recording.trace("42");
   assert.equal(trace.tick, "42");
-  assert.equal(trace.visuals.length, 1);
+  assert.equal(trace.visuals.length, 2);
   assert.deepEqual(trace.visuals[0], {
     id: "core",
     shape: "sphere",
@@ -694,19 +695,29 @@ test("the recording renderer links projector intent to the captured frame", asyn
     visible: false,
     transform: { position: [1, 2, 3], rotation: [0, 0, 0] }
   });
+  assert.deepEqual(trace.visuals[1], {
+    id: "reference-model",
+    shape: "asset",
+    surface: "asset",
+    color: 0,
+    visible: true,
+    transform: null,
+    assetId: "model.reference"
+  });
   assert.equal(trace.operations.createVisual, 1);
+  assert.equal(trace.operations.createAssetVisual, 1);
   assert.equal(trace.operations.setTransform, 1);
   assert.equal(trace.operations.render, 1);
   assert.equal(trace.particleBursts, 1);
   // Every recorded call must still reach the real renderer.
-  assert.deepEqual(calls, ["createVisual", "setTransform", "setVisible", "spawnParticles", "render"]);
+  assert.deepEqual(calls, ["createVisual", "createAssetVisual", "setTransform", "setVisible", "spawnParticles", "render"]);
 
   // A new frame resets per-frame counters but keeps the projected scene.
   recording.beginFrame();
   const next = recording.trace("43");
   assert.equal(next.operations.render, 0);
   assert.equal(next.particleBursts, 0);
-  assert.equal(next.visuals.length, 1);
+  assert.equal(next.visuals.length, 2);
 });
 
 test("game audio renders a recipe, reuses it by key and reports its analysis", () => {

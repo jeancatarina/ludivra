@@ -62,6 +62,10 @@ interface CookedVisualIndex {
   }>;
 }
 
+interface CookedAssetIndex {
+  entries: Array<{ id: string; output: string }>;
+}
+
 function withinProject(projectDirectory: string, path: string): string {
   const resolved = resolve(projectDirectory, path);
   const relation = relative(projectDirectory, resolved);
@@ -101,6 +105,9 @@ function gamePlugin(projectDirectory: string): Plugin {
       const cookedVisuals = JSON.parse(
         await readFile(resolve(projectDirectory, ".ludivra/visual-index.json"), "utf8").catch(() => '{"entries":[]}')
       ) as CookedVisualIndex;
+      const cookedAssets = JSON.parse(
+        await readFile(resolve(projectDirectory, ".ludivra/assets-index.json"), "utf8").catch(() => '{"entries":[]}')
+      ) as CookedAssetIndex;
 
       const audioSources: string[] = [];
       for (const audio of manifest.audio ?? []) {
@@ -147,6 +154,16 @@ function gamePlugin(projectDirectory: string): Plugin {
           }
         }
       }
+      const assetSources: string[] = [];
+      for (const asset of cookedAssets.entries) {
+        const sourcePath = withinProject(projectDirectory, asset.output);
+        const reference = this.emitFile({
+          type: "asset",
+          name: `asset-${asset.id.replaceAll(".", "-")}${extname(sourcePath)}`,
+          source: await readFile(sourcePath)
+        });
+        assetSources.push(`${JSON.stringify(asset.id)}: import.meta.ROLLUP_FILE_URL_${reference}`);
+      }
       // The compiled pack is embedded as bytes; the plugin never composes content
       // into the script, and it never compiles content itself.
       const packSource = await readFile(resolve(projectDirectory, ".ludivra/content-pack.json"), "utf8")
@@ -156,7 +173,8 @@ function gamePlugin(projectDirectory: string): Plugin {
       return `export const manifest = ${JSON.stringify(manifest)};\n` +
         `export const gameplaySource = ${JSON.stringify(gameplay)};\n` +
         `export const contentPackSource = ${JSON.stringify(packSource)};\n` +
-        `export const audioSources = {${audioSources.join(",")}};`;
+        `export const audioSources = {${audioSources.join(",")}};\n` +
+        `export const assetSources = {${assetSources.join(",")}};`;
     }
   };
 }
