@@ -17,6 +17,7 @@
     "build:wasm": "tools/build/build-wasm.sh",
     "build:web": "pnpm build:packages && pnpm build:wasm && pnpm --filter @ludivra/browser-host build",
     "build:native": "cmake --preset dev && cmake --build --preset dev",
+    "bench:physics": "pnpm build:native && build/dev/tests/kernel/ludivra_physics_benchmark",
     "build:typescript": "pnpm --filter @ludivra/cli... --filter @ludivra/platform-contracts --filter @ludivra/renderer-three run build",
     "build": "pnpm contracts && pnpm build:typescript && pnpm build:native",
     "test:cli": "pnpm --filter @ludivra/cli test",

@@ -5,8 +5,8 @@
 | Campo | Valor |
 |---|---|
 | Release atual | 0.7.0 |
-| Foco atual | Fase 6 — Integrar os solvers físicos upstream por adapters de borda, mantendo autoridade e commit quantizado. |
-| Próxima entrega | Implementar PHY-002 com Jolt/Box2D fixados, target gating e benchmark inicial. |
+| Foco atual | Fase 7 — Persistir regiões regeneráveis com journal atômico, recovery e migrations sem duplicar o mundo procedural. |
+| Próxima entrega | Implementar PST-001 com region storage versionado, journal, compactação e recovery verificável. |
 | Fonte editável de progresso | [docs/program-status.json](docs/program-status.json) |
 | Decisão do modelo documental | [ADR 0046](docs/adr/0046-generated-program-documentation.md) |
 
@@ -28,8 +28,8 @@
 | 3 | AI Control Plane e observabilidade causal | `CONCLUÍDA` | nenhuma no gate atual |
 | 4 | Autoria text-first de gameplay, UI e conteúdo | `CONCLUÍDA` | nenhuma no gate atual |
 | 5 | Runtime espacial e mundo procedural | `CONCLUÍDA` | nenhuma no gate atual |
-| 6 | Motion, física e Mass Simulation | `EM ANDAMENTO` | Adapters Jolt 3D e Box2D 2D com autoridade, quantização e replay. |
-| 7 | Persistência, replays e multiplayer player-hosted | `PARCIAL` | Region storage atômico com journal, compactação, recovery e migrations. |
+| 6 | Motion, física e Mass Simulation | `CONCLUÍDA` | nenhuma no gate atual |
+| 7 | Persistência, replays e multiplayer player-hosted | `EM ANDAMENTO` | Region storage atômico com journal, compactação, recovery e migrations. |
 | 8 | Renderer, UI, áudio e apresentação escalável | `PARCIAL` | Perfis web-compatible, desktop-compatible e desktop-high com fallback gráfico observado. |
 | 9 | Procedural Construction Runtime | `PLANEJADA` | Construction Graph, comandos semânticos, undo/redo e replay. |
 | 10 | Procedural Forges | `PARCIAL` | Completar música, stems, previews gráficos e runtime/cooker do Audio Forge. |
@@ -159,7 +159,7 @@ O runtime gera, carrega, descarta e regenera chunks determinísticos com memóri
 
 | Campo | Valor |
 |---|---|
-| Estado | `EM ANDAMENTO` |
+| Estado | `CONCLUÍDA` |
 | Owners | motion runtime, physics adapters, Mass Runtime |
 | Dependências | Fase 5 |
 | ADRs | [ADR 0021](docs/adr/0021-motion-and-physics-adapter-authority.md), [ADR 0022](docs/adr/0022-mass-runtime-storage-levels-and-budgets.md), [ADR 0037](docs/adr/0037-physics-solver-selection.md), [ADR 0045](docs/adr/0045-wasm-threads-and-shared-memory.md) |
@@ -171,11 +171,7 @@ Entregar movimento formal, física por adapters e multidões em níveis de simul
 - Adapter de Motion determinístico para snap, tween e ballistic com relógios lógico/apresentação separados, comando de posição semântico, hash lógico e cancelamento com causa. Capabilities: `motion.reference-runtime`. Evidência: [schemas/motion.schema.json](schemas/motion.schema.json), [kernel/src/motion_reference.cpp](kernel/src/motion_reference.cpp), [examples/card-roguelite/motion/ember-vault.motion.jsonc](examples/card-roguelite/motion/ember-vault.motion.jsonc), [tests/kernel/kernel_test.cpp](tests/kernel/kernel_test.cpp).
 - Adapter de física de referência inteiro com boxes, layers/masks, authority por corpo, triggers, commit gameplay quantizado e golden vector de contato/posição. Capabilities: `physics.reference-adapter`. Evidência: [schemas/physics-world.schema.json](schemas/physics-world.schema.json), [kernel/src/physics_reference.cpp](kernel/src/physics_reference.cpp), [examples/card-roguelite/physics/ember-vault.physics.jsonc](examples/card-roguelite/physics/ember-vault.physics.jsonc), [tests/kernel/kernel_test.cpp](tests/kernel/kernel_test.cpp).
 - Mass Runtime de referência com arrays paralelos ordenados, cinco níveis de simulação, budgets, promoção/rebaixamento, operações em lote, query limitada e hash autoritativo sem níveis visuais. Capabilities: `mass.reference-runtime`. Evidência: [schemas/mass-population.schema.json](schemas/mass-population.schema.json), [kernel/src/mass_reference.cpp](kernel/src/mass_reference.cpp), [examples/card-roguelite/mass/ember-vault.mass.jsonc](examples/card-roguelite/mass/ember-vault.mass.jsonc), [tests/kernel/kernel_test.cpp](tests/kernel/kernel_test.cpp).
-
-### Falta
-
-- Adapters Jolt 3D e Box2D 2D com autoridade, quantização e replay.
-- Mass Runtime contíguo, níveis de simulação, promoção controlada e budgets.
+- Adapters upstream Jolt 3D e Box2D 2D fixados por commit, isolados por PIMPL, com step de 60 Hz, contatos canônicos, authority gameplay, replay de inputs/ticks que reexecuta até o mesmo hash e benchmark reproduzível; Web permanece explicitamente desabilitado. Capabilities: `physics.upstream-adapters`. Evidência: [cmake/UpstreamPhysics.cmake](cmake/UpstreamPhysics.cmake), [kernel/src/upstream_physics.cpp](kernel/src/upstream_physics.cpp), [toolchain.lock](toolchain.lock), [tests/kernel/physics_benchmark.cpp](tests/kernel/physics_benchmark.cpp).
 
 ### Gate de saída
 
@@ -185,7 +181,7 @@ Movimento, física e hordas permanecem observáveis, reproduzíveis e dentro dos
 
 | Campo | Valor |
 |---|---|
-| Estado | `PARCIAL` |
+| Estado | `EM ANDAMENTO` |
 | Owners | kernel, storage, network runtime |
 | Dependências | Fase 5, Fase 6 |
 | ADRs | [ADR 0023](docs/adr/0023-world-persistence-and-region-storage.md), [ADR 0024](docs/adr/0024-player-hosted-multiplayer-and-protocol-compatibility.md), [ADR 0038](docs/adr/0038-network-transport-adapters.md) |

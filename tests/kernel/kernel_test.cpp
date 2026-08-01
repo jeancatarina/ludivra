@@ -3,6 +3,7 @@
 #include "mass_reference.hpp"
 #include "navigation_reference.hpp"
 #include "physics_reference.hpp"
+#include "upstream_physics.hpp"
 #include "random_streams.hpp"
 #include "statechart_runtime.hpp"
 #include "world_chunks.hpp"
@@ -85,10 +86,15 @@ using ludivra::kernel::SpatialGlobalPosition;
 using ludivra::kernel::RegionalWorldError;
 using ludivra::kernel::ReferencePhysics;
 using ludivra::kernel::PhysicsAuthority;
+using ludivra::kernel::PhysicsBodyDefinition;
 using ludivra::kernel::PhysicsBodyKind;
 using ludivra::kernel::PhysicsBox;
 using ludivra::kernel::PhysicsError;
 using ludivra::kernel::PhysicsVelocity;
+using ludivra::kernel::UpstreamPhysicsAdapter;
+using ludivra::kernel::UpstreamPhysicsAvailability;
+using ludivra::kernel::UpstreamPhysicsSolver;
+using ludivra::kernel::upstream_physics_solvers;
 using ludivra::kernel::ReferenceMass;
 using ludivra::kernel::MassAgent;
 using ludivra::kernel::MassBudget;
@@ -562,6 +568,67 @@ void check_reference_physics(TestContext& context) {
       "invalid colliders are observable instead of approximated");
 }
 
+void check_upstream_physics(TestContext& context) {
+  const auto solvers = upstream_physics_solvers();
+  context.expect(solvers.size() == 2U && solvers[0].availability == UpstreamPhysicsAvailability::available &&
+      solvers[1].availability == UpstreamPhysicsAvailability::available && solvers[0].gameplay_authority_available &&
+      solvers[1].gameplay_authority_available,
+      "pinned Jolt and Box2D adapters declare native gameplay authority after golden-vector verification");
+
+  for (const auto solver : {UpstreamPhysicsSolver::jolt_3d, UpstreamPhysicsSolver::box2d_2d}) {
+    UpstreamPhysicsAdapter adapter(solver);
+    context.expect(adapter.availability() == UpstreamPhysicsAvailability::available,
+        "a pinned native solver creates through the Ludivra adapter boundary");
+    const PhysicsBodyDefinition static_body{1U, PhysicsAuthority::gameplay, PhysicsBodyKind::static_body, 1U, 1U,
+        {7U, 0, 0, 0}, {0, 0, 0}, {500, 500, 500}};
+    const PhysicsBodyDefinition overlapping_body{2U, PhysicsAuthority::gameplay, PhysicsBodyKind::dynamic, 1U, 1U,
+        {7U, 0, 0, 0}, {0, 0, 0}, {500, 500, 500}};
+    const PhysicsBodyDefinition moving_body{3U, PhysicsAuthority::gameplay, PhysicsBodyKind::dynamic, 1U, 1U,
+        {7U, 10'000, 0, 0}, {600, 0, 0}, {500, 500, 500}};
+    context.expect(adapter.add_body(static_body) == PhysicsError::none && adapter.add_body(overlapping_body) == PhysicsError::none &&
+        adapter.add_body(moving_body) == PhysicsError::none,
+        "gameplay authority crosses the upstream adapter with quantized body data");
+    context.expect(adapter.step() == PhysicsError::none,
+        "the upstream solver completes a fixed adapter step");
+    const auto snapshots = adapter.inspect();
+    context.expect(snapshots.size() == 3U && snapshots[2].id == 3U && snapshots[2].position.x_milli >= 10'009 &&
+        snapshots[2].position.x_milli <= 10'011,
+        "solver output is committed back to integer millimetres at the adapter edge");
+    const auto contacts = adapter.contacts();
+    context.expect(!contacts.empty() && contacts[0].first_id == 1U && contacts[0].second_id == 2U,
+        "contacts are captured at the vendor edge with canonical Ludivra body ids");
+    const std::uint64_t expected_contact_hash = solver == UpstreamPhysicsSolver::jolt_3d
+        ? 0xd183a22840a5e7b5ULL
+        : 0xa620d29606b34f10ULL;
+    context.expect(adapter.replay_hash() == expected_contact_hash,
+        "quantized positions, velocities and canonical contact match the pinned solver golden vector");
+
+    UpstreamPhysicsAdapter replay_source(solver);
+    context.expect(replay_source.add_body({1U, PhysicsAuthority::gameplay, PhysicsBodyKind::dynamic, 1U, 1U,
+        {7U, 0, 0, 0}, {600, 0, 0}, {500, 500, 500}}) == PhysicsError::none &&
+        replay_source.step() == PhysicsError::none,
+        "a deterministic gameplay state is eligible for upstream replay checkpointing");
+    const auto checkpoint = replay_source.replay_write();
+    UpstreamPhysicsAdapter replay_restored(solver);
+    context.expect(replay_restored.replay_load(checkpoint) == PhysicsError::none && replay_source.step() == PhysicsError::none &&
+        replay_restored.step() == PhysicsError::none,
+        "an upstream adapter restores its binary checkpoint before the next fixed step");
+    const auto continued = replay_source.inspect();
+    const auto restored = replay_restored.inspect();
+    context.expect(continued.size() == 1U && restored.size() == 1U && continued[0].position.x_milli == restored[0].position.x_milli &&
+        continued[0].velocity.x_milli == restored[0].velocity.x_milli && replay_source.replay_hash() == replay_restored.replay_hash(),
+        "a restored adapter reaches the same next quantized presentation state");
+    auto corrupt_checkpoint = checkpoint;
+    corrupt_checkpoint.pop_back();
+    context.expect(replay_restored.replay_load(corrupt_checkpoint) == PhysicsError::replay_invalid,
+        "truncated upstream replay checkpoints are rejected without mutating the current adapter state");
+    const PhysicsBodyDefinition host_body{4U, PhysicsAuthority::host, PhysicsBodyKind::dynamic, 1U, 1U,
+        {7U, 2'000, 0, 0}, {0, 0, 0}, {500, 500, 500}};
+    context.expect(adapter.add_body(host_body) == PhysicsError::solver_authority_unsupported,
+        "host authority remains unavailable before the player-hosted network runtime exists");
+  }
+}
+
 void check_reference_mass(TestContext& context) {
   ReferenceMass mass({1U, 1U, 1U, 1'000, 2U});
   context.expect(mass.add({2U, MassLevel::simplified_agent, 500, 0, 10, 0, 8}) == MassError::none &&
@@ -761,6 +828,7 @@ int main() {
   check_reference_navigation(context);
   check_reference_motion(context);
   check_reference_physics(context);
+  check_upstream_physics(context);
   check_reference_mass(context);
   check_generation(context);
   check_streaming(context);

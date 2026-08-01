@@ -9,3 +9,12 @@ target_compile_definitions(ludivra_kernel_tests PRIVATE
 ludivra_enable_strict_warnings(ludivra_kernel_tests)
 
 add_test(NAME ludivra.kernel.determinism COMMAND ludivra_kernel_tests)
+
+add_executable(ludivra_physics_benchmark
+  physics_benchmark.cpp
+)
+target_link_libraries(ludivra_physics_benchmark PRIVATE ludivra_kernel)
+target_compile_definitions(ludivra_physics_benchmark PRIVATE
+  LUDIVRA_TEST_FIXTURE_DIR="${CMAKE_SOURCE_DIR}/tests/fixtures"
+)
+ludivra_enable_strict_warnings(ludivra_physics_benchmark)

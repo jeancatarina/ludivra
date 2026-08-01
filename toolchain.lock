@@ -18,5 +18,19 @@
     "electronPackager": "20.0.3",
     "steamworksJs": "0.4.0"
   },
+  "upstream": {
+    "joltPhysics": {
+      "version": "5.3.0",
+      "commit": "0373ec0dd762e4bc2f6acdb08371ee84fa23c6db",
+      "repository": "https://github.com/jrouwe/JoltPhysics.git",
+      "license": "MIT"
+    },
+    "box2d": {
+      "version": "3.1.1",
+      "commit": "8c661469c9507d3ad6fbd2fea3f1aa71669c2fe3",
+      "repository": "https://github.com/erincatto/box2d.git",
+      "license": "MIT"
+    }
+  },
   "pending": []
 }

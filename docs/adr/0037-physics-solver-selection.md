@@ -38,6 +38,14 @@ O adapter de referência mínimo do ADR 0021 continua existindo: ele é o que ro
 
 `ReferencePhysics` agora cobre o boundary por boxes quantizados, layers/masks, authorities, triggers, contatos e golden vector. A implementação é deliberadamente pequena e não deve crescer para substituir os vendors: Jolt e Box2D seguem necessários para os recursos de produção declarados pelo ADR 0021.
 
+### Integração inicial auditável
+
+Jolt `5.3.0` (`0373ec0dd762e4bc2f6acdb08371ee84fa23c6db`) e Box2D `3.1.1` (`8c661469c9507d3ad6fbd2fea3f1aa71669c2fe3`) são baixados de seus repositórios canônicos pelo CMake, com commits imutáveis registrados em `toolchain.lock`. `cmake/UpstreamPhysics.cmake` constrói ambos apenas no target nativo por padrão; no WebAssembly eles ficam declaradamente `target_disabled` e o `ReferencePhysics` continua sendo a implementação disponível.
+
+`UpstreamPhysicsAdapter` mantém os tipos dos vendors em PIMPL, executa um step fixo de 60 Hz e converte os resultados para milímetros inteiros na borda. A autoridade `gameplay` foi promovida no target nativo: `tests/kernel/kernel_test.cpp` fixa um vetor que inclui posição, velocidade e contato (`Jolt d183a22840a5e7b5`, `Box2D a620d29606b34f10`) e também recarrega o log binário de spawns, velocidades e ticks antes de exigir o mesmo hash no step seguinte. Autoridade `host` continua recusada até a Fase 7.
+
+`pnpm bench:physics` exercita 128 corpos por 600 steps em cada adapter e imprime uma linha JSON por solver. A medida é comparativa na mesma máquina, não um limite de CI: ela registra a primeira baseline sem confundir variação de hardware com regressão funcional.
+
 ### O que continua recusado
 
 Determinismo competitivo entre plataformas continua não prometido. Engine física própria continua recusada pelo ADR 0008. Um terceiro solver exige revisão deste ADR, não adição silenciosa.

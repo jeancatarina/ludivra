@@ -6,6 +6,7 @@ add_library(ludivra_kernel STATIC
   src/motion_reference.cpp
   src/navigation_reference.cpp
   src/physics_reference.cpp
+  src/upstream_physics.cpp
   src/lua_sandbox.cpp
   src/mass_reference.cpp
   src/random_streams.cpp
@@ -27,5 +28,18 @@ target_include_directories(ludivra_kernel
 )
 
 target_link_libraries(ludivra_kernel PRIVATE ludivra_lua)
+
+target_compile_definitions(ludivra_kernel PRIVATE
+  LUDIVRA_HAS_JOLT_PHYSICS=$<BOOL:${LUDIVRA_JOLT_PHYSICS_AVAILABLE}>
+  LUDIVRA_HAS_BOX2D_PHYSICS=$<BOOL:${LUDIVRA_BOX2D_PHYSICS_AVAILABLE}>
+  LUDIVRA_UPSTREAM_PHYSICS_TARGET_DISABLED=$<BOOL:${LUDIVRA_UPSTREAM_PHYSICS_TARGET_DISABLED}>
+)
+
+if(LUDIVRA_JOLT_PHYSICS_AVAILABLE)
+  target_link_libraries(ludivra_kernel PRIVATE Jolt)
+endif()
+if(LUDIVRA_BOX2D_PHYSICS_AVAILABLE)
+  target_link_libraries(ludivra_kernel PRIVATE box2d)
+endif()
 
 ludivra_enable_strict_warnings(ludivra_kernel)

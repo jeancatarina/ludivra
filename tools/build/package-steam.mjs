@@ -220,6 +220,8 @@ async function smokeTest(directory, targetPlatform, productName) {
 function createSbom(game, lockfileHash, lockedToolchainHash) {
   const components = [
     ["Lua", "5.4.8", "library", "pkg:generic/lua@5.4.8", "MIT"],
+    ["Jolt Physics", "5.3.0", "library", "pkg:generic/jolt-physics@5.3.0", "MIT"],
+    ["Box2D", "3.1.1", "library", "pkg:generic/box2d@3.1.1", "MIT"],
     ["three", "0.185.1", "library", "pkg:npm/three@0.185.1", "MIT"],
     ["Electron", electronVersion, "framework", `pkg:npm/electron@${electronVersion}`, "MIT"],
     ["steamworks.js", steamworksVersion, "library", `pkg:npm/steamworks.js@${steamworksVersion}`, "MIT"]

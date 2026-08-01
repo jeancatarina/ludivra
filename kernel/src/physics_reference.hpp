@@ -18,7 +18,10 @@ enum class PhysicsError : std::uint8_t {
   body_unknown,
   authority_mismatch,
   collider_invalid,
-  arithmetic_overflow
+  arithmetic_overflow,
+  solver_unavailable,
+  solver_authority_unsupported,
+  replay_invalid
 };
 
 struct PhysicsBox final {

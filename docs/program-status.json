@@ -2,9 +2,9 @@
   "schemaVersion": 1,
   "release": "0.7.0",
   "currentFocus": {
-    "phase": 6,
-    "summary": "Integrar os solvers físicos upstream por adapters de borda, mantendo autoridade e commit quantizado.",
-    "next": "Implementar PHY-002 com Jolt/Box2D fixados, target gating e benchmark inicial."
+    "phase": 7,
+    "summary": "Persistir regiões regeneráveis com journal atômico, recovery e migrations sem duplicar o mundo procedural.",
+    "next": "Implementar PST-001 com region storage versionado, journal, compactação e recovery verificável."
   },
   "phases": [
     {
@@ -155,7 +155,7 @@
     {
       "id": 6,
       "title": "Motion, física e Mass Simulation",
-      "status": "active",
+      "status": "completed",
       "owners": ["motion runtime", "physics adapters", "Mass Runtime"],
       "dependencies": [5],
       "adrs": ["0021", "0022", "0037", "0045"],
@@ -175,18 +175,20 @@
           "summary": "Mass Runtime de referência com arrays paralelos ordenados, cinco níveis de simulação, budgets, promoção/rebaixamento, operações em lote, query limitada e hash autoritativo sem níveis visuais.",
           "capabilities": ["mass.reference-runtime"],
           "evidence": ["schemas/mass-population.schema.json", "kernel/src/mass_reference.cpp", "examples/card-roguelite/mass/ember-vault.mass.jsonc", "tests/kernel/kernel_test.cpp"]
+        },
+        {
+          "summary": "Adapters upstream Jolt 3D e Box2D 2D fixados por commit, isolados por PIMPL, com step de 60 Hz, contatos canônicos, authority gameplay, replay de inputs/ticks que reexecuta até o mesmo hash e benchmark reproduzível; Web permanece explicitamente desabilitado.",
+          "capabilities": ["physics.upstream-adapters"],
+          "evidence": ["cmake/UpstreamPhysics.cmake", "kernel/src/upstream_physics.cpp", "toolchain.lock", "tests/kernel/physics_benchmark.cpp"]
         }
       ],
-      "remaining": [
-        "Adapters Jolt 3D e Box2D 2D com autoridade, quantização e replay.",
-        "Mass Runtime contíguo, níveis de simulação, promoção controlada e budgets."
-      ],
+      "remaining": [],
       "gate": "Movimento, física e hordas permanecem observáveis, reproduzíveis e dentro dos budgets aprovados."
     },
     {
       "id": 7,
       "title": "Persistência, replays e multiplayer player-hosted",
-      "status": "partial",
+      "status": "active",
       "owners": ["kernel", "storage", "network runtime"],
       "dependencies": [5, 6],
       "adrs": ["0023", "0024", "0038"],
@@ -316,12 +318,12 @@
   ],
   "tasks": [
     {
-      "id": "PHY-002",
+      "id": "PST-001",
       "priority": "high",
-      "status": "planned",
-      "phase": 6,
-      "work": "Integrar Jolt/Box2D upstream por adapters de borda, com target gating e benchmark inicial.",
-      "adrs": ["0021", "0037"]
+      "status": "in_progress",
+      "phase": 7,
+      "work": "Implementar region storage atômico com journal, compactação, recovery e migrations versionadas.",
+      "adrs": ["0023", "0038"]
     },
     {
       "id": "DESK-001",

@@ -9,6 +9,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
 include(cmake/Lua.cmake)
+include(cmake/UpstreamPhysics.cmake)
 
 function(ludivra_enable_strict_warnings target)
   if(MSVC)

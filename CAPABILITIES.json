@@ -380,6 +380,42 @@
       ]
     },
     {
+      "id": "physics.upstream-adapters",
+      "status": "experimental",
+      "version": "0.1.0",
+      "owner": "kernel",
+      "targets": [
+        "native-headless"
+      ],
+      "contracts": [
+        "kernel/src/upstream_physics.hpp",
+        "cmake/UpstreamPhysics.cmake",
+        "toolchain.lock"
+      ],
+      "examples": [
+        "tests/kernel/kernel_test.cpp",
+        "tests/kernel/physics_benchmark.cpp"
+      ],
+      "dependencies": [
+        "physics.reference-adapter"
+      ],
+      "verification": [
+        "pnpm test:native",
+        "pnpm bench:physics",
+        "pnpm build:wasm"
+      ],
+      "limitations": [
+        {
+          "code": "PHYSICS_HOST_AUTHORITY_UNAVAILABLE",
+          "message": "A autoridade host depende das salas player-hosted, transport e reconexão da Fase 7; os adapters nativos aceitam presentation e gameplay."
+        },
+        {
+          "code": "PHYSICS_SOLVER_TARGET_DISABLED",
+          "message": "Por padrão o target WebAssembly declara os vendors como target_disabled e mantém o ReferencePhysics; a promoção Web requer benchmark próprio."
+        }
+      ]
+    },
+    {
       "id": "presentation.readonly-projectors",
       "status": "experimental",
       "version": "0.1.0",
