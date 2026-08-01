@@ -35,6 +35,7 @@ import {
 } from "three";
 import type { WebGPURenderer } from "three/webgpu";
 import { createCinematicPipeline } from "./cinematic-pipeline.js";
+import { createGpuTimingSampler, type GpuTimingMetrics } from "./gpu-timing.js";
 import {
   RendererFailure,
   rendererFailure,
@@ -51,6 +52,12 @@ import {
 
 export { RendererFailure, type RendererDiagnosticCode, type RendererDiagnosticReporter } from "./diagnostics.js";
 export {
+  createGpuTimingSampler,
+  DESKTOP_HIGH_GPU_P95_BUDGET_MS,
+  type GpuTimingMetrics,
+  type GpuTimingStatus
+} from "./gpu-timing.js";
+export {
   selectRendererProfile,
   type RendererBackendAvailability,
   type RendererFeature,
@@ -65,6 +72,7 @@ export interface ThreeRendererOptions {
   profile?: RendererProfileRequest;
   backends?: RendererBackendAvailability;
   onProfileSelected?: (selection: RendererProfileSelection) => void;
+  onGpuTiming?: (metrics: GpuTimingMetrics) => void;
 }
 
 interface ActiveBurst {
@@ -174,6 +182,82 @@ function rendererOperation<T>(code: RendererDiagnosticCode, source: string, oper
   }
 }
 
+interface WebGpuAdapterInfo {
+  vendor?: string;
+  architecture?: string;
+  device?: string;
+  description?: string;
+}
+
+interface WebGpuAdapter {
+  features: { has(feature: string): boolean };
+  info?: WebGpuAdapterInfo;
+  requestAdapterInfo?: () => Promise<WebGpuAdapterInfo>;
+  requestDevice(descriptor?: { requiredFeatures?: string[] }): Promise<object>;
+}
+
+interface WebGpuApi {
+  requestAdapter(options: { powerPreference: "high-performance"; featureLevel: "compatibility" }): Promise<WebGpuAdapter | null>;
+}
+
+interface WebGpuDeviceSetup {
+  device: object;
+  adapter: string;
+  timestampsAvailable: boolean;
+  timestampRequestFailed: boolean;
+}
+
+function webGpuApi(): WebGpuApi | null {
+  if (typeof navigator === "undefined") return null;
+  return (navigator as unknown as { gpu?: WebGpuApi }).gpu ?? null;
+}
+
+async function adapterLabel(adapter: WebGpuAdapter): Promise<string> {
+  let info = adapter.info;
+  if (info === undefined && adapter.requestAdapterInfo !== undefined) {
+    try {
+      info = await adapter.requestAdapterInfo();
+    } catch {
+      // Adapter metadata can be withheld by browser privacy policy; rendering
+      // itself remains valid and the generic label stays observable.
+    }
+  }
+  const details = [info?.description, info?.vendor, info?.architecture, info?.device]
+    .filter((value): value is string => typeof value === "string" && value.trim().length > 0);
+  return details.length === 0 ? "WebGPU adapter (metadata unavailable)" : `WebGPU ${Array.from(new Set(details)).join(" · ")}`;
+}
+
+async function acquireWebGpuDevice(): Promise<WebGpuDeviceSetup> {
+  const gpu = webGpuApi();
+  if (gpu === null) throw new Error("WebGPU is unavailable in this host");
+  const adapter = await gpu.requestAdapter({ powerPreference: "high-performance", featureLevel: "compatibility" });
+  if (adapter === null) throw new Error("WebGPU adapter request returned null");
+  const timestampRequested = adapter.features.has("timestamp-query");
+  if (!timestampRequested) {
+    return {
+      device: await adapter.requestDevice(),
+      adapter: await adapterLabel(adapter),
+      timestampsAvailable: false,
+      timestampRequestFailed: false
+    };
+  }
+  try {
+    return {
+      device: await adapter.requestDevice({ requiredFeatures: ["timestamp-query"] }),
+      adapter: await adapterLabel(adapter),
+      timestampsAvailable: true,
+      timestampRequestFailed: false
+    };
+  } catch {
+    return {
+      device: await adapter.requestDevice(),
+      adapter: await adapterLabel(adapter),
+      timestampsAvailable: false,
+      timestampRequestFailed: true
+    };
+  }
+}
+
 export async function createThreeRenderer(
   canvas: HTMLCanvasElement,
   options: ThreeRendererOptions = {}
@@ -182,14 +266,39 @@ export async function createThreeRenderer(
     ? undefined
     : selectRendererProfile(options.profile, options.backends ?? { webgl2: true, webgpu: false, adapter: null });
   let renderer: WebGLRenderer | WebGPURenderer;
+  let gpuTiming = createGpuTimingSampler(false);
   if (selection?.effectiveMethod === "webgpu") {
     try {
       const { WebGPURenderer: WebGpuRenderer } = await import("three/webgpu");
-      const webgpu = new WebGpuRenderer({ canvas, antialias: true, alpha: true, powerPreference: "high-performance" });
+      const webgpuDevice = await acquireWebGpuDevice();
+      const webgpu = new WebGpuRenderer({
+        canvas,
+        antialias: true,
+        alpha: true,
+        powerPreference: "high-performance",
+        device: webgpuDevice.device,
+        trackTimestamp: webgpuDevice.timestampsAvailable
+      });
       await webgpu.init();
+      if (!webgpuDevice.timestampsAvailable && selection.requiredFeatures.includes("gpu-timestamps")) {
+        webgpu.dispose();
+        throw new RendererFailure(
+          "RENDER_FEATURE_REQUIRED_UNAVAILABLE",
+          "desktop-high requires GPU timestamps but the selected WebGPU device did not enable timestamp-query",
+          "renderer-three:webgpu"
+        );
+      }
       renderer = webgpu;
-      if (selection !== undefined) selection = { ...selection, adapter: "Three.js WebGPU renderer" };
+      gpuTiming = createGpuTimingSampler(webgpuDevice.timestampsAvailable);
+      if (!webgpuDevice.timestampsAvailable) {
+        const detail = webgpuDevice.timestampRequestFailed
+          ? "timestamp-query was advertised but device creation rejected it"
+          : "the adapter does not expose timestamp-query";
+        options.reportDiagnostic?.("RENDER_GPU_TIMESTAMPS_UNAVAILABLE", detail, "renderer-three:webgpu");
+      }
+      if (selection !== undefined) selection = { ...selection, adapter: webgpuDevice.adapter };
     } catch (error) {
+      if (error instanceof RendererFailure && error.code === "RENDER_FEATURE_REQUIRED_UNAVAILABLE") throw error;
       if (options.profile === undefined) throw rendererFailure("RENDER_INITIALIZATION_FAILED", "renderer-three:webgpu", error);
       selection = selectRendererProfile(options.profile, {
         ...(options.backends ?? { webgl2: true, webgpu: false, adapter: null }),
@@ -231,6 +340,7 @@ export async function createThreeRenderer(
     optionalFeatures: [],
     unavailableOptionalFeatures: []
   });
+  options.onGpuTiming?.(gpuTiming.snapshot());
   renderer.outputColorSpace = SRGBColorSpace;
   renderer.toneMapping = ACESFilmicToneMapping;
   renderer.toneMappingExposure = 1.12;
@@ -399,18 +509,18 @@ export async function createThreeRenderer(
     render() {
       rendererOperation("RENDER_FRAME_FAILED", "renderer-three:frame", () => {
         updateParticles();
-        if (cinematicPipeline === null) renderer.render(scene, camera);
-        else cinematicPipeline.render();
+        if (cinematicPipeline === null) {
+          renderer.render(scene, camera);
+          if (!(renderer instanceof WebGLRenderer)) options.onGpuTiming?.(gpuTiming.record(renderer.info.render.timestamp));
+        } else cinematicPipeline.render();
       });
     },
     resize(width, height, pixelRatio) {
       rendererOperation("RENDER_RESIZE_FAILED", "renderer-three:resize", () => {
         const cappedPixelRatio = Math.min(pixelRatio, 2);
-        renderer.setPixelRatio(cappedPixelRatio);
-        renderer.setSize(width, height, false);
         if (cinematicPipeline === null) {
           renderer.setPixelRatio(cappedPixelRatio);
-          renderer.setSize(width, height);
+          renderer.setSize(width, height, false);
         } else cinematicPipeline.resize(width, height, cappedPixelRatio);
         camera.aspect = width / Math.max(height, 1);
         camera.updateProjectionMatrix();

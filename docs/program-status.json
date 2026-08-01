@@ -233,13 +233,13 @@
           "evidence": ["renderer-three/src", "hosts/browser/src/ui-renderer.ts", "hosts/browser/src/audio-feedback.ts"]
         },
         {
-          "summary": "Manifest v4 declara perfis e features por Browser/Desktop; renderer inicializa WebGPURenderer sob demanda para desktop-high, resolve método efetivo, registra pedido/efetivo/adapter/fallback na inspeção e só reduz para desktop-compatible quando o fallback foi declarado.",
+          "summary": "Manifest v4 declara perfis e features por Browser/Desktop; renderer inicializa WebGPURenderer sob demanda para desktop-high, publica adapter e benchmark GPU limitado (mediana/p95), registra pedido/efetivo/fallback na inspeção e só reduz para desktop-compatible quando o fallback foi declarado.",
           "capabilities": ["presentation.renderer-profiles"],
-          "evidence": ["schemas/game.schema.json", "renderer-three/src/profiles.ts", "renderer-three/src/index.ts", "hosts/browser/src/main.ts", "renderer-three/test/diagnostics.test.mjs", "examples/card-roguelite/game.jsonc"]
+          "evidence": ["schemas/game.schema.json", "renderer-three/src/profiles.ts", "renderer-three/src/gpu-timing.ts", "renderer-three/src/index.ts", "hosts/browser/src/main.ts", "renderer-three/test/diagnostics.test.mjs", "examples/card-roguelite/game.jsonc"]
         }
       ],
       "remaining": [
-        "Adicionar adapter físico, timestamps/benchmarks GPU e pós-processamento WebGPU por tier para promover desktop-high com evidência além do render direto; manter fallback observado quando o método não existir.",
+        "Executar smoke/benchmark do adapter físico no Electron e adicionar pós-processamento WebGPU por tier antes de promover desktop-high; manter fallback observado quando o método não existir.",
         "Ingestão glTF/GLB, cooking, LOD, compressão, residência e streaming por target.",
         "Materiais e ambientes por tiers, shader warmup, cache e fallback verificável.",
         "Grafos de animação com blend, layers, masks, retarget, IK e root motion controlado.",

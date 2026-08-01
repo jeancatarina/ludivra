@@ -6,6 +6,7 @@ import {
   reportShaderFailure
 } from "../dist/diagnostics.js";
 import { selectRendererProfile } from "../dist/profiles.js";
+import { createGpuTimingSampler } from "../dist/gpu-timing.js";
 
 test("renderer failures preserve their stable renderer code and source", () => {
   const original = new RendererFailure("RENDER_FRAME_FAILED", "frame unavailable", "renderer-three:frame");
@@ -71,4 +72,23 @@ test("desktop-high falls back only when declared and preserves required-feature 
     optionalFeatures: [],
     fallbackProfiles: []
   }, { webgl2: true, webgpu: false, adapter: null }), { code: "RENDER_FEATURE_REQUIRED_UNAVAILABLE" });
+});
+
+test("GPU timing benchmark is bounded, ignores unresolved samples and reports its budget", () => {
+  const unavailable = createGpuTimingSampler(false).record(12);
+  assert.equal(unavailable.status, "unavailable");
+  assert.equal(unavailable.sampleCount, 0);
+
+  const sampler = createGpuTimingSampler(true, 10);
+  assert.equal(sampler.record(0).status, "warming");
+  for (let index = 0; index < 120; index += 1) sampler.record(index < 113 ? 8 : 14);
+  const metrics = sampler.snapshot();
+  assert.equal(metrics.sampleCount, 120);
+  assert.equal(metrics.medianMs, 8);
+  assert.equal(metrics.p95Ms, 14);
+  assert.equal(metrics.status, "over-budget");
+
+  for (let index = 0; index < 120; index += 1) sampler.record(6);
+  assert.equal(sampler.snapshot().sampleCount, 120);
+  assert.equal(sampler.snapshot().status, "within-budget");
 });

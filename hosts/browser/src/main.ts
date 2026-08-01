@@ -141,6 +141,15 @@ const rendererProfileReport: {
   adapter: string | null;
   fallbackReason: string | null;
   unavailableOptionalFeatures: string[];
+  gpuTiming: {
+    available: boolean;
+    latestMs: number | null;
+    sampleCount: number;
+    medianMs: number | null;
+    p95Ms: number | null;
+    budgetMs: number;
+    status: string;
+  };
 } = {
   requestedProfile: requestedRendererProfile.profile,
   effectiveProfile: "renderer-unavailable",
@@ -148,7 +157,16 @@ const rendererProfileReport: {
   effectiveMethod: "unavailable",
   adapter: null,
   fallbackReason: null,
-  unavailableOptionalFeatures: []
+  unavailableOptionalFeatures: [],
+  gpuTiming: {
+    available: false,
+    latestMs: null,
+    sampleCount: 0,
+    medianMs: null,
+    p95Ms: null,
+    budgetMs: 16.67,
+    status: "unavailable"
+  }
 };
 
 const recording = createRecordingRenderer(await createThreeRenderer(gameCanvas, {
@@ -166,6 +184,9 @@ const recording = createRecordingRenderer(await createThreeRenderer(gameCanvas, 
     rendererProfileReport.adapter = selection.adapter;
     rendererProfileReport.fallbackReason = selection.fallbackReason ?? null;
     rendererProfileReport.unavailableOptionalFeatures = selection.unavailableOptionalFeatures;
+  },
+  onGpuTiming: (metrics) => {
+    rendererProfileReport.gpuTiming = { ...metrics };
   }
 }));
 // Host diagnostics stay outside the UI contract: they describe the host, not the game.
@@ -219,7 +240,11 @@ window.ludivraUi = {
   snapshot: () => ui.snapshot(),
   projection: () => recording.trace(runtime.tick().toString()),
   projectors: () => uiProjectors.map((projector) => projector.metrics()),
-  rendering: () => ({ ...rendererProfileReport, unavailableOptionalFeatures: [...rendererProfileReport.unavailableOptionalFeatures] }),
+  rendering: () => ({
+    ...rendererProfileReport,
+    unavailableOptionalFeatures: [...rendererProfileReport.unavailableOptionalFeatures],
+    gpuTiming: { ...rendererProfileReport.gpuTiming }
+  }),
   diagnostics: () => hostDiagnostics.list()
 };
 

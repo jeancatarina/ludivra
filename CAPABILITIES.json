@@ -645,6 +645,7 @@
       "contracts": [
         "renderer-three/src/profiles.ts",
         "renderer-three/src/diagnostics.ts",
+        "renderer-three/src/gpu-timing.ts",
         "schemas/game.schema.json",
         "hosts/browser/src/main.ts",
         "docs/adr/0047-desktop-rendering-profiles-and-backend-policy.md"
@@ -663,8 +664,8 @@
       ],
       "limitations": [
         {
-          "code": "RENDER_GPU_PROFILE_METRICS_PENDING",
-          "message": "desktop-high inicializa o WebGPURenderer sob demanda e faz fallback apenas quando declarado; nome do adapter físico, timestamps GPU e pós-processamento WebGPU por tier ainda precisam de smoke/benchmark aprovado."
+          "code": "RENDER_GPU_BENCHMARK_REQUIRED",
+          "message": "desktop-high expõe adapter físico quando o navegador o permite e uma janela limitada de timestamps GPU (mediana/p95); a promoção do tier ainda exige smoke aprovado no Electron e pós-processamento WebGPU específico por tier."
         }
       ]
     },

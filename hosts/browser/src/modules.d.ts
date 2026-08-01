@@ -110,6 +110,15 @@ interface LudivraUiInspection {
     adapter: string | null;
     fallbackReason: string | null;
     unavailableOptionalFeatures: string[];
+    gpuTiming: {
+      available: boolean;
+      latestMs: number | null;
+      sampleCount: number;
+      medianMs: number | null;
+      p95Ms: number | null;
+      budgetMs: number;
+      status: string;
+    };
   };
   diagnostics(): Array<{ code: string; message: string; tick: string | null; source: string }>;
 }

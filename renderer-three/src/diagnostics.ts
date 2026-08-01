@@ -13,6 +13,7 @@ export type RendererDiagnosticCode =
   | "RENDER_METHOD_FALLBACK"
   | "RENDER_FEATURE_REQUIRED_UNAVAILABLE"
   | "RENDER_GPU_PROFILE_UNVERIFIED"
+  | "RENDER_GPU_TIMESTAMPS_UNAVAILABLE"
   | "SHADER_COMPILE_FAILED";
 
 export type RendererDiagnosticReporter = (code: RendererDiagnosticCode, message: string, source: string) => void;
