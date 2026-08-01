@@ -67,7 +67,11 @@ declare module "virtual:ludivra-game" {
   export const gameplaySource: string;
   export const contentPackSource: string;
   export const audioSources: Record<number, string>;
-  export const assetSources: Record<string, string>;
+  export const assetSources: Record<string, {
+    format: "gltf" | "glb";
+    url: string;
+    resources: Record<string, string>;
+  }>;
 }
 
 interface RendererProfileDeclaration {

@@ -14,9 +14,9 @@ Sem cooker, o renderer carrega formatos de autoria diretamente, recompila decis�
 
 ## Corte implementado
 
-O `game asset cook` v1 aceita somente declarações `model` glTF 2.0/GLB no manifest. Ele exige origem, licença, targets, classe de residência, budgets CPU/GPU e as convenções `meters`/`right-handed-y-up`; valida header e JSON do container, recusa URIs remotas ou que escapem do projeto, registra dependências externas e copia o payload inalterado para um cache identificado pelo conteúdo e pelas opções de importação. O índice `.ludivra/assets-index.json` e o manifest por asset dão ao build uma fronteira observável de proveniência, métricas e decisão de cache.
+O `game asset cook` v2 aceita somente declarações `model` glTF 2.0/GLB no manifest. Ele exige origem, licença, targets, classe de residência, budgets CPU/GPU e as convenções `meters`/`right-handed-y-up`; valida header e JSON do container, recusa URIs remotas ou que escapem do projeto, registra dependências externas e copia o payload inalterado para um cache identificado pelo conteúdo e pelas opções de importação. O índice `.ludivra/assets-index.json` e o manifest por asset dão ao build uma fronteira observável de proveniência, métricas e decisão de cache.
 
-O build Browser/Electron emite o payload cozido por URL estática; `createAssetVisual` instala um nó de cena de imediato e usa `GLTFLoader` sob demanda, registrando falhas de source/decode no canal de diagnóstico de apresentação. O carregamento inicial cobre glTF/GLB autocontidos ou com recursos `data:`. Recursos externos continuam preservados e auditados no cache, mas seu rewriting por target ainda não é implementado.
+O build Browser/Electron emite o payload cozido e cada dependência por URL estática; `createAssetVisual` instala um nó de cena de imediato e usa `GLTFLoader` sob demanda com um mapa de URL por recurso, registrando falhas de source/decode no canal de diagnóstico de apresentação. O carregamento cobre glTF/GLB autocontidos, recursos `data:` e dependências locais declaradas pelo asset.
 
 Esse corte não declara normalização, otimização, compressão, variante por target, residência ou streaming: o manifest registra explicitamente `normalized: false` e `compression: none` até a adoção de um encoder upstream licenciado e de evidência de runtime.
 

@@ -9,7 +9,7 @@ import { resolveProjectDirectory, type AssetDeclaration } from "./project.js";
 import { findEngineRoot } from "./repository.js";
 import type { CommandContext, CommandOutcome } from "./result.js";
 
-export const ASSET_COOKER_VERSION = 1;
+export const ASSET_COOKER_VERSION = 2;
 export const ASSET_INDEX_FILE = ".ludivra/assets-index.json";
 
 interface GltfDocument {
@@ -38,6 +38,13 @@ export interface AssetMetrics {
   skins: number;
 }
 
+export interface CookedAssetDependency {
+  uri: string;
+  source: string;
+  sha256: string;
+  bytes: number;
+}
+
 export interface CookedAssetRecord {
   id: string;
   kind: "model";
@@ -51,12 +58,12 @@ export interface CookedAssetRecord {
   targets: AssetDeclaration["targets"];
   residency: AssetDeclaration["residency"];
   metrics: AssetMetrics;
+  dependencies: CookedAssetDependency[];
 }
 
 interface CookedAssetManifest extends Omit<CookedAssetRecord, "reused"> {
   schemaVersion: 1;
   cookerVersion: number;
-  dependencies: Array<{ source: string; sha256: string; bytes: number }>;
   import: AssetDeclaration["import"];
   origin: string;
   license: string;
@@ -208,7 +215,7 @@ async function cookAsset(project: string, declaration: AssetDeclaration, force: 
   const dependencies = await Promise.all(parsed.dependencyReferences.map(async (reference) => {
     const path = await containedFile(project, resolve(dirname(source), reference), `${declaration.source}:${reference}`);
     const bytes = await readFile(path);
-    return { path, source: relative(project, path), sha256: hash(bytes), bytes: bytes.byteLength };
+    return { uri: reference, path, source: relative(project, path), sha256: hash(bytes), bytes: bytes.byteLength };
   }));
   const inputs = [{ source: relative(project, source), sha256: hash(sourceBytes) }, ...dependencies.map(({ source: path, sha256 }) => ({ source: path, sha256 }))]
     .sort((left, right) => left.source.localeCompare(right.source));
@@ -241,11 +248,11 @@ async function cookAsset(project: string, declaration: AssetDeclaration, force: 
     origin: declaration.origin,
     license: declaration.license,
     metrics: metrics(parsed.document, sourceBytes.byteLength, dependencies.length),
-    dependencies: dependencies.map(({ source: dependencySource, sha256, bytes }) => ({ source: dependencySource, sha256, bytes })),
+    dependencies: dependencies.map(({ uri, source: dependencySource, sha256, bytes }) => ({ uri, source: dependencySource, sha256, bytes })),
     payload: {
       normalized: false,
       compression: "none",
-      reason: "The v1 cooker validates provenance and glTF/GLB container structure, then preserves source payloads until a licensed optimizer is adopted."
+      reason: "The v2 cooker validates provenance, glTF/GLB structure and dependent resources, then preserves source payloads until a licensed optimizer is adopted."
     }
   };
   await mkdir(dirname(manifestPath), { recursive: true });
@@ -257,8 +264,9 @@ export async function ensureProjectAssets(
   project: string,
   options: { force?: boolean; onlyId?: string } = {}
 ): Promise<{ rendered: CookedAssetRecord[]; diagnostics: Diagnostic[] }> {
+  const projectRoot = await realpath(project);
   const parseErrors: ParseError[] = [];
-  const manifest = parse(await readFile(resolve(project, "game.jsonc"), "utf8"), parseErrors) as { assets?: AssetDeclaration[] };
+  const manifest = parse(await readFile(resolve(projectRoot, "game.jsonc"), "utf8"), parseErrors) as { assets?: AssetDeclaration[] };
   if (parseErrors.length > 0) throw new Error("GAME_MANIFEST_INVALID_JSONC");
   const allRendered: CookedAssetRecord[] = [];
   const diagnostics: Diagnostic[] = [];
@@ -270,7 +278,7 @@ export async function ensureProjectAssets(
     }
     ids.add(declaration.id);
     try {
-      allRendered.push(await cookAsset(project, declaration, options.force === true));
+      allRendered.push(await cookAsset(projectRoot, declaration, options.force === true));
     } catch (error) {
       const message = error instanceof Error ? error.message : "Asset cook failed";
       const code = message.match(/^[A-Z][A-Z0-9_]+/)?.[0] ?? "ASSET_IMPORT_NORMALIZATION_FAILED";
@@ -282,8 +290,8 @@ export async function ensureProjectAssets(
     cookerVersion: ASSET_COOKER_VERSION,
     entries: allRendered.map(({ reused: _reused, ...entry }) => entry)
   };
-  await mkdir(resolve(project, ".ludivra"), { recursive: true });
-  await writeFile(resolve(project, ASSET_INDEX_FILE), `${JSON.stringify(index, null, 2)}\n`, "utf8");
+  await mkdir(resolve(projectRoot, ".ludivra"), { recursive: true });
+  await writeFile(resolve(projectRoot, ASSET_INDEX_FILE), `${JSON.stringify(index, null, 2)}\n`, "utf8");
   return {
     rendered: options.onlyId === undefined ? allRendered : allRendered.filter(({ id }) => id === options.onlyId),
     diagnostics

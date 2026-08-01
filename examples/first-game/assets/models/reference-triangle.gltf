@@ -21,8 +21,11 @@
     },
     { "bufferView": 1, "componentType": 5123, "count": 3, "type": "SCALAR" }
   ],
+  "images": [{ "uri": "reference-texture.svg", "mimeType": "image/svg+xml" }],
+  "textures": [{ "source": 0 }],
+  "materials": [{ "pbrMetallicRoughness": { "baseColorTexture": { "index": 0 } } }],
   "meshes": [
-    { "name": "reference-triangle", "primitives": [{ "attributes": { "POSITION": 0 }, "indices": 1 }] }
+    { "name": "reference-triangle", "primitives": [{ "attributes": { "POSITION": 0 }, "indices": 1, "material": 0 }] }
   ],
   "nodes": [{ "mesh": 0, "name": "reference-triangle" }],
   "scenes": [{ "nodes": [0] }],

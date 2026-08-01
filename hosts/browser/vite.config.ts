@@ -63,7 +63,13 @@ interface CookedVisualIndex {
 }
 
 interface CookedAssetIndex {
-  entries: Array<{ id: string; output: string }>;
+  entries: Array<{
+    id: string;
+    format: "gltf" | "glb";
+    output: string;
+    cacheKey: string;
+    dependencies: Array<{ uri: string; source: string }>;
+  }>;
 }
 
 function withinProject(projectDirectory: string, path: string): string {
@@ -157,12 +163,25 @@ function gamePlugin(projectDirectory: string): Plugin {
       const assetSources: string[] = [];
       for (const asset of cookedAssets.entries) {
         const sourcePath = withinProject(projectDirectory, asset.output);
-        const reference = this.emitFile({
+        const sourceReference = this.emitFile({
           type: "asset",
           name: `asset-${asset.id.replaceAll(".", "-")}${extname(sourcePath)}`,
           source: await readFile(sourcePath)
         });
-        assetSources.push(`${JSON.stringify(asset.id)}: import.meta.ROLLUP_FILE_URL_${reference}`);
+        const resources: string[] = [];
+        for (const dependency of asset.dependencies) {
+          const dependencyPath = withinProject(
+            projectDirectory,
+            `.ludivra/cache/assets/${asset.cacheKey}/source/${dependency.source}`
+          );
+          const reference = this.emitFile({
+            type: "asset",
+            name: `asset-${asset.id.replaceAll(".", "-")}-${basename(dependency.source)}`,
+            source: await readFile(dependencyPath)
+          });
+          resources.push(`${JSON.stringify(dependency.uri)}: import.meta.ROLLUP_FILE_URL_${reference}`);
+        }
+        assetSources.push(`${JSON.stringify(asset.id)}: { format: ${JSON.stringify(asset.format)}, url: import.meta.ROLLUP_FILE_URL_${sourceReference}, resources: {${resources.join(",")} } }`);
       }
       // The compiled pack is embedded as bytes; the plugin never composes content
       // into the script, and it never compiles content itself.

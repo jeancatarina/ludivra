@@ -203,8 +203,10 @@ test("asset cooker validates glTF provenance, reuses content-addressed output an
     assert.equal(runCli(["new", project, "--name", "Asset Game", "--format", "json"]).execution.status, 0);
     const source = "assets/models/reference.gltf";
     mkdirSync(resolve(project, "assets/models"), { recursive: true });
+    writeFileSync(resolve(project, "assets/models/reference.svg"), "<svg xmlns=\"http://www.w3.org/2000/svg\"/>");
     writeFileSync(resolve(project, source), JSON.stringify({
       asset: { version: "2.0", generator: "asset cooker test" },
+      images: [{ uri: "reference.svg" }],
       meshes: [{ primitives: [{ indices: 0 }] }],
       accessors: [{ count: 3 }]
     }));
@@ -226,6 +228,7 @@ test("asset cooker validates glTF provenance, reuses content-addressed output an
     const cooked = runCli(["asset", "cook", "--project", project, "--format", "json"]);
     assert.equal(cooked.execution.status, 0);
     assert.equal(cooked.result.data.rendered[0].metrics.triangles, 1);
+    assert.deepEqual(cooked.result.data.rendered[0].dependencies.map(({ uri }) => uri), ["reference.svg"]);
     assert.equal(cooked.result.data.rendered[0].reused, false);
     assert.ok(existsSync(resolve(project, ".ludivra/assets-index.json")));
 

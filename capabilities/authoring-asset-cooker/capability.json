@@ -1,7 +1,7 @@
 {
   "id": "authoring.asset-cooker",
   "status": "experimental",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "owner": "cli",
   "targets": ["browser", "electron", "native-headless"],
   "contracts": [
@@ -28,7 +28,7 @@
   "limitations": [
     {
       "code": "ASSET_TARGET_VARIANT_MISSING",
-      "message": "Browser/Electron carregam modelos glTF/GLB cozidos por URL estática, mas encoder/compressão, variantes por target, rewriting de dependências externas, residência e streaming ainda não existem."
+      "message": "Browser/Electron carregam modelos glTF/GLB cozidos e fazem rewriting de dependências por URL estática, mas encoder/compressão, variantes por target, residência e streaming ainda não existem."
     }
   ]
 }

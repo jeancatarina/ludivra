@@ -20,6 +20,7 @@ import {
   DoubleSide,
   FogExp2,
   Group,
+  LoadingManager,
   Mesh,
   MeshStandardMaterial,
   OctahedronGeometry,
@@ -76,7 +77,13 @@ export interface ThreeRendererOptions {
   backends?: RendererBackendAvailability;
   onProfileSelected?: (selection: RendererProfileSelection) => void;
   onGpuTiming?: (metrics: GpuTimingMetrics) => void;
-  assetSources?: Readonly<Record<string, string>>;
+  assetSources?: Readonly<Record<string, CookedAssetSource>>;
+}
+
+export interface CookedAssetSource {
+  format: "gltf" | "glb";
+  url: string;
+  resources: Readonly<Record<string, string>>;
 }
 
 interface ActiveBurst {
@@ -471,9 +478,15 @@ export async function createThreeRenderer(
     }
     const cached = assetTemplates.get(assetId);
     if (cached !== undefined) return cached;
-    const loading = import("three/addons/loaders/GLTFLoader.js")
-      .then(({ GLTFLoader }) => new GLTFLoader().loadAsync(source))
-      .then(({ scene: loaded }) => loaded);
+    const loading = import("three/addons/loaders/GLTFLoader.js").then(async ({ GLTFLoader }) => {
+      const response = await fetch(source.url);
+      if (!response.ok) throw new Error(`asset request failed with HTTP ${response.status}`);
+      const manager = new LoadingManager();
+      manager.setURLModifier((url) => source.resources[url] ?? url);
+      const loader = new GLTFLoader(manager);
+      const bytes = source.format === "gltf" ? await response.text() : await response.arrayBuffer();
+      return loader.parseAsync(bytes, "");
+    }).then(({ scene: loaded }) => loaded);
     assetTemplates.set(assetId, loading);
     return loading;
   }

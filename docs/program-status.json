@@ -238,14 +238,14 @@
           "evidence": ["schemas/game.schema.json", "renderer-three/src/profiles.ts", "renderer-three/src/gpu-timing.ts", "renderer-three/src/index.ts", "hosts/browser/src/main.ts", "hosts/electron/src/main.cjs", "tools/build/package-steam.mjs", "renderer-three/test/diagnostics.test.mjs", "examples/card-roguelite/game.jsonc"]
         },
         {
-          "summary": "Manifest declara modelos glTF/GLB com provenance, targets e budgets; o cooker valida containers, dependências e isolamento, preserva a fonte em cache content-addressed, o build emite URLs estáticas e o renderer instancia modelos autocontidos sob demanda com diagnóstico estruturado.",
+          "summary": "Manifest declara modelos glTF/GLB com provenance, targets e budgets; o cooker valida containers, dependências e isolamento, preserva fonte/dependências em cache content-addressed, o build reescreve cada URL estática e o renderer instancia modelos sob demanda com diagnóstico estruturado.",
           "capabilities": ["authoring.asset-cooker"],
           "evidence": ["schemas/game.schema.json", "cli/src/asset-forge.ts", "cli/src/commands/build.ts", "presentation-protocol/src/index.ts", "renderer-three/src/index.ts", "hosts/browser/vite.config.ts", "examples/first-game/assets/models/reference-triangle.gltf", "cli/test/cli.test.mjs"]
         }
       ],
       "remaining": [
         "Adicionar pós-processamento WebGPU por tier ao desktop-high; manter fallback observado quando o método não existir.",
-        "Adicionar normalização/otimização upstream licenciada, variantes comprimidas por target, rewriting de dependências externas, residência e streaming aos assets glTF/GLB já carregáveis.",
+        "Adicionar normalização/otimização upstream licenciada, variantes comprimidas por target, residência e streaming aos assets glTF/GLB já carregáveis.",
         "Materiais e ambientes por tiers, shader warmup, cache e fallback verificável.",
         "Grafos de animação com blend, layers, masks, retarget, IK e root motion controlado.",
         "VFX GPU/CPU com trails, subemitters, colisão, pooling e budgets.",
