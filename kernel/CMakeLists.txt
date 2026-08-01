@@ -12,6 +12,7 @@ add_library(ludivra_kernel STATIC
   src/world_generator.cpp
   src/world_jobs.cpp
   src/world_position.cpp
+  src/world_runtime.cpp
   src/world_streaming.cpp
 )
 

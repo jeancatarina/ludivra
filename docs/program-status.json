@@ -3,8 +3,8 @@
   "release": "0.7.0",
   "currentFocus": {
     "phase": 5,
-    "summary": "Concluir a fundação espacial com jobs assíncronos, Simulation LOD e inspeção de regiões.",
-    "next": "Implementar WORLD-001: jobs assíncronos determinísticos, Simulation LOD e inspeção espacial."
+    "summary": "Implementar navegação por regiões, pathfinding, links, obstacles, agents e avoidance sobre a fundação espacial.",
+    "next": "Implementar NAV-001 com fixture de benchmark e inspeção determinística de navegação."
   },
   "phases": [
     {
@@ -132,11 +132,14 @@
         {
           "summary": "Janela de streaming com residência estável e regeneração idêntica ao revisitar.",
           "evidence": ["kernel/src/world_streaming.cpp", "capabilities/spatial-runtime-foundation/capability.json"]
+        },
+        {
+          "summary": "Runtime cooperativo de geração e meshing com orçamento por tick, commit ordenado, Simulation LOD com catch-up lógico e snapshot de chunks, jobs e LOD.",
+          "capabilities": ["spatial.runtime-foundation"],
+          "evidence": ["kernel/src/world_runtime.hpp", "kernel/src/world_runtime.cpp", "tests/kernel/kernel_test.cpp"]
         }
       ],
       "remaining": [
-        "Jobs assíncronos reais sem alterar a ordem de commit.",
-        "Simulation LOD, catch-up lógico e inspeção de regiões, chunks, jobs e caches.",
         "Posição com região e partitioning interno comprovado pelo consumidor.",
         "Regiões de navegação, pathfinding, links, obstacles, agents e avoidance por adapter.",
         "Superfície pública apenas quando um jogo declarar a capability."
@@ -291,14 +294,6 @@
     }
   ],
   "tasks": [
-    {
-      "id": "WORLD-001",
-      "priority": "high",
-      "status": "planned",
-      "phase": 5,
-      "work": "Adicionar jobs assíncronos, Simulation LOD e inspeção espacial após o gate da Fase 4.",
-      "adrs": ["0019", "0045"]
-    },
     {
       "id": "NAV-001",
       "priority": "high",

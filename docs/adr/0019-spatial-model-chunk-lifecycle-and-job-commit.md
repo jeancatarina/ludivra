@@ -2,6 +2,7 @@
 
 - Status: provisório
 - Data: 2026-07-24
+- Revisado: 2026-08-01 para o runtime cooperativo, Simulation LOD e inspeção espacial iniciais
 - Revisão: antes de habilitar a capability espacial em qualquer jogo de prova
 - Depende de: [ADR 0018](0018-numeric-determinism-and-rng-streams.md)
 - Complementa: [ADR 0008](0008-mandatory-scale-and-procedural-capabilities.md)
@@ -50,6 +51,12 @@ Essa é a propriedade que o cenário de ordem permutada verifica: com as mesmas 
 A estrutura de particionamento — grid, sparse grid, quadtree, octree, BVH ou region index — é interna, substituível e escolhida por benchmark por capability. Ela não vaza para o contrato público.
 
 O LOD de simulação tem níveis ativo, simplificado, agregado e não carregado. Catch-up usa tempo lógico e regras agregadas, e o resultado do catch-up é reproduzível a partir do tempo decorrido, não do tempo de parede.
+
+### Runtime cooperativo inicial
+
+`WorldRuntime` inicia por jobs cooperativos no mesmo thread, como permite o ADR 0045: geração e meshing entram com quantidade declarada de passos e o runtime consome no máximo o orçamento por tick. Resultado concluído entra em `JobQueue` e só altera lifecycle no commit ordenado. Assim, uma geração não termina no método que a solicita, não bloqueia ticks seguintes e uma ordem diferente de submissão preserva o mesmo hash de mundo.
+
+O runtime também guarda `SimulationLod` por chunk (`active`, `simplified`, `aggregated`, `unloaded`). A cada cadência lógica, o consumidor recebe `elapsedTicks` exato, que é o único catch-up permitido. `inspect()` retorna tick, chunks, jobs pendentes e registros de LOD em ordem estável; não há consulta dependente de scheduler ou tempo de parede.
 
 ### Floating origin
 

@@ -479,7 +479,7 @@
     {
       "id": "spatial.runtime-foundation",
       "status": "experimental",
-      "version": "0.1.0",
+      "version": "0.2.0",
       "owner": "kernel",
       "targets": [
         "native-headless",
@@ -498,8 +498,8 @@
       ],
       "limitations": [
         {
-          "code": "SPATIAL_GENERATION_SYNCHRONOUS",
-          "message": "Chunk identity, lifecycle, pure generation and the streaming window exist; jobs commit deterministically but still run synchronously, and simulation LOD and region persistence do not exist."
+          "code": "SPATIAL_WORKER_ADAPTER_UNAVAILABLE",
+          "message": "Geração e meshing são jobs cooperativos com orçamento por tick, commit determinístico, Simulation LOD e snapshot de inspeção; adapter de worker por cópia e persistência de regiões ainda não existem."
         },
         {
           "code": "SPATIAL_NOT_EXPOSED_TO_LUA",

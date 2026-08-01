@@ -5,6 +5,7 @@
 #include "world_generator.hpp"
 #include "world_jobs.hpp"
 #include "world_position.hpp"
+#include "world_runtime.hpp"
 #include "world_streaming.hpp"
 
 #include <cstdint>
@@ -52,6 +53,10 @@ using ludivra::kernel::translate;
 using ludivra::kernel::WorldOffset;
 using ludivra::kernel::WorldPosition;
 using ludivra::kernel::WorldPositionError;
+using ludivra::kernel::WorldRuntime;
+using ludivra::kernel::WorldRuntimeConfig;
+using ludivra::kernel::WorldRuntimeError;
+using ludivra::kernel::SimulationLod;
 
 struct TestContext final {
   void expect(const bool condition, const char* message) {
@@ -323,6 +328,63 @@ void check_job_commit_order(TestContext& context) {
   context.expect(ordering.pending() == 0U, "committing drains the queue");
 }
 
+void check_cooperative_world_runtime(TestContext& context) {
+  const WorldRuntimeConfig config{42U, 1U, 2U, 2U};
+  const auto first_chunk = chunk_at(0, 0);
+  const auto second_chunk = chunk_at(1, 0);
+  WorldRuntime first(config);
+  context.expect(first.request(second_chunk) == WorldRuntimeError::none && first.request(first_chunk) == WorldRuntimeError::none,
+      "world runtime schedules requested chunks without completing them in the caller");
+  auto inspection = first.inspect();
+  context.expect(inspection.tick == 0U && inspection.pending_jobs.size() == 2U &&
+      inspection.pending_jobs[0].chunk == first_chunk && inspection.pending_jobs[1].chunk == second_chunk,
+      "inspection reports sorted pending jobs before their commit boundary");
+  context.expect(first.set_simulation_lod(chunk_at(9, 9), SimulationLod::active) == WorldRuntimeError::chunk_error,
+      "simulation LOD cannot attach to an unknown chunk");
+
+  const auto first_tick = first.advance();
+  context.expect(first_tick.error == WorldRuntimeError::none && first_tick.committed_jobs.empty() && first_tick.tick == 1U,
+      "a cooperative job yields instead of blocking the tick");
+  const auto generated = first.advance();
+  context.expect(generated.error == WorldRuntimeError::none && generated.committed_jobs.size() == 1U &&
+      generated.committed_jobs[0].kind == JobKind::generate,
+      "generation commits at its deterministic boundary after its declared work units");
+  inspection = first.inspect();
+  context.expect(inspection.chunks[0].state == ChunkState::meshing && inspection.pending_jobs.size() == 2U,
+      "a generated chunk enters meshing and the second chunk remains pending");
+  for (std::uint32_t tick = 0U; tick < 6U; ++tick) {
+    context.expect(first.advance().error == WorldRuntimeError::none, "every cooperative world tick commits without a lifecycle error");
+  }
+  inspection = first.inspect();
+  context.expect(inspection.pending_jobs.empty() && inspection.chunks.size() == 2U &&
+      inspection.chunks[0].state == ChunkState::resident && inspection.chunks[1].state == ChunkState::resident,
+      "both chunks reach resident after interleaved generation and mesh jobs");
+
+  WorldRuntime replayed(config);
+  context.expect(replayed.request(first_chunk) == WorldRuntimeError::none && replayed.request(second_chunk) == WorldRuntimeError::none,
+      "a replay may submit the same chunks in another order");
+  for (std::uint32_t tick = 0U; tick < 8U; ++tick) {
+    context.expect(replayed.advance().error == WorldRuntimeError::none, "replayed cooperative tick succeeds");
+  }
+  context.expect(first.world_hash() == replayed.world_hash(),
+      "submission order does not alter the committed world hash");
+
+  context.expect(first.set_simulation_lod(first_chunk, SimulationLod::simplified) == WorldRuntimeError::none,
+      "a resident chunk can select simplified simulation");
+  context.expect(first.advance().simulation_updates.empty(), "simplified simulation waits for its logical cadence");
+  const auto simplified = first.advance();
+  context.expect(simplified.simulation_updates.size() == 1U && simplified.simulation_updates[0].elapsed_ticks == 2U,
+      "simplified simulation receives exact elapsed logical time for catch-up");
+  context.expect(first.set_simulation_lod(first_chunk, SimulationLod::active) == WorldRuntimeError::none,
+      "simulation LOD can promote deterministically");
+  const auto active = first.advance();
+  context.expect(active.simulation_updates.size() == 1U && active.simulation_updates[0].elapsed_ticks == 1U,
+      "active simulation updates every logical tick after promotion");
+  context.expect(first.set_simulation_lod(first_chunk, SimulationLod::unloaded) == WorldRuntimeError::none,
+      "simulation can become unloaded without removing chunk metadata");
+  context.expect(first.advance().simulation_updates.empty(), "unloaded simulation does not consume catch-up work");
+}
+
 void check_generation(TestContext& context) {
   const auto origin = chunk_at(0, 0);
   context.expect(
@@ -488,6 +550,7 @@ int main() {
   check_chunk_lifecycle(context);
   check_chunk_seed(context);
   check_job_commit_order(context);
+  check_cooperative_world_runtime(context);
   check_generation(context);
   check_streaming(context);
   check_statechart_runtime(context);

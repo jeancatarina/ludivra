@@ -5,8 +5,8 @@
 | Campo | Valor |
 |---|---|
 | Release atual | 0.7.0 |
-| Foco atual | Fase 5 — Concluir a fundação espacial com jobs assíncronos, Simulation LOD e inspeção de regiões. |
-| Próxima entrega | Implementar WORLD-001: jobs assíncronos determinísticos, Simulation LOD e inspeção espacial. |
+| Foco atual | Fase 5 — Implementar navegação por regiões, pathfinding, links, obstacles, agents e avoidance sobre a fundação espacial. |
+| Próxima entrega | Implementar NAV-001 com fixture de benchmark e inspeção determinística de navegação. |
 | Fonte editável de progresso | [docs/program-status.json](docs/program-status.json) |
 | Decisão do modelo documental | [ADR 0046](docs/adr/0046-generated-program-documentation.md) |
 
@@ -27,7 +27,7 @@
 | 2 | Context Engine, CLI e Development Runner | `CONCLUÍDA` | nenhuma no gate atual |
 | 3 | AI Control Plane e observabilidade causal | `CONCLUÍDA` | nenhuma no gate atual |
 | 4 | Autoria text-first de gameplay, UI e conteúdo | `CONCLUÍDA` | nenhuma no gate atual |
-| 5 | Runtime espacial e mundo procedural | `EM ANDAMENTO` | Jobs assíncronos reais sem alterar a ordem de commit. |
+| 5 | Runtime espacial e mundo procedural | `EM ANDAMENTO` | Posição com região e partitioning interno comprovado pelo consumidor. |
 | 6 | Motion, física e Mass Simulation | `PLANEJADA` | Motion por tempo declarado e comandos semânticos. |
 | 7 | Persistência, replays e multiplayer player-hosted | `PARCIAL` | Region storage atômico com journal, compactação, recovery e migrations. |
 | 8 | Renderer, UI, áudio e apresentação escalável | `PARCIAL` | Perfis web-compatible, desktop-compatible e desktop-high com fallback gráfico observado. |
@@ -147,11 +147,10 @@ Criar uma fundação opt-in para mapas pequenos, mundos extensos e sandboxes vir
 
 - Posição composta, identidade e lifecycle de chunk, commit determinístico de jobs e geração pura sem seams. Capabilities: `spatial.runtime-foundation`. Evidência: [kernel/src/world_position.cpp](kernel/src/world_position.cpp), [kernel/src/world_chunks.cpp](kernel/src/world_chunks.cpp), [tests/kernel/kernel_test.cpp](tests/kernel/kernel_test.cpp).
 - Janela de streaming com residência estável e regeneração idêntica ao revisitar. Evidência: [kernel/src/world_streaming.cpp](kernel/src/world_streaming.cpp), [capabilities/spatial-runtime-foundation/capability.json](capabilities/spatial-runtime-foundation/capability.json).
+- Runtime cooperativo de geração e meshing com orçamento por tick, commit ordenado, Simulation LOD com catch-up lógico e snapshot de chunks, jobs e LOD. Capabilities: `spatial.runtime-foundation`. Evidência: [kernel/src/world_runtime.hpp](kernel/src/world_runtime.hpp), [kernel/src/world_runtime.cpp](kernel/src/world_runtime.cpp), [tests/kernel/kernel_test.cpp](tests/kernel/kernel_test.cpp).
 
 ### Falta
 
-- Jobs assíncronos reais sem alterar a ordem de commit.
-- Simulation LOD, catch-up lógico e inspeção de regiões, chunks, jobs e caches.
 - Posição com região e partitioning interno comprovado pelo consumidor.
 - Regiões de navegação, pathfinding, links, obstacles, agents e avoidance por adapter.
 - Superfície pública apenas quando um jogo declarar a capability.
