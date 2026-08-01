@@ -5,6 +5,10 @@ import { defineConfig, type Plugin } from "vite";
 
 interface GameManifest {
   name: string;
+  rendering: {
+    browser: RendererProfileDeclaration;
+    desktop: RendererProfileDeclaration;
+  };
   entrypoints: {
     gameplay: string;
     presentation: string;
@@ -24,6 +28,13 @@ interface GameManifest {
     breakpoints: Array<{ id: string; minWidth: number; maxWidth?: number }>;
   };
   audio?: Array<{ eventId: number; source?: string; recipe?: string }>;
+}
+
+interface RendererProfileDeclaration {
+  profile: "web-compatible" | "desktop-compatible" | "desktop-high";
+  requiredFeatures: string[];
+  optionalFeatures: string[];
+  fallbackProfiles: Array<"web-compatible" | "desktop-compatible" | "desktop-high">;
 }
 
 interface CookedAudioIndex {

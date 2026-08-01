@@ -9,6 +9,10 @@ export interface GameManifest {
   id: string;
   name: string;
   targets: string[];
+  rendering: {
+    browser: RendererProfileDeclaration;
+    desktop: RendererProfileDeclaration;
+  };
   entrypoints: { gameplay: string; presentation: string };
   content?: Array<{ id: string; schema: string; source: string }>;
   composition?: {
@@ -36,6 +40,26 @@ export interface GameManifest {
   steam?: { appId: number | null; depotId: number | null };
   desktop?: { updates?: { enabled: boolean; feedUrl: string | null } };
 }
+
+export interface RendererProfileDeclaration {
+  profile: "web-compatible" | "desktop-compatible" | "desktop-high";
+  requiredFeatures: RendererFeature[];
+  optionalFeatures: RendererFeature[];
+  fallbackProfiles: Array<"web-compatible" | "desktop-compatible" | "desktop-high">;
+}
+
+export type RendererFeature =
+  | "pbr"
+  | "shadows"
+  | "postprocess"
+  | "cpu-particles"
+  | "gpu-particles"
+  | "instancing"
+  | "lod"
+  | "culling"
+  | "animation"
+  | "gamepad"
+  | "gpu-timestamps";
 
 export async function resolveProjectDirectory(arguments_: string[]): Promise<string> {
   const explicit = optionValue(arguments_, "--project");

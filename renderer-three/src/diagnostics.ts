@@ -8,6 +8,11 @@ export type RendererDiagnosticCode =
   | "RENDER_VISUAL_DUPLICATE"
   | "RENDER_VISUAL_NOT_FOUND"
   | "RENDER_VISUAL_MATERIAL_UNSUPPORTED"
+  | "RENDER_PROFILE_UNDECLARED"
+  | "RENDER_PROFILE_UNSUPPORTED"
+  | "RENDER_METHOD_FALLBACK"
+  | "RENDER_FEATURE_REQUIRED_UNAVAILABLE"
+  | "RENDER_GPU_PROFILE_UNVERIFIED"
   | "SHADER_COMPILE_FAILED";
 
 export type RendererDiagnosticReporter = (code: RendererDiagnosticCode, message: string, source: string) => void;

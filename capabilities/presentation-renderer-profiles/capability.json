@@ -1,0 +1,30 @@
+{
+  "id": "presentation.renderer-profiles",
+  "status": "experimental",
+  "version": "0.1.0",
+  "owner": "renderer-three",
+  "targets": ["browser", "electron"],
+  "contracts": [
+    "renderer-three/src/profiles.ts",
+    "renderer-three/src/diagnostics.ts",
+    "schemas/game.schema.json",
+    "hosts/browser/src/main.ts",
+    "docs/adr/0047-desktop-rendering-profiles-and-backend-policy.md"
+  ],
+  "examples": [
+    "renderer-three/test/diagnostics.test.mjs",
+    "examples/card-roguelite/game.jsonc"
+  ],
+  "dependencies": ["presentation.three"],
+  "verification": [
+    "pnpm --filter @ludivra/renderer-three test",
+    "pnpm --filter @ludivra/browser-host build",
+    "pnpm game validate --project examples/card-roguelite --format json"
+  ],
+  "limitations": [
+    {
+      "code": "RENDER_WEBGPU_BACKEND_UNAVAILABLE",
+      "message": "desktop-high é validado e só faz fallback quando declarado, mas esta build ainda possui pipeline Three.js WebGL2; WebGPU, adapter real e métricas GPU precisam ser inicializados antes de promover o perfil high."
+    }
+  ]
+}

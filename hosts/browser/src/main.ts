@@ -132,12 +132,43 @@ const initialUiProjection = uiProjections.get(gameUiProjector.declaration.id);
 if (initialUiProjection === undefined) throw new Error("UI_PROJECTOR_GAME_MISSING");
 let uiProjection: UiInspectionProjection = initialUiProjection;
 const desktop = await createDesktopCheckpointManager(runtime);
-// Host diagnostics stay outside the UI contract: they describe the host, not the game.
-hostStatus.textContent = `Kernel WASM${desktop === null ? "" : " · autosave desktop"}`;
+const requestedRendererProfile = manifest.rendering[window.ludivraDesktop === undefined ? "browser" : "desktop"];
+const rendererProfileReport: {
+  requestedProfile: string;
+  effectiveProfile: string;
+  requestedMethod: string;
+  effectiveMethod: string;
+  adapter: string | null;
+  fallbackReason: string | null;
+  unavailableOptionalFeatures: string[];
+} = {
+  requestedProfile: requestedRendererProfile.profile,
+  effectiveProfile: "renderer-unavailable",
+  requestedMethod: "unavailable",
+  effectiveMethod: "unavailable",
+  adapter: null,
+  fallbackReason: null,
+  unavailableOptionalFeatures: []
+};
 
 const recording = createRecordingRenderer(createThreeRenderer(gameCanvas, {
-  reportDiagnostic: hostDiagnostics.report
+  reportDiagnostic: hostDiagnostics.report,
+  profile: requestedRendererProfile,
+  // This production build currently owns a WebGL2 renderer. WebGPU may be
+  // visible to the OS, but is not claimed as available until a Three WebGPU
+  // pipeline and metrics are actually initialized.
+  backends: { webgl2: true, webgpu: false, adapter: "Three.js WebGL2" },
+  onProfileSelected: (selection) => {
+    rendererProfileReport.effectiveProfile = selection.effectiveProfile;
+    rendererProfileReport.requestedMethod = selection.requestedMethod;
+    rendererProfileReport.effectiveMethod = selection.effectiveMethod;
+    rendererProfileReport.adapter = selection.adapter;
+    rendererProfileReport.fallbackReason = selection.fallbackReason ?? null;
+    rendererProfileReport.unavailableOptionalFeatures = selection.unavailableOptionalFeatures;
+  }
 }));
+// Host diagnostics stay outside the UI contract: they describe the host, not the game.
+hostStatus.textContent = `Kernel WASM${desktop === null ? "" : " · autosave desktop"} · ${rendererProfileReport.effectiveProfile}`;
 const renderer = recording.renderer;
 const contentById = new Map(Object.entries(packDocuments));
 const presenter = createGamePresenter(renderer, {
@@ -187,6 +218,7 @@ window.ludivraUi = {
   snapshot: () => ui.snapshot(),
   projection: () => recording.trace(runtime.tick().toString()),
   projectors: () => uiProjectors.map((projector) => projector.metrics()),
+  rendering: () => ({ ...rendererProfileReport, unavailableOptionalFeatures: [...rendererProfileReport.unavailableOptionalFeatures] }),
   diagnostics: () => hostDiagnostics.list()
 };
 

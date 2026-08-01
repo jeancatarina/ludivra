@@ -231,10 +231,15 @@
           "summary": "Renderer Three.js experimental, UI DOM acessível, Web Audio e partículas simples.",
           "capabilities": ["presentation.three", "feedback.audio-effects"],
           "evidence": ["renderer-three/src", "hosts/browser/src/ui-renderer.ts", "hosts/browser/src/audio-feedback.ts"]
+        },
+        {
+          "summary": "Manifest v4 declara perfis e features por Browser/Desktop; renderer resolve método efetivo, registra pedido/efetivo/adapter/fallback na inspeção e só reduz desktop-high para desktop-compatible quando o fallback foi declarado.",
+          "capabilities": ["presentation.renderer-profiles"],
+          "evidence": ["schemas/game.schema.json", "renderer-three/src/profiles.ts", "hosts/browser/src/main.ts", "renderer-three/test/diagnostics.test.mjs", "examples/card-roguelite/game.jsonc"]
         }
       ],
       "remaining": [
-        "Perfis web-compatible, desktop-compatible e desktop-high com fallback gráfico observado.",
+        "Inicializar pipeline WebGPU, adapter real e métricas GPU para promover desktop-high sem fallback; manter fallback observado quando o método não existir.",
         "Ingestão glTF/GLB, cooking, LOD, compressão, residência e streaming por target.",
         "Materiais e ambientes por tiers, shader warmup, cache e fallback verificável.",
         "Grafos de animação com blend, layers, masks, retarget, IK e root motion controlado.",

@@ -41,11 +41,29 @@ import {
   type RendererDiagnosticCode,
   type RendererDiagnosticReporter
 } from "./diagnostics.js";
+import {
+  selectRendererProfile,
+  type RendererBackendAvailability,
+  type RendererProfileRequest,
+  type RendererProfileSelection
+} from "./profiles.js";
 
 export { RendererFailure, type RendererDiagnosticCode, type RendererDiagnosticReporter } from "./diagnostics.js";
+export {
+  selectRendererProfile,
+  type RendererBackendAvailability,
+  type RendererFeature,
+  type RendererMethod,
+  type RendererProfile,
+  type RendererProfileRequest,
+  type RendererProfileSelection
+} from "./profiles.js";
 
 export interface ThreeRendererOptions {
   reportDiagnostic?: RendererDiagnosticReporter;
+  profile?: RendererProfileRequest;
+  backends?: RendererBackendAvailability;
+  onProfileSelected?: (selection: RendererProfileSelection) => void;
 }
 
 interface ActiveBurst {
@@ -159,6 +177,25 @@ export function createThreeRenderer(
   canvas: HTMLCanvasElement,
   options: ThreeRendererOptions = {}
 ): PresentationRenderer {
+  const selection = options.profile === undefined
+    ? undefined
+    : selectRendererProfile(options.profile, options.backends ?? { webgl2: true, webgpu: false, adapter: null });
+  if (selection?.fallbackReason !== undefined) {
+    options.reportDiagnostic?.("RENDER_METHOD_FALLBACK", selection.fallbackReason, "renderer-three:profile");
+  }
+  if (selection?.requestedProfile === "desktop-high" && selection.effectiveProfile === "desktop-high") {
+    options.reportDiagnostic?.("RENDER_GPU_PROFILE_UNVERIFIED", "desktop-high selected; adapter metrics remain pending renderer initialization", "renderer-three:profile");
+  }
+  options.onProfileSelected?.(selection ?? {
+    requestedProfile: "web-compatible",
+    effectiveProfile: "web-compatible",
+    requestedMethod: "webgl2",
+    effectiveMethod: "webgl2",
+    adapter: null,
+    requiredFeatures: [],
+    optionalFeatures: [],
+    unavailableOptionalFeatures: []
+  });
   const renderer = rendererOperation("RENDER_INITIALIZATION_FAILED", "renderer-three:initialization", () => new WebGLRenderer({
     canvas,
     antialias: true,

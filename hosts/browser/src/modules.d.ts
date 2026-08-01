@@ -1,6 +1,10 @@
 declare module "virtual:ludivra-game" {
   export const manifest: {
     name: string;
+    rendering: {
+      browser: RendererProfileDeclaration;
+      desktop: RendererProfileDeclaration;
+    };
     inspection: {
       integerStates: Array<{ id: string; label: string; key: number }>;
     };
@@ -65,6 +69,19 @@ declare module "virtual:ludivra-game" {
   export const audioSources: Record<number, string>;
 }
 
+interface RendererProfileDeclaration {
+  profile: "web-compatible" | "desktop-compatible" | "desktop-high";
+  requiredFeatures: Array<
+    "pbr" | "shadows" | "postprocess" | "cpu-particles" | "gpu-particles" |
+    "instancing" | "lod" | "culling" | "animation" | "gamepad" | "gpu-timestamps"
+  >;
+  optionalFeatures: Array<
+    "pbr" | "shadows" | "postprocess" | "cpu-particles" | "gpu-particles" |
+    "instancing" | "lod" | "culling" | "animation" | "gamepad" | "gpu-timestamps"
+  >;
+  fallbackProfiles: Array<"web-compatible" | "desktop-compatible" | "desktop-high">;
+}
+
 declare module "@ludivra/runtime-module" {
   import type { RuntimeModuleFactory } from "@ludivra/runtime-web";
   const factory: RuntimeModuleFactory;
@@ -85,6 +102,15 @@ interface LudivraUiInspection {
   snapshot(): import("@ludivra/presentation-protocol").RenderedUiSnapshot;
   projection(): import("@ludivra/presentation-protocol").ProjectionTrace;
   projectors(): Array<import("@ludivra/presentation-protocol").UiInspectionProjectorMetrics>;
+  rendering(): {
+    requestedProfile: string;
+    effectiveProfile: string;
+    requestedMethod: string;
+    effectiveMethod: string;
+    adapter: string | null;
+    fallbackReason: string | null;
+    unavailableOptionalFeatures: string[];
+  };
   diagnostics(): Array<{ code: string; message: string; tick: string | null; source: string }>;
 }
 

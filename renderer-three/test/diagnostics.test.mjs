@@ -5,6 +5,7 @@ import {
   rendererFailure,
   reportShaderFailure
 } from "../dist/diagnostics.js";
+import { selectRendererProfile } from "../dist/profiles.js";
 
 test("renderer failures preserve their stable renderer code and source", () => {
   const original = new RendererFailure("RENDER_FRAME_FAILED", "frame unavailable", "renderer-three:frame");
@@ -43,4 +44,31 @@ test("shader failures report compiler logs through the structured renderer chann
     message: "vertex: vertex compile failed | fragment: fragment compile failed | program: program link failed",
     source: "renderer-three:shader"
   }]);
+});
+
+test("desktop-high falls back only when declared and preserves required-feature checks", () => {
+  const fallback = selectRendererProfile({
+    profile: "desktop-high",
+    requiredFeatures: ["pbr", "shadows", "instancing"],
+    optionalFeatures: ["gpu-particles"],
+    fallbackProfiles: ["desktop-compatible"]
+  }, { webgl2: true, webgpu: false, adapter: "WebGL2 test adapter" });
+  assert.equal(fallback.effectiveProfile, "desktop-compatible");
+  assert.equal(fallback.effectiveMethod, "webgl2");
+  assert.match(fallback.fallbackReason, /webgpu is unavailable/);
+  assert.deepEqual(fallback.unavailableOptionalFeatures, ["gpu-particles"]);
+
+  assert.throws(() => selectRendererProfile({
+    profile: "desktop-high",
+    requiredFeatures: ["gpu-particles"],
+    optionalFeatures: [],
+    fallbackProfiles: ["desktop-compatible"]
+  }, { webgl2: true, webgpu: false, adapter: null }), { code: "RENDER_PROFILE_UNSUPPORTED" });
+
+  assert.throws(() => selectRendererProfile({
+    profile: "desktop-compatible",
+    requiredFeatures: ["gpu-particles"],
+    optionalFeatures: [],
+    fallbackProfiles: []
+  }, { webgl2: true, webgpu: false, adapter: null }), { code: "RENDER_FEATURE_REQUIRED_UNAVAILABLE" });
 });

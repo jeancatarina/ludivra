@@ -1,12 +1,12 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://ludivra.dev/schemas/game/v3",
+  "$id": "https://ludivra.dev/schemas/game/v4",
   "title": "Ludivra game manifest",
   "type": "object",
   "additionalProperties": false,
-  "required": ["schemaVersion", "id", "name", "engine", "targets", "entrypoints", "inputs", "ui", "inspection", "projectors", "scenarios"],
+  "required": ["schemaVersion", "id", "name", "engine", "targets", "rendering", "entrypoints", "inputs", "ui", "inspection", "projectors", "scenarios"],
   "properties": {
-    "schemaVersion": { "const": 3 },
+    "schemaVersion": { "const": 4 },
     "id": { "type": "string", "pattern": "^[a-z][a-z0-9-]*$" },
     "name": { "type": "string", "minLength": 1 },
     "engine": {
@@ -23,6 +23,15 @@
       "uniqueItems": true,
       "items": {
         "enum": ["browser", "desktop", "android", "ios", "native-headless"]
+      }
+    },
+    "rendering": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["browser", "desktop"],
+      "properties": {
+        "browser": { "$ref": "#/$defs/renderProfile" },
+        "desktop": { "$ref": "#/$defs/renderProfile" }
       }
     },
     "capabilities": {
@@ -303,6 +312,22 @@
             }
           }
         }
+      }
+    }
+  },
+  "$defs": {
+    "rendererFeature": {
+      "enum": ["pbr", "shadows", "postprocess", "cpu-particles", "gpu-particles", "instancing", "lod", "culling", "animation", "gamepad", "gpu-timestamps"]
+    },
+    "renderProfile": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["profile", "requiredFeatures", "optionalFeatures", "fallbackProfiles"],
+      "properties": {
+        "profile": { "enum": ["web-compatible", "desktop-compatible", "desktop-high"] },
+        "requiredFeatures": { "type": "array", "uniqueItems": true, "items": { "$ref": "#/$defs/rendererFeature" } },
+        "optionalFeatures": { "type": "array", "uniqueItems": true, "items": { "$ref": "#/$defs/rendererFeature" } },
+        "fallbackProfiles": { "type": "array", "uniqueItems": true, "items": { "enum": ["web-compatible", "desktop-compatible", "desktop-high"] } }
       }
     }
   },
