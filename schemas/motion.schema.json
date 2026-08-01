@@ -1,0 +1,67 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ludivra.dev/schemas/motion/v1",
+  "title": "Ludivra deterministic motion tracks",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["$schema", "schemaVersion", "id", "dimension", "motions"],
+  "properties": {
+    "$schema": { "const": "https://ludivra.dev/schemas/motion/v1" },
+    "schemaVersion": { "const": 1 },
+    "id": { "type": "string", "pattern": "^motion\\.[a-z][a-z0-9.-]*$" },
+    "dimension": { "type": "integer", "minimum": 0, "maximum": 65535 },
+    "motions": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/motion" }
+    }
+  },
+  "$defs": {
+    "position": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["xMilli", "yMilli", "zMilli"],
+      "properties": {
+        "xMilli": { "$ref": "#/$defs/coordinate" },
+        "yMilli": { "$ref": "#/$defs/coordinate" },
+        "zMilli": { "$ref": "#/$defs/coordinate" }
+      }
+    },
+    "coordinate": {
+      "type": "integer",
+      "minimum": -68719476736000,
+      "maximum": 68719476767999
+    },
+    "motion": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "entityId", "clock", "kind", "start", "startTime", "duration"],
+      "properties": {
+        "id": { "type": "string", "pattern": "^motion\\.[a-z][a-z0-9.-]*$" },
+        "entityId": { "type": "integer", "minimum": 1, "maximum": 4294967295 },
+        "clock": { "enum": ["logical", "presentation"] },
+        "kind": { "enum": ["snap", "tween", "ballistic"] },
+        "start": { "$ref": "#/$defs/position" },
+        "target": { "$ref": "#/$defs/position" },
+        "velocity": { "$ref": "#/$defs/position" },
+        "acceleration": { "$ref": "#/$defs/position" },
+        "startTime": { "type": "integer", "minimum": 0, "maximum": 9223372036854775807 },
+        "duration": { "type": "integer", "minimum": 0, "maximum": 9223372036854775807 }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "kind": { "const": "snap" } } },
+          "then": { "required": ["target"], "properties": { "duration": { "const": 0 } } }
+        },
+        {
+          "if": { "properties": { "kind": { "const": "tween" } } },
+          "then": { "required": ["target"], "properties": { "duration": { "type": "integer", "minimum": 1 } } }
+        },
+        {
+          "if": { "properties": { "kind": { "const": "ballistic" } } },
+          "then": { "required": ["velocity", "acceleration"], "properties": { "duration": { "type": "integer", "minimum": 1 } } }
+        }
+      ]
+    }
+  }
+}

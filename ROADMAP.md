@@ -5,8 +5,8 @@
 | Campo | Valor |
 |---|---|
 | Release atual | 0.7.0 |
-| Foco atual | Fase 6 — Implementar Motion por tempo declarado e comandos semânticos sobre o runtime espacial concluído. |
-| Próxima entrega | Implementar MOT-001 com contrato de movimento, fixture e verificação determinística. |
+| Foco atual | Fase 6 — Implementar o adapter de física de referência com autoridade declarada e commit quantizado. |
+| Próxima entrega | Implementar PHY-001 com corpos, layers, contatos e golden vector quantizado. |
 | Fonte editável de progresso | [docs/program-status.json](docs/program-status.json) |
 | Decisão do modelo documental | [ADR 0046](docs/adr/0046-generated-program-documentation.md) |
 
@@ -28,7 +28,7 @@
 | 3 | AI Control Plane e observabilidade causal | `CONCLUÍDA` | nenhuma no gate atual |
 | 4 | Autoria text-first de gameplay, UI e conteúdo | `CONCLUÍDA` | nenhuma no gate atual |
 | 5 | Runtime espacial e mundo procedural | `CONCLUÍDA` | nenhuma no gate atual |
-| 6 | Motion, física e Mass Simulation | `EM ANDAMENTO` | Motion por tempo declarado e comandos semânticos. |
+| 6 | Motion, física e Mass Simulation | `EM ANDAMENTO` | Adapters Jolt 3D e Box2D 2D com autoridade, quantização e replay. |
 | 7 | Persistência, replays e multiplayer player-hosted | `PARCIAL` | Region storage atômico com journal, compactação, recovery e migrations. |
 | 8 | Renderer, UI, áudio e apresentação escalável | `PARCIAL` | Perfis web-compatible, desktop-compatible e desktop-high com fallback gráfico observado. |
 | 9 | Procedural Construction Runtime | `PLANEJADA` | Construction Graph, comandos semânticos, undo/redo e replay. |
@@ -166,9 +166,12 @@ O runtime gera, carrega, descarta e regenera chunks determinísticos com memóri
 
 Entregar movimento formal, física por adapters e multidões em níveis de simulação declarados.
 
+### Entregue
+
+- Adapter de Motion determinístico para snap, tween e ballistic com relógios lógico/apresentação separados, comando de posição semântico, hash lógico e cancelamento com causa. Capabilities: `motion.reference-runtime`. Evidência: [schemas/motion.schema.json](schemas/motion.schema.json), [kernel/src/motion_reference.cpp](kernel/src/motion_reference.cpp), [examples/card-roguelite/motion/ember-vault.motion.jsonc](examples/card-roguelite/motion/ember-vault.motion.jsonc), [tests/kernel/kernel_test.cpp](tests/kernel/kernel_test.cpp).
+
 ### Falta
 
-- Motion por tempo declarado e comandos semânticos.
 - Adapters Jolt 3D e Box2D 2D com autoridade, quantização e replay.
 - Mass Runtime contíguo, níveis de simulação, promoção controlada e budgets.
 

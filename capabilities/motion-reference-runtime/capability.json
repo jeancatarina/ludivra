@@ -1,0 +1,31 @@
+{
+  "id": "motion.reference-runtime",
+  "status": "experimental",
+  "version": "0.1.0",
+  "owner": "kernel",
+  "targets": ["native-headless"],
+  "contracts": [
+    "schemas/motion.schema.json",
+    "kernel/src/motion_reference.hpp"
+  ],
+  "examples": [
+    "examples/card-roguelite/motion/ember-vault.motion.jsonc",
+    "tests/kernel/kernel_test.cpp"
+  ],
+  "dependencies": ["spatial.regional-world"],
+  "verification": [
+    "pnpm test:native",
+    "pnpm game validate --project examples/card-roguelite --format json",
+    "pnpm test:card-roguelite"
+  ],
+  "limitations": [
+    {
+      "code": "MOTION_PUBLIC_BINDING_UNAVAILABLE",
+      "message": "O runtime de referência emite comandos de posição no kernel; binding C/Web e instalação automática pelo host ainda não existem."
+    },
+    {
+      "code": "MOTION_SAVE_REPLAY_UNAVAILABLE",
+      "message": "Trilhas lógicas são hasháveis e inspecionáveis, mas não são persistidas em save/replay até a integração do runtime."
+    }
+  ]
+}

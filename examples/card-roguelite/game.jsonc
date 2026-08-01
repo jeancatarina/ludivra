@@ -24,6 +24,11 @@
       "id": "world.ember-vault",
       "schema": "https://ludivra.dev/schemas/spatial-world/v1",
       "source": "worlds/ember-vault.world.jsonc"
+    },
+    {
+      "id": "motion.ember-vault",
+      "schema": "https://ludivra.dev/schemas/motion/v1",
+      "source": "motion/ember-vault.motion.jsonc"
     }
   ],
   "spatial": { "worldContentId": "world.ember-vault" },

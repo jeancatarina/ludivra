@@ -2,11 +2,11 @@
 
 > Gerado de `docs/program-status.json` por `tools/program-status/generate.mjs`. Não edite manualmente.
 
-Foco atual: **Fase 6 — Implementar Motion por tempo declarado e comandos semânticos sobre o runtime espacial concluído.**
+Foco atual: **Fase 6 — Implementar o adapter de física de referência com autoridade declarada e commit quantizado.**
 
 | ID | Prioridade | Estado | Fase | Trabalho | ADRs |
 |---|---|---|---:|---|---|
-| MOT-001 | alta | planejado | 6 | Implementar Motion por tempo declarado e comandos semânticos com fixture e verificação determinística. | [ADR 0021](docs/adr/0021-motion-and-physics-adapter-authority.md) |
+| PHY-001 | alta | planejado | 6 | Implementar adapter de física de referência com corpos, layers, contatos e commit quantizado verificável. | [ADR 0021](docs/adr/0021-motion-and-physics-adapter-authority.md), [ADR 0037](docs/adr/0037-physics-solver-selection.md) |
 | ANM-001 | alta | planejado | 8 | Implementar grafo de animação, retarget, IK, layers, masks e root motion controlado. | [ADR 0051](docs/adr/0051-animation-graph-and-skeletal-runtime.md) |
 | AST-001 | alta | planejado | 8 | Implementar ingestão, cooking, variantes, residência e streaming de assets por target. | [ADR 0049](docs/adr/0049-asset-ingest-cooking-and-residency.md) |
 | DESK-001 | alta | planejado | 8 | Implementar perfis gráficos desktop-compatible e desktop-high, seleção de backend e fallback observável. | [ADR 0047](docs/adr/0047-desktop-rendering-profiles-and-backend-policy.md) |

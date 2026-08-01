@@ -1,0 +1,29 @@
+{
+  "$schema": "https://ludivra.dev/schemas/motion/v1",
+  "schemaVersion": 1,
+  "id": "motion.ember-vault",
+  "dimension": 7,
+  "motions": [
+    {
+      "id": "motion.ember-hero-step",
+      "entityId": 1,
+      "clock": "logical",
+      "kind": "tween",
+      "start": { "xMilli": 0, "yMilli": 0, "zMilli": 0 },
+      "target": { "xMilli": 4000, "yMilli": 0, "zMilli": 0 },
+      "startTime": 10,
+      "duration": 4
+    },
+    {
+      "id": "motion.ember-card-float",
+      "entityId": 2,
+      "clock": "presentation",
+      "kind": "ballistic",
+      "start": { "xMilli": 0, "yMilli": 0, "zMilli": 0 },
+      "velocity": { "xMilli": 0, "yMilli": 500, "zMilli": 0 },
+      "acceleration": { "xMilli": 0, "yMilli": -20, "zMilli": 0 },
+      "startTime": 0,
+      "duration": 500
+    }
+  ]
+}

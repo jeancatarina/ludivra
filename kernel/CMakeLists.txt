@@ -3,6 +3,7 @@ add_library(ludivra_kernel STATIC
   src/content_pack.cpp
   src/fixed_point.cpp
   src/logical_timers.cpp
+  src/motion_reference.cpp
   src/navigation_reference.cpp
   src/lua_sandbox.cpp
   src/random_streams.cpp

@@ -3,8 +3,8 @@
   "release": "0.7.0",
   "currentFocus": {
     "phase": 6,
-    "summary": "Implementar Motion por tempo declarado e comandos semânticos sobre o runtime espacial concluído.",
-    "next": "Implementar MOT-001 com contrato de movimento, fixture e verificação determinística."
+    "summary": "Implementar o adapter de física de referência com autoridade declarada e commit quantizado.",
+    "next": "Implementar PHY-001 com corpos, layers, contatos e golden vector quantizado."
   },
   "phases": [
     {
@@ -160,9 +160,14 @@
       "dependencies": [5],
       "adrs": ["0021", "0022", "0037", "0045"],
       "objective": "Entregar movimento formal, física por adapters e multidões em níveis de simulação declarados.",
-      "delivered": [],
+      "delivered": [
+        {
+          "summary": "Adapter de Motion determinístico para snap, tween e ballistic com relógios lógico/apresentação separados, comando de posição semântico, hash lógico e cancelamento com causa.",
+          "capabilities": ["motion.reference-runtime"],
+          "evidence": ["schemas/motion.schema.json", "kernel/src/motion_reference.cpp", "examples/card-roguelite/motion/ember-vault.motion.jsonc", "tests/kernel/kernel_test.cpp"]
+        }
+      ],
       "remaining": [
-        "Motion por tempo declarado e comandos semânticos.",
         "Adapters Jolt 3D e Box2D 2D com autoridade, quantização e replay.",
         "Mass Runtime contíguo, níveis de simulação, promoção controlada e budgets."
       ],
@@ -301,12 +306,12 @@
   ],
   "tasks": [
     {
-      "id": "MOT-001",
+      "id": "PHY-001",
       "priority": "high",
       "status": "planned",
       "phase": 6,
-      "work": "Implementar Motion por tempo declarado e comandos semânticos com fixture e verificação determinística.",
-      "adrs": ["0021"]
+      "work": "Implementar adapter de física de referência com corpos, layers, contatos e commit quantizado verificável.",
+      "adrs": ["0021", "0037"]
     },
     {
       "id": "DESK-001",

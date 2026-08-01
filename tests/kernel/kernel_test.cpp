@@ -1,4 +1,5 @@
 #include "fixed_point.hpp"
+#include "motion_reference.hpp"
 #include "navigation_reference.hpp"
 #include "random_streams.hpp"
 #include "statechart_runtime.hpp"
@@ -67,6 +68,19 @@ using ludivra::kernel::NavigationObstacle;
 using ludivra::kernel::NavigationPathQuery;
 using ludivra::kernel::NavigationRegion;
 using ludivra::kernel::ReferenceNavigation;
+using ludivra::kernel::ReferenceMotion;
+using ludivra::kernel::MotionCancelCause;
+using ludivra::kernel::MotionClock;
+using ludivra::kernel::MotionDefinition;
+using ludivra::kernel::MotionError;
+using ludivra::kernel::MotionKind;
+using ludivra::kernel::MotionStatus;
+using ludivra::kernel::MotionVector;
+using ludivra::kernel::RegionalWorld;
+using ludivra::kernel::RegionalWorldConfig;
+using ludivra::kernel::SpatialEntityLocation;
+using ludivra::kernel::SpatialGlobalPosition;
+using ludivra::kernel::RegionalWorldError;
 
 struct TestContext final {
   void expect(const bool condition, const char* message) {
@@ -438,6 +452,55 @@ void check_reference_navigation(TestContext& context) {
       "avoidance returns deterministic velocity intents rather than transforms");
 }
 
+void check_reference_motion(TestContext& context) {
+  const SpatialGlobalPosition origin{7U, 0, 0, 0};
+  const SpatialGlobalPosition east{7U, 4'000, 0, 0};
+  ReferenceMotion motion;
+  context.expect(motion.install({1U, 1U, MotionClock::logical, MotionKind::tween, origin, east, {0, 0, 0}, {0, 0, 0}, 10U, 4U}) == MotionError::none,
+      "a logical tween declares entity, clock, endpoints and duration");
+  context.expect(motion.advance_logical(9U).empty(), "motion stays scheduled before its declared logical time");
+  const auto started = motion.advance_logical(10U);
+  context.expect(started.size() == 1U && started[0].status == MotionStatus::running && started[0].position.x_milli == 0,
+      "a logical tween starts at its declared fixed-point origin");
+  const auto midpoint = motion.advance_logical(12U);
+  context.expect(midpoint.size() == 1U && midpoint[0].position.x_milli == 2'000,
+      "the midpoint uses declared integer interpolation");
+  const auto completed = motion.advance_logical(14U);
+  context.expect(completed.size() == 1U && completed[0].status == MotionStatus::completed && completed[0].position.x_milli == 4'000,
+      "logical tween completion is exact and inspectable");
+
+  RegionalWorld world(RegionalWorldConfig{7U, 2U});
+  context.expect(world.put(1U, origin) == RegionalWorldError::none,
+      "the consumer owns applying a motion position command");
+  context.expect(world.put(completed[0].entity_id, completed[0].position) == RegionalWorldError::none,
+      "motion output crosses the semantic regional-world boundary");
+  SpatialEntityLocation location{};
+  context.expect(world.locate(1U, location) == RegionalWorldError::none && location.position.x_milli == 4'000,
+      "motion does not write world state except through the consumer command");
+
+  const auto logical_hash = motion.logical_hash();
+  context.expect(motion.install({2U, 2U, MotionClock::presentation, MotionKind::tween, origin, east, {0, 0, 0}, {0, 0, 0}, 0U, 500U}) == MotionError::none,
+      "presentation motion is declared separately from logical motion");
+  const auto visual = motion.advance_presentation(250U);
+  context.expect(visual.size() == 1U && visual[0].position.x_milli == 2'000,
+      "presentation motion is sampled in its own time unit");
+  context.expect(motion.logical_hash() == logical_hash,
+      "presentation motion never changes the logical motion hash");
+
+  context.expect(motion.install({3U, 3U, MotionClock::logical, MotionKind::ballistic, origin, origin, {500, 0, 0}, {100, 0, 0}, 0U, 5U}) == MotionError::none,
+      "ballistic motion declares integer velocity and acceleration");
+  const auto ballistic = motion.advance_logical(2U);
+  context.expect(ballistic.size() == 1U && ballistic[0].position.x_milli == 1'200,
+      "ballistic motion uses a deterministic integer trajectory");
+  context.expect(motion.cancel(3U, MotionCancelCause::none) == MotionError::cancel_cause_required,
+      "motion cancellation cannot discard a cause");
+  context.expect(motion.cancel(3U, MotionCancelCause::explicit_request) == MotionError::none,
+      "motion cancellation records an explicit cause");
+  const auto inspected = motion.inspect();
+  context.expect(inspected[2].status == MotionStatus::cancelled && inspected[2].cancel_cause == MotionCancelCause::explicit_request,
+      "inspection retains the terminal cancellation cause");
+}
+
 void check_generation(TestContext& context) {
   const auto origin = chunk_at(0, 0);
   context.expect(
@@ -605,6 +668,7 @@ int main() {
   check_job_commit_order(context);
   check_cooperative_world_runtime(context);
   check_reference_navigation(context);
+  check_reference_motion(context);
   check_generation(context);
   check_streaming(context);
   check_statechart_runtime(context);

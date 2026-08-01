@@ -44,6 +44,7 @@ const requiredFiles = [
   "schemas/card-roguelite-v1.schema.json",
   "schemas/character-spec.schema.json",
   "schemas/navigation-map.schema.json",
+  "schemas/motion.schema.json",
   "schemas/spatial-world.schema.json",
   "schemas/prefab.schema.json",
   "schemas/scenario.schema.json",
@@ -79,6 +80,7 @@ const jsonFiles = [
   "schemas/character-spec.schema.json",
   "schemas/game.schema.json",
   "schemas/navigation-map.schema.json",
+  "schemas/motion.schema.json",
   "schemas/spatial-world.schema.json",
   "schemas/prefab.schema.json",
   "schemas/scenario.schema.json",
@@ -107,6 +109,7 @@ const contractSchemaFiles = [
   "schemas/character-spec.schema.json",
   "schemas/game.schema.json",
   "schemas/navigation-map.schema.json",
+  "schemas/motion.schema.json",
   "schemas/spatial-world.schema.json",
   "schemas/prefab.schema.json",
   "schemas/scenario.schema.json",
@@ -757,6 +760,12 @@ export async function runValidate(arguments_: string[] = []): Promise<CommandOut
                 const entities = (migratedDocument as { entities?: Array<{ id: number }> }).entities ?? [];
                 if (new Set(entities.map(({ id }) => id)).size !== entities.length) {
                   diagnostics.push({ code: "SPATIAL_ENTITY_ID_DUPLICATE", severity: "error", message: "Spatial entity IDs must be unique", file: contentPath });
+                }
+              }
+              if (descriptor.schema === "https://ludivra.dev/schemas/motion/v1") {
+                const motions = (migratedDocument as { motions?: Array<{ id: string }> }).motions ?? [];
+                if (new Set(motions.map(({ id }) => id)).size !== motions.length) {
+                  diagnostics.push({ code: "MOTION_ID_DUPLICATE", severity: "error", message: "Motion IDs must be unique", file: contentPath });
                 }
               }
             } catch (error) {

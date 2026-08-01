@@ -2,7 +2,7 @@
 
 - Status: provisório
 - Data: 2026-07-24
-- Revisado: 2026-07-26 para fechar a cobertura mínima de física desktop
+- Revisado: 2026-08-01 para o adapter de Motion determinístico inicial
 - Revisão: ao registrar o primeiro benchmark oficial de física; a escolha de solver está no [ADR 0037](0037-physics-solver-selection.md)
 - Depende de: [ADR 0018](0018-numeric-determinism-and-rng-streams.md) e [ADR 0019](0019-spatial-model-chunk-lifecycle-and-job-commit.md)
 - Complementa: [ADR 0008](0008-mandatory-scale-and-procedural-capabilities.md)
@@ -28,6 +28,14 @@ Toda operação de motion — `tween`, `spring`, `path`, `ballistic`, `snap`, `f
 - motion nunca decide dano, vitória, colisão relevante para regra ou transição de estado. Violação é `MOTION_AUTHORITY_VIOLATION`.
 
 Cancelamento, conclusão e interrupção são inspecionáveis com causa. Motion silenciosamente descartado é defeito.
+
+### Adapter de Motion inicial
+
+`ReferenceMotion` implementa o primeiro boundary em kernel para `snap`, `tween` e `ballistic`. Cada trilha declara clock, entidade, origem, duração e seus parâmetros; o clock lógico usa aritmética inteira e entra em `logical_hash`, enquanto amostras de apresentação não podem alterar esse hash.
+
+O runtime emite `MotionSample` como comando de posição, e o consumidor decide explicitamente aplicá-lo a `RegionalWorld`. Conclusão e cancelamento permanecem no snapshot de inspeção; cancelamento sem causa é recusado e falha aritmética recebe causa terminal. O documento `motion/v1` é compilado no content pack da fixture.
+
+Este primeiro adapter não instala trilhas automaticamente no host nem as persiste em save/replay; essas integrações continuam gates explícitos, não promessas implícitas.
 
 ### Física é adapter, com autoridade por corpo
 
