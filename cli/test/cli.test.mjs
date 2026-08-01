@@ -196,6 +196,75 @@ test("new creates a schema-valid game project", () => {
   }
 });
 
+test("asset cooker validates glTF provenance, reuses content-addressed output and rejects project escape", () => {
+  const temporaryRoot = mkdtempSync(resolve(tmpdir(), "ludivra-asset-cook-"));
+  const project = resolve(temporaryRoot, "asset-game");
+  try {
+    assert.equal(runCli(["new", project, "--name", "Asset Game", "--format", "json"]).execution.status, 0);
+    const source = "assets/models/reference.gltf";
+    mkdirSync(resolve(project, "assets/models"), { recursive: true });
+    writeFileSync(resolve(project, source), JSON.stringify({
+      asset: { version: "2.0", generator: "asset cooker test" },
+      meshes: [{ primitives: [{ indices: 0 }] }],
+      accessors: [{ count: 3 }]
+    }));
+    const manifestPath = resolve(project, "game.jsonc");
+    const manifest = parseJsonc(readFileSync(manifestPath, "utf8"));
+    manifest.assets = [{
+      id: "model.reference",
+      kind: "model",
+      format: "gltf",
+      source,
+      origin: "test",
+      license: "CC0-1.0",
+      targets: ["browser"],
+      residency: { class: "scene", priority: 1, cpuBudgetMiB: 1, gpuBudgetMiB: 1 },
+      import: { units: "meters", coordinateSystem: "right-handed-y-up" }
+    }];
+    writeFileSync(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`);
+
+    const cooked = runCli(["asset", "cook", "--project", project, "--format", "json"]);
+    assert.equal(cooked.execution.status, 0);
+    assert.equal(cooked.result.data.rendered[0].metrics.triangles, 1);
+    assert.equal(cooked.result.data.rendered[0].reused, false);
+    assert.ok(existsSync(resolve(project, ".ludivra/assets-index.json")));
+
+    const reused = runCli(["asset", "inspect", "--project", project, "--id", "model.reference", "--format", "json"]);
+    assert.equal(reused.execution.status, 0);
+    assert.equal(reused.result.data.rendered[0].reused, true);
+
+    const glbJson = Buffer.from('{"asset":{"version":"2.0"}} '.padEnd(28, " "), "utf8");
+    const glb = Buffer.alloc(20 + glbJson.length);
+    glb.writeUInt32LE(0x46546c67, 0);
+    glb.writeUInt32LE(2, 4);
+    glb.writeUInt32LE(glb.length, 8);
+    glb.writeUInt32LE(glbJson.length, 12);
+    glb.writeUInt32LE(0x4e4f534a, 16);
+    glbJson.copy(glb, 20);
+    writeFileSync(resolve(project, "assets/models/reference.glb"), glb);
+    manifest.assets.push({
+      ...manifest.assets[0],
+      id: "model.binary-reference",
+      format: "glb",
+      source: "assets/models/reference.glb"
+    });
+    writeFileSync(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`);
+    const binary = runCli(["asset", "cook", "--project", project, "--id", "model.binary-reference", "--format", "json"]);
+    assert.equal(binary.execution.status, 0);
+    assert.equal(binary.result.data.rendered[0].format, "glb");
+    const index = JSON.parse(readFileSync(resolve(project, ".ludivra/assets-index.json"), "utf8"));
+    assert.equal(index.entries.length, 2);
+
+    manifest.assets[0].source = "../outside.gltf";
+    writeFileSync(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`);
+    const escaped = runCli(["asset", "cook", "--project", project, "--format", "json"]);
+    assert.equal(escaped.execution.status, 2);
+    assert.equal(escaped.result.diagnostics[0].code, "ASSET_SOURCE_UNDECLARED");
+  } finally {
+    rmSync(temporaryRoot, { recursive: true, force: true });
+  }
+});
+
 test("fitness functions reject workspace and CMake cycles", async () => {
   const temporaryRoot = mkdtempSync(resolve(tmpdir(), "ludivra-cycles-"));
   try {

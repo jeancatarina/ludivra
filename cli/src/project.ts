@@ -13,6 +13,7 @@ export interface GameManifest {
     browser: RendererProfileDeclaration;
     desktop: RendererProfileDeclaration;
   };
+  assets?: AssetDeclaration[];
   entrypoints: { gameplay: string; presentation: string };
   content?: Array<{ id: string; schema: string; source: string }>;
   composition?: {
@@ -46,6 +47,26 @@ export interface RendererProfileDeclaration {
   requiredFeatures: RendererFeature[];
   optionalFeatures: RendererFeature[];
   fallbackProfiles: Array<"web-compatible" | "desktop-compatible" | "desktop-high">;
+}
+
+export interface AssetDeclaration {
+  id: string;
+  kind: "model";
+  format: "gltf" | "glb";
+  source: string;
+  origin: string;
+  license: string;
+  targets: Array<"browser" | "desktop" | "android" | "ios" | "native-headless">;
+  residency: {
+    class: "boot" | "scene" | "streamed" | "transient";
+    priority: number;
+    cpuBudgetMiB: number;
+    gpuBudgetMiB: number;
+  };
+  import: {
+    units: "meters";
+    coordinateSystem: "right-handed-y-up";
+  };
 }
 
 export type RendererFeature =

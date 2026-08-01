@@ -6,8 +6,8 @@ Foco atual: **Fase 8 — Escalar renderer, UI, áudio e apresentação sem alter
 
 | ID | Prioridade | Estado | Fase | Trabalho | ADRs |
 |---|---|---|---:|---|---|
+| AST-001 | alta | em andamento | 8 | Implementar ingestão, cooking, variantes, residência e streaming de assets por target. | [ADR 0049](docs/adr/0049-asset-ingest-cooking-and-residency.md) |
 | ANM-001 | alta | planejado | 8 | Implementar grafo de animação, retarget, IK, layers, masks e root motion controlado. | [ADR 0051](docs/adr/0051-animation-graph-and-skeletal-runtime.md) |
-| AST-001 | alta | planejado | 8 | Implementar ingestão, cooking, variantes, residência e streaming de assets por target. | [ADR 0049](docs/adr/0049-asset-ingest-cooking-and-residency.md) |
 | RND-001 | alta | planejado | 8 | Implementar materiais, shaders, ambiente e feature tiers com warmup e fallback. | [ADR 0050](docs/adr/0050-material-shader-environment-and-render-feature-tiers.md) |
 | VFX-001 | alta | planejado | 8 | Implementar VFX e partículas GPU/CPU com pooling, colisão, trails e budgets. | [ADR 0052](docs/adr/0052-textual-vfx-and-particle-runtime.md) |
 | AUD-001 | alta | planejado | 10 | Completar música, stems, previews e integração final do Audio Forge. | [ADR 0032](docs/adr/0032-audio-forge-recipes-and-deterministic-renderer.md) |

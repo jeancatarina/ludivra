@@ -659,6 +659,7 @@ export async function runValidate(arguments_: string[] = []): Promise<CommandOut
             scenarios: string[];
             audio?: Array<{ id: string; eventId: number; source?: string }>;
             effects?: Array<{ id: string; eventId: number }>;
+            assets?: Array<{ id: string; source: string }>;
           };
           const manifestActions = new Map(manifest.inputs.map(({ id, actionId }) => [id, actionId]));
           const declaredStateKeys = new Set(manifest.inspection.integerStates.map(({ key }) => key));
@@ -898,6 +899,48 @@ export async function runValidate(arguments_: string[] = []): Promise<CommandOut
                 code: "AUDIO_SOURCE_MISSING",
                 severity: "error",
                 message: `Audio source does not exist: ${audio.source}`,
+                file: gamePath
+              });
+            }
+          }
+          const assetIds = new Set<string>();
+          for (const asset of manifest.assets ?? []) {
+            if (assetIds.has(asset.id)) {
+              diagnostics.push({
+                code: "ASSET_ID_DUPLICATE",
+                severity: "error",
+                message: `Asset ID is duplicated: ${asset.id}`,
+                file: gamePath
+              });
+            }
+            assetIds.add(asset.id);
+            const source = resolve(project, asset.source);
+            const relation = relative(project, source);
+            if (relation.startsWith("..") || isAbsolute(relation)) {
+              diagnostics.push({
+                code: "ASSET_SOURCE_UNDECLARED",
+                severity: "error",
+                message: `Asset source escapes the game project: ${asset.source}`,
+                file: gamePath
+              });
+              continue;
+            }
+            try {
+              const [actualProject, actualSource] = await Promise.all([realpath(project), realpath(source)]);
+              const actualRelation = relative(actualProject, actualSource);
+              if (actualRelation.startsWith("..") || isAbsolute(actualRelation)) {
+                diagnostics.push({
+                  code: "ASSET_SOURCE_UNDECLARED",
+                  severity: "error",
+                  message: `Asset source symlink escapes the game project: ${asset.source}`,
+                  file: source
+                });
+              }
+            } catch {
+              diagnostics.push({
+                code: "ASSET_SOURCE_UNDECLARED",
+                severity: "error",
+                message: `Asset source does not exist: ${asset.source}`,
                 file: gamePath
               });
             }

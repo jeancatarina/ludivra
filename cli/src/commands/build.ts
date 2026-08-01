@@ -1,6 +1,7 @@
 import { resolve } from "node:path";
 import type { CacheFamilyId } from "../artifact-cache.js";
 import { ensureProjectAudio } from "../audio-forge.js";
+import { ensureProjectAssets } from "../asset-forge.js";
 import { ensureContentPack } from "../content-forge.js";
 import { ensureProjectVisuals } from "../visual-forge.js";
 import { optionValue } from "../arguments.js";
@@ -27,6 +28,7 @@ export async function runBuild(context: CommandContext, arguments_: string[]): P
   const content = await ensureContentPack(project);
   const audio = await ensureProjectAudio(root, project);
   const visual = await ensureProjectVisuals(root, project);
+  const assets = await ensureProjectAssets(project);
   const result = await runFamilies({
     runId: context.runId,
     root,
@@ -40,7 +42,7 @@ export async function runBuild(context: CommandContext, arguments_: string[]): P
     },
     ...options
   });
-  const diagnostics = [...content.diagnostics, ...audio.diagnostics, ...visual.diagnostics, ...result.diagnostics];
+  const diagnostics = [...content.diagnostics, ...audio.diagnostics, ...visual.diagnostics, ...assets.diagnostics, ...result.diagnostics];
   const failed = diagnostics.some(({ severity }) => severity === "error");
   return {
     diagnostics,
@@ -58,6 +60,13 @@ export async function runBuild(context: CommandContext, arguments_: string[]): P
         output,
         reused,
         triangles: report.metrics.triangles
+      })),
+      assets: assets.rendered.map(({ id, output, reused, metrics }) => ({
+        id,
+        output,
+        reused,
+        bytes: metrics.bytes,
+        triangles: metrics.triangles
       })),
       content: { pack: content.path, sha256: content.sha256, reused: content.reused },
       cache: summarizeDecisions(result.decisions)

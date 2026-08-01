@@ -18,6 +18,7 @@ node_modules/
 **/.ludivra/project-state.json
 **/.ludivra/audio-index.json
 **/.ludivra/visual-index.json
+**/.ludivra/assets-index.json
 **/.ludivra/content-pack.json
 **/.ludivra/content-pack.meta.json
 **/.ludivra/cache/

@@ -12,6 +12,12 @@ A arquitetura descreve validação, normalização, cooker e pack, mas não deci
 
 Sem cooker, o renderer carrega formatos de autoria diretamente, recompila decisões em runtime e não consegue atribuir memória, stutter ou falha de decode a um asset.
 
+## Corte implementado
+
+O `game asset cook` v1 aceita somente declarações `model` glTF 2.0/GLB no manifest. Ele exige origem, licença, targets, classe de residência, budgets CPU/GPU e as convenções `meters`/`right-handed-y-up`; valida header e JSON do container, recusa URIs remotas ou que escapem do projeto, registra dependências externas e copia o payload inalterado para um cache identificado pelo conteúdo e pelas opções de importação. O índice `.ludivra/assets-index.json` e o manifest por asset dão ao build uma fronteira observável de proveniência, métricas e decisão de cache.
+
+Esse corte não declara normalização, otimização, compressão, variante por target, loader de cena ou streaming: o manifest registra explicitamente `normalized: false` e `compression: none` até a adoção de um encoder upstream licenciado e de evidência de runtime.
+
 ## Decisão
 
 ### Produtores diferentes, contrato único

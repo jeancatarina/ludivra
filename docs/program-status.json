@@ -236,11 +236,16 @@
           "summary": "Manifest v4 declara perfis e features por Browser/Desktop; renderer inicializa WebGPURenderer sob demanda para desktop-high, publica adapter e benchmark GPU limitado (mediana/p95) no provenance do smoke Electron, registra pedido/efetivo/fallback na inspeção e só reduz para desktop-compatible quando o fallback foi declarado.",
           "capabilities": ["presentation.renderer-profiles"],
           "evidence": ["schemas/game.schema.json", "renderer-three/src/profiles.ts", "renderer-three/src/gpu-timing.ts", "renderer-three/src/index.ts", "hosts/browser/src/main.ts", "hosts/electron/src/main.cjs", "tools/build/package-steam.mjs", "renderer-three/test/diagnostics.test.mjs", "examples/card-roguelite/game.jsonc"]
+        },
+        {
+          "summary": "Manifest declara modelos glTF/GLB com provenance, targets e budgets; o cooker valida containers, dependências e isolamento, preserva a fonte em cache content-addressed e publica índice/telemetria de importação para o build.",
+          "capabilities": ["authoring.asset-cooker"],
+          "evidence": ["schemas/game.schema.json", "cli/src/asset-forge.ts", "cli/src/commands/build.ts", "examples/first-game/assets/models/reference-triangle.gltf", "cli/test/cli.test.mjs"]
         }
       ],
       "remaining": [
         "Adicionar pós-processamento WebGPU por tier ao desktop-high; manter fallback observado quando o método não existir.",
-        "Ingestão glTF/GLB, cooking, LOD, compressão, residência e streaming por target.",
+        "Adicionar normalização/otimização upstream licenciada, variantes comprimidas por target, loader de cena, residência e streaming aos assets glTF/GLB já ingeridos.",
         "Materiais e ambientes por tiers, shader warmup, cache e fallback verificável.",
         "Grafos de animação com blend, layers, masks, retarget, IK e root motion controlado.",
         "VFX GPU/CPU com trails, subemitters, colisão, pooling e budgets.",
@@ -336,7 +341,7 @@
     {
       "id": "AST-001",
       "priority": "high",
-      "status": "planned",
+      "status": "in_progress",
       "phase": 8,
       "work": "Implementar ingestão, cooking, variantes, residência e streaming de assets por target.",
       "adrs": ["0049"]

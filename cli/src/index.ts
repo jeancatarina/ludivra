@@ -11,6 +11,7 @@ import { runPackage } from "./commands/package.js";
 import { runGame } from "./commands/run.js";
 import { runStatus } from "./commands/status.js";
 import { runAudio } from "./commands/audio.js";
+import { runAsset } from "./commands/asset.js";
 import { runVisual } from "./commands/visual.js";
 import { runCapture } from "./commands/capture.js";
 import { runContent } from "./commands/content.js";
@@ -46,6 +47,8 @@ function parseMaxDiagnostics(arguments_: string[]): number | undefined {
 
 async function dispatch(command: string, context: CommandContext, arguments_: string[]): Promise<CommandOutcome> {
   switch (command) {
+    case "asset":
+      return runAsset(context, arguments_);
     case "doctor":
       return runDoctor();
     case "inspect":
@@ -85,7 +88,7 @@ async function dispatch(command: string, context: CommandContext, arguments_: st
     case "help":
       return {
         diagnostics: [],
-        data: { commands: ["audio", "build", "content", "capture", "context", "doctor", "inspect", "new", "package", "replay", "report", "run", "simulate", "status", "storage", "test", "validate", "visual"] },
+        data: { commands: ["asset", "audio", "build", "content", "capture", "context", "doctor", "inspect", "new", "package", "replay", "report", "run", "simulate", "status", "storage", "test", "validate", "visual"] },
         nextActions: ["Run game doctor --format json"]
       };
     default:

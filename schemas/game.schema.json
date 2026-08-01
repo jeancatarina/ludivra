@@ -231,6 +231,49 @@
       "uniqueItems": true,
       "items": { "type": "string", "minLength": 1 }
     },
+    "assets": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "kind", "format", "source", "origin", "license", "targets", "residency", "import"],
+        "properties": {
+          "id": { "type": "string", "pattern": "^[a-z][a-z0-9.-]*$" },
+          "kind": { "const": "model" },
+          "format": { "enum": ["gltf", "glb"] },
+          "source": { "type": "string", "minLength": 1 },
+          "origin": { "type": "string", "minLength": 1 },
+          "license": { "type": "string", "minLength": 1 },
+          "targets": {
+            "type": "array",
+            "minItems": 1,
+            "uniqueItems": true,
+            "items": { "enum": ["browser", "desktop", "android", "ios", "native-headless"] }
+          },
+          "residency": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["class", "priority", "cpuBudgetMiB", "gpuBudgetMiB"],
+            "properties": {
+              "class": { "enum": ["boot", "scene", "streamed", "transient"] },
+              "priority": { "type": "integer", "minimum": 0, "maximum": 100 },
+              "cpuBudgetMiB": { "type": "number", "exclusiveMinimum": 0, "maximum": 4096 },
+              "gpuBudgetMiB": { "type": "number", "exclusiveMinimum": 0, "maximum": 4096 }
+            }
+          },
+          "import": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["units", "coordinateSystem"],
+            "properties": {
+              "units": { "const": "meters" },
+              "coordinateSystem": { "const": "right-handed-y-up" }
+            }
+          }
+        }
+      }
+    },
     "audio": {
       "type": "array",
       "uniqueItems": true,

@@ -1,0 +1,31 @@
+{
+  "id": "authoring.asset-cooker",
+  "status": "experimental",
+  "version": "0.1.0",
+  "owner": "cli",
+  "targets": ["browser", "electron", "native-headless"],
+  "contracts": [
+    "schemas/game.schema.json",
+    "cli/src/project.ts",
+    "cli/src/asset-forge.ts",
+    "cli/src/commands/build.ts",
+    "docs/adr/0049-asset-ingest-cooking-and-residency.md"
+  ],
+  "examples": [
+    "examples/first-game/game.jsonc",
+    "examples/first-game/assets/models/reference-triangle.gltf",
+    "cli/test/cli.test.mjs"
+  ],
+  "dependencies": ["presentation.three"],
+  "verification": [
+    "pnpm --filter @ludivra/cli test",
+    "pnpm game asset cook --project examples/first-game --format json",
+    "pnpm game validate --project examples/first-game --format json"
+  ],
+  "limitations": [
+    {
+      "code": "ASSET_TARGET_VARIANT_MISSING",
+      "message": "O cooker v1 valida provenance e glTF/GLB, preservando a fonte no cache content-addressed; encoder/compressão, variantes por target, loader de cena, residência e streaming ainda não existem."
+    }
+  ]
+}
