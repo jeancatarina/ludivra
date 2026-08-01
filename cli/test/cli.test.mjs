@@ -341,6 +341,20 @@ test("raster comparison decodes PNG filters and applies declared tolerance", asy
   assert.throws(() => decodePng(Buffer.from("not a png")), /CAPTURE_IMAGE_NOT_PNG/);
 });
 
+test("raster capture keys approved baselines by viewport, text scale and device scale", async () => {
+  const { parseRasterCaptureRequest, rasterBaselineFileName } = await import("../dist/raster-capture.js");
+  const request = parseRasterCaptureRequest([
+    "capture", "--viewport", "390x844", "--text-scale", "1.5", "--device-scale", "2"
+  ]);
+  assert.equal(request.textScale, 1.5);
+  assert.equal(request.deviceScale, 2);
+  assert.equal(rasterBaselineFileName(request, 2), "390x844@2x-text-1.5x.png");
+  assert.throws(
+    () => parseRasterCaptureRequest(["capture", "--text-scale", "0"]),
+    /CAPTURE_PROFILE_UNDECLARED/
+  );
+});
+
 test("artifact families own their inputs and declare their dependents", async () => {
   const { cacheFamilyIds, dependentFamilies, familyDefinition, owningFamily } = await import(
     "../dist/artifact-cache.js"

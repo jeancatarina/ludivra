@@ -71,7 +71,7 @@ For now, the engine is consumed directly from a cloned repository. There is no s
 | Signing and notarization | Responsibility of the game owner |
 | Semantic audio, music, and particle effects | Experimental, functional in Browser and Electron |
 | Headless harness and cold session | Experimental, functional, and automated |
-| Early card roguelite integration fixture | ENG-016 complete; real BrowserHost UI snapshot and raster capture pending |
+| Early card roguelite integration fixture | ENG-016 complete; real BrowserHost UI snapshot and approved raster matrix verified |
 | Android and iOS | Planned |
 | Consoles | Future architectural path; no public backend |
 
@@ -379,7 +379,7 @@ Run all commands from the engine root directory.
 | `game run --control --project <directory>` | runs the default scenario through the control protocol |
 | `game simulate --project <directory> --scenario <file>` | executes assertions and produces an artifact bundle |
 | `game capture --project <directory> --scenario <file>` | produces a semantic capture linked to state |
-| `game capture --raster --project <directory> --name <id>` | captures a real frame of the web bundle through the ElectronHost and compares it with the approved baseline |
+| `game capture --raster --project <directory> --name <id> --viewport <w>x<h> --text-scale <n> --device-scale <n>` | captures a real frame of the web bundle through the ElectronHost and compares it with the approved baseline |
 | `game audio render --project <directory>` | renders every audio recipe into canonical PCM, reusing the cache by recipe, generator version and seed |
 | `game audio inspect --project <directory>` | lists recipes with duration, level and hash without writing evidence |
 | `game content build --project <directory>` | compiles the validated JSONC into the versioned content pack |

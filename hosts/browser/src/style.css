@@ -18,8 +18,8 @@ body { margin: 0; min-width: 320px; min-height: 100vh; }
   grid-template-rows: auto minmax(0, 1fr) auto;
   gap: 24px;
 }
-.eyebrow { margin: 0 0 10px; color: #a992ff; font-size: 12px; letter-spacing: 0.2em; }
-h1 { margin: 0; font-size: clamp(32px, 6vw, 64px); letter-spacing: -0.04em; }
+.eyebrow { margin: 0 0 10px; color: #a992ff; font-size: 0.75rem; letter-spacing: 0.2em; }
+h1 { margin: 0; font-size: clamp(2rem, calc(4vw + 1rem), 4rem); letter-spacing: -0.04em; }
 #host-status { margin: 8px 0 0; color: #aaa4bd; }
 #game-status {
   margin: 14px 0 0;

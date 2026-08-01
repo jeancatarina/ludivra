@@ -1,7 +1,7 @@
 {
   "id": "proof.card-roguelite-loop",
   "status": "experimental",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "owner": "examples/card-roguelite",
   "targets": [
     "native-headless",
@@ -32,10 +32,6 @@
     {
       "code": "CARD_FRAMEWORK_NOT_EXTRACTED",
       "message": "The loop is intentionally game-specific until a second game proves a reusable card contract."
-    },
-    {
-      "code": "CARD_VISUAL_BASELINE_SINGLE_PROFILE",
-      "message": "Only the desktop 1280x800@2x baseline is approved; other viewports, text scales and device scale factors remain NOT_AVAILABLE."
     }
   ]
 }

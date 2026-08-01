@@ -18,13 +18,34 @@ function readCaptureOptions(environment) {
     if (!Number.isInteger(parsed) || parsed < 0) throw new Error("CAPTURE_PROFILE_UNDECLARED");
     return parsed;
   };
+  const positiveNumber = (value, fallback) => {
+    if (value === undefined) return fallback;
+    const parsed = Number(value);
+    if (!Number.isFinite(parsed) || parsed <= 0) throw new Error("CAPTURE_PROFILE_UNDECLARED");
+    return parsed;
+  };
   return {
     bundle: path.resolve(bundle),
     output: path.resolve(output),
     ticks: integer(environment.LUDIVRA_CAPTURE_TICKS, 0),
     width: integer(environment.LUDIVRA_CAPTURE_WIDTH, 1280),
     height: integer(environment.LUDIVRA_CAPTURE_HEIGHT, 800),
+    textScale: positiveNumber(environment.LUDIVRA_CAPTURE_TEXT_SCALE, 1),
+    deviceScale: positiveNumber(environment.LUDIVRA_CAPTURE_DEVICE_SCALE, undefined),
     timeoutMs: integer(environment.LUDIVRA_CAPTURE_TIMEOUT_MS, 20_000)
+  };
+}
+
+function captureWebPreferences(options) {
+  return {
+    contextIsolation: true,
+    nodeIntegration: false,
+    sandbox: true,
+    backgroundThrottling: false,
+    // Electron owns the output scale in offscreen mode. A Chromium command-line
+    // switch leaves macOS tied to the primary display and cannot prove the matrix.
+    offscreen: options.deviceScale === undefined ? true : { deviceScaleFactor: options.deviceScale },
+    preload: path.join(__dirname, "..", "preload.cjs")
   };
 }
 
@@ -80,13 +101,7 @@ async function runCapture({ BrowserWindow, logger, environment }) {
     show: false,
     paintWhenInitiallyHidden: true,
     backgroundColor: "#080711",
-    webPreferences: {
-      contextIsolation: true,
-      nodeIntegration: false,
-      sandbox: true,
-      backgroundThrottling: false,
-      preload: path.join(__dirname, "..", "preload.cjs")
-    }
+    webPreferences: captureWebPreferences(options)
   });
   window.removeMenu();
   const rendererMessages = [];
@@ -109,16 +124,23 @@ async function runCapture({ BrowserWindow, logger, environment }) {
         reject(new Error(`CAPTURE_BUNDLE_LOAD_FAILED: ${code} ${description}`));
       });
     });
-    void window.loadFile(options.bundle, { search: `ludivra-capture=${options.ticks}` });
+    const search = new URLSearchParams({
+      "ludivra-capture": String(options.ticks),
+      "ludivra-text-scale": String(options.textScale)
+    }).toString();
+    void window.loadFile(options.bundle, { search });
     await withDeadline(loaded, deadline, "CAPTURE_BUNDLE_LOAD_TIMEOUT");
     await waitForQuiescence(window.webContents, deadline);
 
     const inspection = JSON.parse(await window.webContents.executeJavaScript(
-      "JSON.stringify({ tick: window.ludivraUi.tick, stateHash: window.ludivraUi.stateHash," +
+      "JSON.stringify({ deviceScale: window.devicePixelRatio, tick: window.ludivraUi.tick, stateHash: window.ludivraUi.stateHash," +
       " viewModel: window.ludivraUi.viewModel(), snapshot: window.ludivraUi.snapshot()," +
       " projection: window.ludivraUi.projection(), diagnostics: window.ludivraUi.diagnostics() })"
     ));
     const { png, size } = await captureStableFrame(window.webContents, deadline);
+    const deviceScale = Number(inspection.deviceScale);
+    if (!Number.isFinite(deviceScale) || deviceScale <= 0) throw new Error("CAPTURE_DEVICE_SCALE_UNAVAILABLE");
+    const capturePixelScale = Number((size.width / options.width).toFixed(3));
 
     await mkdir(options.output, { recursive: true });
     await Promise.all([
@@ -150,10 +172,14 @@ async function runCapture({ BrowserWindow, logger, environment }) {
           renderer: inspection.snapshot.renderer,
           requestedViewport: { width: options.width, height: options.height },
           imageSize: size,
+          requestedDeviceScale: options.deviceScale ?? null,
+          deviceScale,
+          capturePixelScale,
           ticks: options.ticks,
           tick: inspection.tick,
           stateHash: inspection.stateHash,
           locale: inspection.snapshot.locale,
+          requestedTextScale: options.textScale,
           textScale: inspection.snapshot.textScale,
           quiescence: "ludivraUi.ready + two identical consecutive frames",
           projectorOperations: inspection.projection.operations,
@@ -176,4 +202,4 @@ async function runCapture({ BrowserWindow, logger, environment }) {
   }
 }
 
-module.exports = { readCaptureOptions, runCapture };
+module.exports = { captureWebPreferences, readCaptureOptions, runCapture };

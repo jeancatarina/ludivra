@@ -37,10 +37,22 @@ interface CaptureRequest {
   width: number;
   height: number;
   ticks: number;
+  textScale: number;
+  deviceScale: number | undefined;
   updateBaseline: boolean;
 }
 
-function parseRequest(arguments_: string[]): CaptureRequest {
+function positiveNumberOption(arguments_: string[], name: string, fallback: number | undefined): number | undefined {
+  const value = optionValue(arguments_, name);
+  if (value === undefined) return fallback;
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed) || parsed <= 0) {
+    throw new Error(`CAPTURE_PROFILE_UNDECLARED: ${name} expects a positive number`);
+  }
+  return parsed;
+}
+
+export function parseRasterCaptureRequest(arguments_: string[]): CaptureRequest {
   const viewport = optionValue(arguments_, "--viewport") ?? "1280x800";
   const match = /^(\d+)x(\d+)$/.exec(viewport);
   if (match === null) throw new Error("CAPTURE_PROFILE_UNDECLARED: --viewport expects <width>x<height>");
@@ -52,8 +64,18 @@ function parseRequest(arguments_: string[]): CaptureRequest {
     width: Number(match[1]),
     height: Number(match[2]),
     ticks,
+    textScale: positiveNumberOption(arguments_, "--text-scale", 1) ?? 1,
+    deviceScale: positiveNumberOption(arguments_, "--device-scale", undefined),
     updateBaseline: arguments_.includes("--update-baseline")
   };
+}
+
+function scaleSegment(value: number): string {
+  return Number(value.toFixed(3)).toString();
+}
+
+export function rasterBaselineFileName(request: Pick<CaptureRequest, "width" | "height" | "textScale">, deviceScale: number): string {
+  return `${request.width}x${request.height}@${scaleSegment(deviceScale)}x-text-${scaleSegment(request.textScale)}x.png`;
 }
 
 function baselineDirectory(project: string, request: CaptureRequest): string {
@@ -123,7 +145,7 @@ export async function runRasterCapture(
   context: CommandContext,
   arguments_: string[]
 ): Promise<CommandOutcome> {
-  const request = parseRequest(arguments_);
+  const request = parseRasterCaptureRequest(arguments_);
   const engineRoot = await findEngineRoot();
   const project = await resolveProjectDirectory(arguments_);
   const binary = resolveElectronBinary(engineRoot);
@@ -163,6 +185,8 @@ export async function runRasterCapture(
       LUDIVRA_CAPTURE_TICKS: String(request.ticks),
       LUDIVRA_CAPTURE_WIDTH: String(request.width),
       LUDIVRA_CAPTURE_HEIGHT: String(request.height),
+      LUDIVRA_CAPTURE_TEXT_SCALE: String(request.textScale),
+      ...(request.deviceScale === undefined ? {} : { LUDIVRA_CAPTURE_DEVICE_SCALE: String(request.deviceScale) }),
       // Keep host state inside the run bundle: a capture must not touch the
       // developer's real save directory.
       LUDIVRA_USER_DATA: resolve(runDirectory, "host-user-data")
@@ -250,19 +274,41 @@ export async function runRasterCapture(
   const metadata = JSON.parse(await readFile(metadataPath, "utf8")) as {
     imageSize: { width: number; height: number };
     requestedViewport: { width: number; height: number };
+    deviceScale: number;
+    capturePixelScale: number;
+    requestedDeviceScale: number | null;
+    requestedTextScale: number;
+    textScale: number;
   };
-  const deviceScale = Number((metadata.imageSize.width / metadata.requestedViewport.width).toFixed(2));
+  const deviceScale = metadata.deviceScale;
+  if (Math.abs(metadata.textScale - request.textScale) > 0.001) {
+    diagnostics.push({
+      code: "CAPTURE_TEXT_SCALE_UNEXPECTED",
+      severity: "error",
+      message: `Capture requested text scale ${request.textScale}, but the rendered UI reported ${metadata.textScale}`
+    });
+  }
+  if (request.deviceScale !== undefined && Math.abs(deviceScale - request.deviceScale) > 0.001) {
+    diagnostics.push({
+      code: "CAPTURE_DEVICE_SCALE_UNEXPECTED",
+      severity: "error",
+      message: `Capture requested device scale ${request.deviceScale}, but the image was rendered at ${deviceScale}`
+    });
+  }
   const baselineDirectoryPath = baselineDirectory(project, request);
-  const baselinePath = resolve(baselineDirectoryPath, `${request.width}x${request.height}@${deviceScale}x.png`);
+  const baselinePath = resolve(baselineDirectoryPath, rasterBaselineFileName(request, deviceScale));
   const tolerance = await readTolerance(baselineDirectoryPath);
   const captured = await readFile(capturePath);
   const baseline = await readFile(baselinePath).catch(() => null);
   let comparison: RasterComparison | null = null;
+  let updatedBaseline = false;
+  const captureValid = !diagnostics.some(({ severity }) => severity === "error");
 
   if (baseline === null) {
-    if (request.updateBaseline) {
+    if (request.updateBaseline && captureValid) {
       await mkdir(baselineDirectoryPath, { recursive: true });
       await writeFile(baselinePath, captured);
+      updatedBaseline = true;
     } else {
       diagnostics.push({
         code: "CAPTURE_BASELINE_MISSING",
@@ -292,7 +338,10 @@ export async function runRasterCapture(
         file: relative(project, baselinePath),
         details: { tolerance: { ...tolerance }, regions: comparison.regions.length }
       });
-      if (request.updateBaseline) await writeFile(baselinePath, captured);
+      if (request.updateBaseline && captureValid) {
+        await writeFile(baselinePath, captured);
+        updatedBaseline = true;
+      }
     }
   }
 
@@ -302,7 +351,7 @@ export async function runRasterCapture(
     baselinePresent: baseline !== null,
     tolerance,
     comparison,
-    updatedBaseline: request.updateBaseline
+    updatedBaseline
   }, null, 2)}\n`, "utf8");
 
   const artifacts = await Promise.all([
@@ -324,6 +373,9 @@ export async function runRasterCapture(
       profile: request.profile,
       viewport: { width: request.width, height: request.height },
       ticks: request.ticks,
+      textScale: metadata.textScale,
+      deviceScale,
+      capturePixelScale: metadata.capturePixelScale,
       baselinePresent: baseline !== null,
       projection: { visuals: projection.visuals.length, operations: projection.operations },
       hostDiagnostics: hostDiagnostics.length,

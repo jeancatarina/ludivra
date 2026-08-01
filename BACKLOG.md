@@ -2,11 +2,10 @@
 
 > Gerado de `docs/program-status.json` por `tools/program-status/generate.mjs`. Não edite manualmente.
 
-Foco atual: **Fase 3 — Aprovar a matriz mínima adicional de baselines raster.**
+Foco atual: **Fase 4 — Fechar o contrato versionado da camada 1 do SDK Lua, queries e projectors.**
 
 | ID | Prioridade | Estado | Fase | Trabalho | ADRs |
 |---|---|---|---:|---|---|
-| OBS-002 | alta | planejado | 3 | Aprovar a matriz mínima adicional de baselines raster. | [ADR 0015](docs/adr/0015-raster-capture-and-visual-baselines.md) |
 | CNT-001 | alta | planejado | 4 | Implementar migrations explícitas do content pack e suas fixtures. | [ADR 0017](docs/adr/0017-content-pack-compilation-and-migrations.md) |
 | FSM-001 | alta | planejado | 4 | Implementar statecharts determinísticas de gameplay com save, hash, replay e diagnóstico. | [ADR 0053](docs/adr/0053-deterministic-gameplay-statecharts.md) |
 | SCN-001 | alta | planejado | 4 | Implementar schemas, compilação e inspeção do grafo textual de cenas e prefabs. | [ADR 0048](docs/adr/0048-textual-scene-prefab-and-resource-graph.md) |

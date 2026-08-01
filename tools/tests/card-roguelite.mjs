@@ -55,4 +55,21 @@ assert.ok(
 // vite directly would only work on a machine that happened to have the index.
 game(["build", "--project", project, "--target", "web"]);
 
+const rasterMatrix = [
+  { viewport: "1280x800", textScale: "1", deviceScale: "1" },
+  { viewport: "1280x800", textScale: "1", deviceScale: "2" },
+  { viewport: "390x844", textScale: "1", deviceScale: "2" },
+  { viewport: "1280x800", textScale: "1.5", deviceScale: "2" }
+];
+for (const row of rasterMatrix) {
+  const captured = game([
+    "capture", "--raster", "--project", project, "--name", "card-roguelite", "--profile", "desktop",
+    "--viewport", row.viewport, "--text-scale", row.textScale, "--device-scale", row.deviceScale
+  ]);
+  assert.equal(captured.status, "passed");
+  assert.equal(captured.data.baselinePresent, true);
+  assert.equal(captured.data.textScale, Number(row.textScale));
+  assert.equal(captured.data.deviceScale, Number(row.deviceScale));
+}
+
 process.stdout.write("card_roguelite=PASS\n");

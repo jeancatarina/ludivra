@@ -2,7 +2,7 @@
 
 - Status: aceito
 - Data: 2026-07-24
-- Revisado: 2026-07-26 para perfis gráficos e evidência dinâmica
+- Revisado: 2026-08-01 para a matriz mínima de viewport, escala de texto e device scale factor
 - Revisão: antes de aceitar um segundo backend de captura ou de prometer comparação entre backends
 - Complementa: [ADR 0010](0010-local-control-protocol-and-scenario-harness.md) e [ADR 0014](0014-declarative-ui-contracts-and-initial-renderer.md)
 - Complementa: [ADR 0047](0047-desktop-rendering-profiles-and-backend-policy.md), [ADR 0051](0051-animation-graph-and-skeletal-runtime.md) e [ADR 0052](0052-textual-vfx-and-particle-runtime.md)
@@ -54,13 +54,15 @@ O relatório de diff registra pixels alterados, delta máximo, caixas das regiõ
 
 ### Baselines
 
-Baselines vivem versionadas **no projeto**, em `tests/baselines/<nome>/<backend>/<perfil>/<largura>x<altura>@<escala>x.png`, uma por combinação declarada. O jogo é dono das suas baselines; a engine não guarda evidência visual de projetos. Capturas de execução permanecem no bundle do run ignorado pelo Git.
+Baselines vivem versionadas **no projeto**, em `tests/baselines/<nome>/<backend>/<perfil>/<largura>x<altura>@<device-scale>x-text-<text-scale>x.png`, uma por combinação declarada. O jogo é dono das suas baselines; a engine não guarda evidência visual de projetos. Capturas de execução permanecem no bundle do run ignorado pelo Git.
 
 O device scale factor, o método gráfico e o perfil efetivo entram no caminho da baseline porque frames produzidos por escalas ou métodos diferentes não são comparáveis. Sem isso, a mesma baseline acusaria defeito inexistente ou esconderia fallback; com isso, a combinação ausente é `CAPTURE_BASELINE_MISSING`, ou seja `NOT_AVAILABLE`.
 
 Atualização de baseline só ocorre por mudança intencional que carregue o relatório de diff no mesmo change set.
 
 Combinação sem baseline aprovada não pode ser alegada como suporte visual, seguindo a regra da target matrix.
+
+O mínimo para encerrar o gate visual é uma matriz que cubra pelo menos dois viewports, duas escalas de texto e dois device scale factors. A fixture de prova deve executar todas as combinações aprovadas, com `--text-scale` e `--device-scale` declarados, para que uma baseline versionada nunca dependa silenciosamente da configuração do monitor do desenvolvedor.
 
 ### Evidência dinâmica
 
@@ -70,7 +72,7 @@ Animação, blend, trails, subemitters, transições e frame pacing exigem sequ�
 
 A captura SVG headless permanece válida como evidência de composição e semântica e continua proibida como evidência de pixels. Este ADR não promete comparação de pixels entre métodos gráficos diferentes, profiling de GPU completo nem baseline por máquina de desenvolvedor. Vídeo é evidência dinâmica correlacionada, não baseline byte a byte.
 
-Códigos: `CAPTURE_RASTER_UNAVAILABLE`, `CAPTURE_NOT_QUIESCENT`, `CAPTURE_FRAME_NOT_STABLE`, `CAPTURE_BUNDLE_LOAD_FAILED`, `CAPTURE_BUNDLE_LOAD_TIMEOUT`, `CAPTURE_BASELINE_MISSING`, `CAPTURE_BASELINE_MISMATCH`, `CAPTURE_IMAGE_SIZE_MISMATCH`, `CAPTURE_PROFILE_UNDECLARED`, `CAPTURE_RENDERER_UNEXPECTED`, `RENDER_INITIALIZATION_FAILED`, `RENDER_OPERATION_FAILED`, `RENDER_PARTICLE_CREATE_FAILED`, `RENDER_FRAME_FAILED`, `RENDER_RESIZE_FAILED`, `RENDER_DISPOSAL_FAILED`, `RENDER_VISUAL_DUPLICATE`, `RENDER_VISUAL_NOT_FOUND`, `RENDER_VISUAL_MATERIAL_UNSUPPORTED`, `RENDER_CONTEXT_LOST`, `SHADER_COMPILE_FAILED`.
+Códigos: `CAPTURE_RASTER_UNAVAILABLE`, `CAPTURE_NOT_QUIESCENT`, `CAPTURE_FRAME_NOT_STABLE`, `CAPTURE_BUNDLE_LOAD_FAILED`, `CAPTURE_BUNDLE_LOAD_TIMEOUT`, `CAPTURE_BASELINE_MISSING`, `CAPTURE_BASELINE_MISMATCH`, `CAPTURE_IMAGE_SIZE_MISMATCH`, `CAPTURE_PROFILE_UNDECLARED`, `CAPTURE_RENDERER_UNEXPECTED`, `CAPTURE_TEXT_SCALE_UNEXPECTED`, `CAPTURE_DEVICE_SCALE_UNEXPECTED`, `CAPTURE_DEVICE_SCALE_UNAVAILABLE`, `RENDER_INITIALIZATION_FAILED`, `RENDER_OPERATION_FAILED`, `RENDER_PARTICLE_CREATE_FAILED`, `RENDER_FRAME_FAILED`, `RENDER_RESIZE_FAILED`, `RENDER_DISPOSAL_FAILED`, `RENDER_VISUAL_DUPLICATE`, `RENDER_VISUAL_NOT_FOUND`, `RENDER_VISUAL_MATERIAL_UNSUPPORTED`, `RENDER_CONTEXT_LOST`, `SHADER_COMPILE_FAILED`.
 
 ## Consequências
 

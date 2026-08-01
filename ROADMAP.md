@@ -5,8 +5,8 @@
 | Campo | Valor |
 |---|---|
 | Release atual | 0.7.0 |
-| Foco atual | Fase 3 — Aprovar a matriz mínima adicional de baselines raster. |
-| Próxima entrega | Concluir o gate da Fase 4 antes de ampliar novamente a fundação espacial. |
+| Foco atual | Fase 4 — Fechar o contrato versionado da camada 1 do SDK Lua, queries e projectors. |
+| Próxima entrega | Implementar migrations explícitas do content pack e suas fixtures. |
 | Fonte editável de progresso | [docs/program-status.json](docs/program-status.json) |
 | Decisão do modelo documental | [ADR 0046](docs/adr/0046-generated-program-documentation.md) |
 
@@ -25,8 +25,8 @@
 |---:|---|---|---|
 | 1 | Estado canônico e catálogo de capacidades | `CONCLUÍDA` | nenhuma no gate atual |
 | 2 | Context Engine, CLI e Development Runner | `CONCLUÍDA` | nenhuma no gate atual |
-| 3 | AI Control Plane e observabilidade causal | `EM ANDAMENTO` | Baselines aprovadas para a matriz mínima de viewport, escala de texto e device scale factor. |
-| 4 | Autoria text-first de gameplay, UI e conteúdo | `PARCIAL` | Contrato público e versionado da camada 1 do SDK, incluindo queries declarativas e maturidade por símbolo. |
+| 3 | AI Control Plane e observabilidade causal | `CONCLUÍDA` | nenhuma no gate atual |
+| 4 | Autoria text-first de gameplay, UI e conteúdo | `EM ANDAMENTO` | Contrato público e versionado da camada 1 do SDK, incluindo queries declarativas e maturidade por símbolo. |
 | 5 | Runtime espacial e mundo procedural | `PARCIAL` | Jobs assíncronos reais sem alterar a ordem de commit. |
 | 6 | Motion, física e Mass Simulation | `PLANEJADA` | Motion por tempo declarado e comandos semânticos. |
 | 7 | Persistência, replays e multiplayer player-hosted | `PARCIAL` | Region storage atômico com journal, compactação, recovery e migrations. |
@@ -90,7 +90,7 @@ Uma sessão executa, interrompe, reconstrói e inspeciona um projeto com comando
 
 | Campo | Valor |
 |---|---|
-| Estado | `EM ANDAMENTO` |
+| Estado | `CONCLUÍDA` |
 | Owners | CLI, control protocol, scenario harness, BrowserHost |
 | Dependências | Fase 1, Fase 2 |
 | ADRs | [ADR 0010](docs/adr/0010-local-control-protocol-and-scenario-harness.md), [ADR 0014](docs/adr/0014-declarative-ui-contracts-and-initial-renderer.md), [ADR 0015](docs/adr/0015-raster-capture-and-visual-baselines.md) |
@@ -101,10 +101,7 @@ Permitir que a IA controle uma execução real e rastreie um defeito do input at
 
 - Control protocol, harness, replay, contratos de UI e captura raster com baseline. Capabilities: `operability.control-harness`. Evidência: [contracts/control-protocol.schema.json](contracts/control-protocol.schema.json), [cli/src/scenario-harness.ts](cli/src/scenario-harness.ts), [cli/src/raster-capture.ts](cli/src/raster-capture.ts).
 - Cadeia de pixels para trace de projeção, estado lógico e tick no mesmo run. Evidência: [renderer-three/src/index.ts](renderer-three/src/index.ts), [contracts/rendered-ui-snapshot.schema.json](contracts/rendered-ui-snapshot.schema.json).
-
-### Falta
-
-- Baselines aprovadas para a matriz mínima de viewport, escala de texto e device scale factor.
+- Matriz raster aprovada para desktop, telefone, texto ampliado e device scale factors 1x e 2x. Evidência: [tools/tests/card-roguelite.mjs](tools/tests/card-roguelite.mjs), [examples/card-roguelite/tests/baselines/card-roguelite](examples/card-roguelite/tests/baselines/card-roguelite).
 
 ### Gate de saída
 
@@ -114,7 +111,7 @@ Um defeito nos pixels é correlacionado a estado, ação, evento, projector e or
 
 | Campo | Valor |
 |---|---|
-| Estado | `PARCIAL` |
+| Estado | `EM ANDAMENTO` |
 | Owners | kernel, Lua SDK, content compiler, presentation protocol |
 | Dependências | Fase 3 |
 | ADRs | [ADR 0004](docs/adr/0004-lua-sandbox.md), [ADR 0016](docs/adr/0016-public-lua-sdk-layers-and-escape-hatches.md), [ADR 0017](docs/adr/0017-content-pack-compilation-and-migrations.md), [ADR 0018](docs/adr/0018-numeric-determinism-and-rng-streams.md), [ADR 0044](docs/adr/0044-approved-native-extension-process.md), [ADR 0048](docs/adr/0048-textual-scene-prefab-and-resource-graph.md), [ADR 0053](docs/adr/0053-deterministic-gameplay-statecharts.md) |

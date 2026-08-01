@@ -5,6 +5,7 @@ const os = require("node:os");
 const path = require("node:path");
 const test = require("node:test");
 const { createStorageService } = require("../src/services/storage.cjs");
+const { captureWebPreferences, readCaptureOptions } = require("../src/services/capture.cjs");
 const { prepareSteam } = require("../src/services/steam.cjs");
 const { createUpdateService } = require("../src/services/updates.cjs");
 
@@ -56,4 +57,26 @@ test("desktop updates are disabled unless every release precondition exists", as
   });
   assert.equal(enabled.available, true);
   assert.equal(await enabled.check(), "current");
+});
+
+test("raster capture declares text and device scales in Electron offscreen output", () => {
+  const options = readCaptureOptions({
+    LUDIVRA_CAPTURE_BUNDLE: "bundle/index.html",
+    LUDIVRA_CAPTURE_OUTPUT: "reports/capture",
+    LUDIVRA_CAPTURE_TEXT_SCALE: "1.5",
+    LUDIVRA_CAPTURE_DEVICE_SCALE: "2"
+  });
+  assert.equal(options.textScale, 1.5);
+  assert.equal(options.deviceScale, 2);
+
+  assert.deepEqual(captureWebPreferences(options).offscreen, { deviceScaleFactor: 2 });
+  assert.equal(captureWebPreferences({ ...options, deviceScale: undefined }).offscreen, true);
+  assert.throws(
+    () => readCaptureOptions({
+      LUDIVRA_CAPTURE_BUNDLE: "bundle/index.html",
+      LUDIVRA_CAPTURE_OUTPUT: "reports/capture",
+      LUDIVRA_CAPTURE_TEXT_SCALE: "0"
+    }),
+    /CAPTURE_PROFILE_UNDECLARED/
+  );
 });

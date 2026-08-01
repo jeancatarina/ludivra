@@ -2,9 +2,9 @@
   "schemaVersion": 1,
   "release": "0.7.0",
   "currentFocus": {
-    "phase": 3,
-    "summary": "Aprovar a matriz mínima adicional de baselines raster.",
-    "next": "Concluir o gate da Fase 4 antes de ampliar novamente a fundação espacial."
+    "phase": 4,
+    "summary": "Fechar o contrato versionado da camada 1 do SDK Lua, queries e projectors.",
+    "next": "Implementar migrations explícitas do content pack e suas fixtures."
   },
   "phases": [
     {
@@ -44,7 +44,7 @@
     {
       "id": 3,
       "title": "AI Control Plane e observabilidade causal",
-      "status": "active",
+      "status": "completed",
       "owners": ["CLI", "control protocol", "scenario harness", "BrowserHost"],
       "dependencies": [1, 2],
       "adrs": ["0010", "0014", "0015"],
@@ -58,17 +58,19 @@
         {
           "summary": "Cadeia de pixels para trace de projeção, estado lógico e tick no mesmo run.",
           "evidence": ["renderer-three/src/index.ts", "contracts/rendered-ui-snapshot.schema.json"]
+        },
+        {
+          "summary": "Matriz raster aprovada para desktop, telefone, texto ampliado e device scale factors 1x e 2x.",
+          "evidence": ["tools/tests/card-roguelite.mjs", "examples/card-roguelite/tests/baselines/card-roguelite"]
         }
       ],
-      "remaining": [
-        "Baselines aprovadas para a matriz mínima de viewport, escala de texto e device scale factor."
-      ],
+      "remaining": [],
       "gate": "Um defeito nos pixels é correlacionado a estado, ação, evento, projector e origem, reproduzido por cenário e anexado ao artifact bundle."
     },
     {
       "id": 4,
       "title": "Autoria text-first de gameplay, UI e conteúdo",
-      "status": "partial",
+      "status": "active",
       "owners": ["kernel", "Lua SDK", "content compiler", "presentation protocol"],
       "dependencies": [3],
       "adrs": ["0004", "0016", "0017", "0018", "0044", "0048", "0053"],
@@ -271,14 +273,6 @@
     }
   ],
   "tasks": [
-    {
-      "id": "OBS-002",
-      "priority": "high",
-      "status": "planned",
-      "phase": 3,
-      "work": "Aprovar a matriz mínima adicional de baselines raster.",
-      "adrs": ["0015"]
-    },
     {
       "id": "SDK-001",
       "priority": "high",

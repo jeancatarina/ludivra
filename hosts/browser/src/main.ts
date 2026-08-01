@@ -36,6 +36,12 @@ const captureTicks = captureParameter === null ? null : Number(captureParameter)
 if (captureTicks !== null && (!Number.isInteger(captureTicks) || captureTicks < 0)) {
   throw new Error("CAPTURE_TICKS_INVALID");
 }
+const textScaleParameter = new URLSearchParams(window.location.search).get("ludivra-text-scale");
+if (textScaleParameter !== null) {
+  const textScale = Number(textScaleParameter);
+  if (!Number.isFinite(textScale) || textScale <= 0) throw new Error("CAPTURE_TEXT_SCALE_INVALID");
+  document.documentElement.style.fontSize = `${16 * textScale}px`;
+}
 
 title.textContent = manifest.name;
 document.title = manifest.name;
