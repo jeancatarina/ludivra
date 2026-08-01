@@ -39,6 +39,7 @@ import {
 } from "three";
 import type { WebGPURenderer } from "three/webgpu";
 import { createCinematicPipeline } from "./cinematic-pipeline.js";
+import { createWebGpuCinematicPipeline, type WebGpuCinematicPipeline } from "./webgpu-cinematic-pipeline.js";
 import { createGpuTimingSampler, type GpuTimingMetrics } from "./gpu-timing.js";
 import {
   RendererFailure,
@@ -76,9 +77,12 @@ export interface ThreeRendererOptions {
   profile?: RendererProfileRequest;
   backends?: RendererBackendAvailability;
   onProfileSelected?: (selection: RendererProfileSelection) => void;
+  onPostprocessConfigured?: (pipeline: RendererPostprocessPipeline) => void;
   onGpuTiming?: (metrics: GpuTimingMetrics) => void;
   assetSources?: Readonly<Record<string, CookedAssetSource>>;
 }
+
+export type RendererPostprocessPipeline = "webgl-cinematic" | "webgpu-bloom";
 
 export interface CookedAssetSource {
   format: "gltf" | "glb";
@@ -407,13 +411,16 @@ export async function createThreeRenderer(
   const visuals = new Map<string, Object3D>();
   const assetTemplates = new Map<string, Promise<Object3D>>();
   const bursts: ActiveBurst[] = [];
-  const cinematicPipeline = renderer instanceof WebGLRenderer
+  const cinematicPipeline: ReturnType<typeof createCinematicPipeline> | WebGpuCinematicPipeline = renderer instanceof WebGLRenderer
     ? rendererOperation(
       "RENDER_INITIALIZATION_FAILED",
       "renderer-three:cinematic-pipeline",
       () => createCinematicPipeline(renderer, scene, camera)
     )
-    : null;
+    : await createWebGpuCinematicPipeline(renderer, scene, camera).catch((error: unknown) => {
+      throw rendererFailure("RENDER_INITIALIZATION_FAILED", "renderer-three:webgpu-cinematic-pipeline", error);
+    });
+  options.onPostprocessConfigured?.(renderer instanceof WebGLRenderer ? "webgl-cinematic" : "webgpu-bloom");
   let previousRenderTime = performance.now();
   let gpuTimestampResolve: Promise<void> | null = null;
 
@@ -620,19 +627,20 @@ export async function createThreeRenderer(
     render() {
       rendererOperation("RENDER_FRAME_FAILED", "renderer-three:frame", () => {
         updateParticles();
-        if (cinematicPipeline === null) {
-          renderer.render(scene, camera);
-          collectGpuTiming();
-        } else cinematicPipeline.render();
+        cinematicPipeline.render();
+        collectGpuTiming();
       });
     },
     resize(width, height, pixelRatio) {
       rendererOperation("RENDER_RESIZE_FAILED", "renderer-three:resize", () => {
         const cappedPixelRatio = Math.min(pixelRatio, 2);
-        if (cinematicPipeline === null) {
+        if (renderer instanceof WebGLRenderer) {
+          cinematicPipeline.resize(width, height, cappedPixelRatio);
+        } else {
           renderer.setPixelRatio(cappedPixelRatio);
           renderer.setSize(width, height, false);
-        } else cinematicPipeline.resize(width, height, cappedPixelRatio);
+          cinematicPipeline.resize(width, height, cappedPixelRatio);
+        }
         camera.aspect = width / Math.max(height, 1);
         camera.updateProjectionMatrix();
       });
@@ -649,7 +657,7 @@ export async function createThreeRenderer(
           burst.points.material.dispose();
         }
         bursts.length = 0;
-        cinematicPipeline?.destroy();
+        cinematicPipeline.destroy();
         renderer.dispose();
       });
     }

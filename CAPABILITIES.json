@@ -676,7 +676,7 @@
     {
       "id": "presentation.renderer-profiles",
       "status": "experimental",
-      "version": "0.1.0",
+      "version": "0.2.0",
       "owner": "renderer-three",
       "targets": [
         "browser",
@@ -686,13 +686,16 @@
         "renderer-three/src/profiles.ts",
         "renderer-three/src/diagnostics.ts",
         "renderer-three/src/gpu-timing.ts",
+        "renderer-three/src/webgpu-cinematic-pipeline.ts",
         "schemas/game.schema.json",
         "hosts/browser/src/main.ts",
+        "hosts/electron/src/main.cjs",
         "docs/adr/0047-desktop-rendering-profiles-and-backend-policy.md"
       ],
       "examples": [
         "renderer-three/test/diagnostics.test.mjs",
-        "examples/card-roguelite/game.jsonc"
+        "examples/card-roguelite/game.jsonc",
+        "examples/first-game/game.jsonc"
       ],
       "dependencies": [
         "presentation.three"
@@ -700,12 +703,13 @@
       "verification": [
         "pnpm --filter @ludivra/renderer-three test",
         "pnpm --filter @ludivra/browser-host build",
+        "pnpm game package --project examples/first-game --target steam-macos --format json",
         "pnpm game validate --project examples/card-roguelite --format json"
       ],
       "limitations": [
         {
-          "code": "RENDER_WEBGPU_POSTPROCESS_TIER_PENDING",
-          "message": "desktop-high publica adapter e benchmark GPU no smoke do Electron, mas ainda usa render direto com tone mapping; bloom e demais pós-processamentos WebGPU continuam dependentes do tier declarado."
+          "code": "RENDER_WEBGPU_ADVANCED_POSTPROCESS_PENDING",
+          "message": "desktop-high aplica bloom por RenderPipeline WebGPU e o smoke exige essa cadeia; SSAO, DOF, TAA e efeitos advanced continuam dependentes de material/environment e budget declarados."
         }
       ]
     },

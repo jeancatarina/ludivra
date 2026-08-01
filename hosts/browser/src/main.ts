@@ -141,6 +141,7 @@ const rendererProfileReport: {
   adapter: string | null;
   fallbackReason: string | null;
   unavailableOptionalFeatures: string[];
+  postprocess: "unavailable" | "webgl-cinematic" | "webgpu-bloom";
   gpuTiming: {
     available: boolean;
     latestMs: number | null;
@@ -158,6 +159,7 @@ const rendererProfileReport: {
   adapter: null,
   fallbackReason: null,
   unavailableOptionalFeatures: [],
+  postprocess: "unavailable",
   gpuTiming: {
     available: false,
     latestMs: null,
@@ -184,6 +186,9 @@ const recording = createRecordingRenderer(await createThreeRenderer(gameCanvas, 
     rendererProfileReport.adapter = selection.adapter;
     rendererProfileReport.fallbackReason = selection.fallbackReason ?? null;
     rendererProfileReport.unavailableOptionalFeatures = selection.unavailableOptionalFeatures;
+  },
+  onPostprocessConfigured: (pipeline) => {
+    rendererProfileReport.postprocess = pipeline;
   },
   onGpuTiming: (metrics) => {
     rendererProfileReport.gpuTiming = { ...metrics };

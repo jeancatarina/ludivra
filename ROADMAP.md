@@ -6,7 +6,7 @@
 |---|---|
 | Release atual | 0.7.0 |
 | Foco atual | Fase 8 — Escalar renderer, UI, áudio e apresentação sem alterar autoridade de gameplay. |
-| Próxima entrega | Implementar perfis gráficos desktop-compatible e desktop-high, seleção de backend e fallback observável. |
+| Próxima entrega | Implementar materiais, shaders, ambiente e tiers com warmup e fallback verificável. |
 | Fonte editável de progresso | [docs/program-status.json](docs/program-status.json) |
 | Decisão do modelo documental | [ADR 0046](docs/adr/0046-generated-program-documentation.md) |
 
@@ -30,7 +30,7 @@
 | 5 | Runtime espacial e mundo procedural | `CONCLUÍDA` | nenhuma no gate atual |
 | 6 | Motion, física e Mass Simulation | `CONCLUÍDA` | nenhuma no gate atual |
 | 7 | Persistência, replays e multiplayer player-hosted | `CONCLUÍDA` | nenhuma no gate atual |
-| 8 | Renderer, UI, áudio e apresentação escalável | `EM ANDAMENTO` | Adicionar pós-processamento WebGPU por tier ao desktop-high; manter fallback observado quando o método não existir. |
+| 8 | Renderer, UI, áudio e apresentação escalável | `EM ANDAMENTO` | Adicionar normalização/otimização upstream licenciada, variantes comprimidas por target, residência e streaming aos assets glTF/GLB já carregáveis. |
 | 9 | Procedural Construction Runtime | `PLANEJADA` | Construction Graph, comandos semânticos, undo/redo e replay. |
 | 10 | Procedural Forges | `PARCIAL` | Completar música, stems, previews gráficos e runtime/cooker do Audio Forge. |
 | 11 | Diagnose, Repair, Verify e performance gates | `PARCIAL` | Fluxo real de diagnose, explain, fix dry-run/apply e verify com classes de reparo. |
@@ -213,12 +213,11 @@ Apresentar jogos pequenos e massivos com observabilidade e degradação sem alte
 ### Entregue
 
 - Renderer Three.js experimental, UI DOM acessível, Web Audio e partículas simples. Capabilities: `presentation.three`, `feedback.audio-effects`. Evidência: [renderer-three/src](renderer-three/src), [hosts/browser/src/ui-renderer.ts](hosts/browser/src/ui-renderer.ts), [hosts/browser/src/audio-feedback.ts](hosts/browser/src/audio-feedback.ts).
-- Manifest v4 declara perfis e features por Browser/Desktop; renderer inicializa WebGPURenderer sob demanda para desktop-high, publica adapter e benchmark GPU limitado (mediana/p95) no provenance do smoke Electron, registra pedido/efetivo/fallback na inspeção e só reduz para desktop-compatible quando o fallback foi declarado. Capabilities: `presentation.renderer-profiles`. Evidência: [schemas/game.schema.json](schemas/game.schema.json), [renderer-three/src/profiles.ts](renderer-three/src/profiles.ts), [renderer-three/src/gpu-timing.ts](renderer-three/src/gpu-timing.ts), [renderer-three/src/index.ts](renderer-three/src/index.ts), [hosts/browser/src/main.ts](hosts/browser/src/main.ts), [hosts/electron/src/main.cjs](hosts/electron/src/main.cjs), [tools/build/package-steam.mjs](tools/build/package-steam.mjs), [renderer-three/test/diagnostics.test.mjs](renderer-three/test/diagnostics.test.mjs), [examples/card-roguelite/game.jsonc](examples/card-roguelite/game.jsonc).
+- Manifest v4 declara perfis e features por Browser/Desktop; renderer inicializa WebGPURenderer sob demanda para desktop-high, aplica RenderPipeline WebGPU com bloom por tier, publica adapter/pipeline e benchmark GPU limitado (mediana/p95) no smoke Electron e só reduz para desktop-compatible quando o fallback foi declarado. Capabilities: `presentation.renderer-profiles`. Evidência: [schemas/game.schema.json](schemas/game.schema.json), [renderer-three/src/profiles.ts](renderer-three/src/profiles.ts), [renderer-three/src/gpu-timing.ts](renderer-three/src/gpu-timing.ts), [renderer-three/src/webgpu-cinematic-pipeline.ts](renderer-three/src/webgpu-cinematic-pipeline.ts), [renderer-three/src/index.ts](renderer-three/src/index.ts), [hosts/browser/src/main.ts](hosts/browser/src/main.ts), [hosts/electron/src/main.cjs](hosts/electron/src/main.cjs), [tools/build/package-steam.mjs](tools/build/package-steam.mjs), [renderer-three/test/diagnostics.test.mjs](renderer-three/test/diagnostics.test.mjs), [examples/first-game/game.jsonc](examples/first-game/game.jsonc).
 - Manifest declara modelos glTF/GLB com provenance, targets e budgets; o cooker valida containers, dependências e isolamento, preserva fonte/dependências em cache content-addressed, o build reescreve cada URL estática e o renderer instancia modelos sob demanda com diagnóstico estruturado. Capabilities: `authoring.asset-cooker`. Evidência: [schemas/game.schema.json](schemas/game.schema.json), [cli/src/asset-forge.ts](cli/src/asset-forge.ts), [cli/src/commands/build.ts](cli/src/commands/build.ts), [presentation-protocol/src/index.ts](presentation-protocol/src/index.ts), [renderer-three/src/index.ts](renderer-three/src/index.ts), [hosts/browser/vite.config.ts](hosts/browser/vite.config.ts), [examples/first-game/assets/models/reference-triangle.gltf](examples/first-game/assets/models/reference-triangle.gltf), [cli/test/cli.test.mjs](cli/test/cli.test.mjs).
 
 ### Falta
 
-- Adicionar pós-processamento WebGPU por tier ao desktop-high; manter fallback observado quando o método não existir.
 - Adicionar normalização/otimização upstream licenciada, variantes comprimidas por target, residência e streaming aos assets glTF/GLB já carregáveis.
 - Materiais e ambientes por tiers, shader warmup, cache e fallback verificável.
 - Grafos de animação com blend, layers, masks, retarget, IK e root motion controlado.

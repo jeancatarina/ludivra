@@ -115,6 +115,7 @@ interface LudivraUiInspection {
     adapter: string | null;
     fallbackReason: string | null;
     unavailableOptionalFeatures: string[];
+    postprocess: "unavailable" | "webgl-cinematic" | "webgpu-bloom";
     gpuTiming: {
       available: boolean;
       latestMs: number | null;

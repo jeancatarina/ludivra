@@ -244,6 +244,11 @@ app.whenReady().then(() => {
                     reject(new Error("desktop renderer smoke did not request desktop-high"));
                     return;
                   }
+                  if (inspection.rendering.postprocess !== "webgpu-bloom") {
+                    clearTimeout(timeout);
+                    reject(new Error("desktop renderer smoke did not enable the WebGPU bloom pipeline"));
+                    return;
+                  }
                   if (rendererReadyAt === null) rendererReadyAt = Date.now();
                   const elapsed = Date.now() - rendererReadyAt;
                   if (inspection.diagnostics.some((entry) => entry.code === "RENDER_ASSET_LOAD_FAILED")) {
