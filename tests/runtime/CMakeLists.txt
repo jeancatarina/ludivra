@@ -3,6 +3,7 @@ add_executable(ludivra_runtime_tests
 )
 
 target_link_libraries(ludivra_runtime_tests PRIVATE ludivra::runtime)
+target_include_directories(ludivra_runtime_tests PRIVATE "${CMAKE_SOURCE_DIR}/kernel/src")
 target_compile_definitions(ludivra_runtime_tests PRIVATE
   LUDIVRA_TEST_FIXTURE_DIR="${CMAKE_SOURCE_DIR}/tests/fixtures"
 )

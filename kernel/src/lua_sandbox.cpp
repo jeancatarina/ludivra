@@ -2,11 +2,16 @@
 
 #include "content_pack.hpp"
 #include "fixed_point.hpp"
+#include "generated/lua_sdk_contract.hpp"
 
+#include <algorithm>
 #include <cstring>
 #include <limits>
 #include <new>
+#include <string>
 #include <string_view>
+#include <utility>
+#include <vector>
 
 extern "C" {
 #include <lauxlib.h>
@@ -19,13 +24,35 @@ namespace {
 
 constexpr int instruction_budget = 100'000;
 constexpr char execution_context_key = 0;
+constexpr char module_load_context_key = 0;
+constexpr char symbol_ref_metatable[] = "ludivra.sdk.symbol-ref.v1";
+constexpr char query_metatable[] = "ludivra.sdk.query.v1";
 
 struct ExecutionContext final {
+  std::uint64_t logical_tick;
   const IntegerState* state;
   const SymbolTables* symbols;
   const LogicalTimerStore* timers;
   RandomStreamRegistry* random_streams;
   CommandBuffer* commands;
+};
+
+struct ModuleLoadContext final {
+  const SymbolTables* symbols;
+};
+
+struct LuaSymbolRef final {
+  SymbolKind kind;
+  std::uint32_t key;
+};
+
+struct LuaQueryField final {
+  std::string name;
+  std::uint32_t key;
+};
+
+struct LuaQuery final {
+  std::vector<LuaQueryField> fields;
 };
 
 std::uint32_t checked_key(lua_State* state, const int index) {
@@ -54,6 +81,50 @@ ExecutionContext& context(lua_State* state) {
     luaL_error(state, "gameplay context is unavailable");
   }
   return *value;
+}
+
+ModuleLoadContext& module_load_context(lua_State* state) {
+  lua_pushlightuserdata(state, const_cast<char*>(&module_load_context_key));
+  lua_gettable(state, LUA_REGISTRYINDEX);
+  auto* value = static_cast<ModuleLoadContext*>(lua_touserdata(state, -1));
+  lua_pop(state, 1);
+  if (value == nullptr) {
+    luaL_error(state, "SDK_SYMBOL_NOT_DECLARED: symbols must bind while gameplay loads");
+  }
+  return *value;
+}
+
+void set_module_load_context(lua_State* state, ModuleLoadContext* value) {
+  lua_pushlightuserdata(state, const_cast<char*>(&module_load_context_key));
+  lua_pushlightuserdata(state, value);
+  lua_settable(state, LUA_REGISTRYINDEX);
+}
+
+LuaSymbolRef* checked_symbol_ref(lua_State* state, const int index, const SymbolKind expected) {
+  auto* value = static_cast<LuaSymbolRef*>(luaL_testudata(state, index, symbol_ref_metatable));
+  if (value == nullptr || value->kind != expected) {
+    luaL_error(state, "SDK_SYMBOL_NOT_DECLARED: expected a declared %s symbol",
+        expected == SymbolKind::state ? "state" : "timer");
+    return nullptr;
+  }
+  return value;
+}
+
+LuaQuery* checked_query(lua_State* state, const int index) {
+  auto* value = static_cast<LuaQuery*>(luaL_testudata(state, index, query_metatable));
+  if (value == nullptr) {
+    luaL_error(state, "SDK_SYMBOL_NOT_DECLARED: expected a declared query");
+    return nullptr;
+  }
+  return value;
+}
+
+void push_symbol_ref(lua_State* state, const SymbolKind kind, const std::uint32_t key) {
+  auto* value = static_cast<LuaSymbolRef*>(lua_newuserdatauv(state, sizeof(LuaSymbolRef), 0));
+  value->kind = kind;
+  value->key = key;
+  luaL_getmetatable(state, symbol_ref_metatable);
+  lua_setmetatable(state, -2);
 }
 
 int query_get_i64(lua_State* state) {
@@ -115,32 +186,97 @@ int commands_spawn_effect(lua_State* state) {
   return 0;
 }
 
-/// Resolves a declared symbol. An unknown name fails the tick with a stable
-/// message instead of silently reading key zero.
-std::uint32_t resolved_symbol(lua_State* state, const int index, const SymbolKind kind) {
+/// The only lookup by semantic name happens while the module is loading. A bound
+/// userdata carries the key into every later callback, so no tick can perform a
+/// string lookup against the manifest table.
+int bind_symbol(lua_State* state, const SymbolKind kind) {
   std::size_t length = 0;
-  const char* text = luaL_checklstring(state, index, &length);
-  const auto& symbols = context(state).symbols->of(kind);
+  const char* text = luaL_checklstring(state, 1, &length);
+  const auto& symbols = module_load_context(state).symbols->of(kind);
   const auto found = symbols.find(std::string(text, length));
   if (found == symbols.end()) {
     luaL_error(state, "SDK_SYMBOL_UNKNOWN: %s", text);
   }
-  return found->second;
+  push_symbol_ref(state, kind, found->second);
+  return 1;
 }
 
-int state_get(lua_State* state) {
-  const auto key = resolved_symbol(state, 2, SymbolKind::state);
+int sdk_bind_state(lua_State* state) {
+  return bind_symbol(state, SymbolKind::state);
+}
+
+int sdk_bind_timer(lua_State* state) {
+  return bind_symbol(state, SymbolKind::timer);
+}
+
+int sdk_query_declare(lua_State* state) {
+  if (!lua_istable(state, 1)) {
+    return luaL_argerror(state, 1, "query fields must be a table of declared state symbols");
+  }
+  std::vector<LuaQueryField> fields;
+  lua_pushnil(state);
+  while (lua_next(state, 1) != 0) {
+    if (fields.size() >= contract::lua_sdk_maximum_query_fields) {
+      return luaL_error(state, "SDK_QUERY_TOO_BROAD: query exceeds %zu state reads",
+          contract::lua_sdk_maximum_query_fields);
+    }
+    std::size_t length = 0;
+    const char* name = luaL_checklstring(state, -2, &length);
+    const auto* symbol = checked_symbol_ref(state, -1, SymbolKind::state);
+    if (symbol == nullptr) return 0;
+    fields.push_back({std::string(name, length), symbol->key});
+    lua_pop(state, 1);
+  }
+  if (fields.empty()) {
+    return luaL_error(state, "SDK_QUERY_TOO_BROAD: query must declare at least one state read");
+  }
+  std::sort(fields.begin(), fields.end(), [](const auto& left, const auto& right) {
+    return left.name < right.name;
+  });
+  auto* query = static_cast<LuaQuery*>(lua_newuserdatauv(state, sizeof(LuaQuery), 0));
+  new (query) LuaQuery{std::move(fields)};
+  luaL_getmetatable(state, query_metatable);
+  lua_setmetatable(state, -2);
+  return 1;
+}
+
+int sdk_content_get(lua_State* state) {
+  std::size_t length = 0;
+  const char* id = luaL_checklstring(state, 1, &length);
+  std::string error;
+  if (!ContentPack::push_document(state, std::string_view(id, length), error)) {
+    return luaL_error(state, "%s: content document is unavailable", error.c_str());
+  }
+  return 1;
+}
+
+int query_read(lua_State* state) {
+  const auto* query = checked_query(state, 2);
+  if (query == nullptr) return 0;
   const auto& values = *context(state).state;
-  const auto found = values.find(key);
-  lua_pushinteger(state, found == values.end() ? 0 : found->second);
+  lua_createtable(state, 0, static_cast<int>(query->fields.size()));
+  for (const auto& field : query->fields) {
+    const auto found = values.find(field.key);
+    lua_pushlstring(state, field.name.data(), field.name.size());
+    lua_pushinteger(state, found == values.end() ? 0 : found->second);
+    lua_rawset(state, -3);
+  }
+  return 1;
+}
+
+int query_cost(lua_State* state) {
+  const auto* query = checked_query(state, 2);
+  if (query == nullptr) return 0;
+  lua_pushinteger(state, static_cast<lua_Integer>(query->fields.size()));
   return 1;
 }
 
 int commands_add(lua_State* state) {
-  const auto key = resolved_symbol(state, 2, SymbolKind::state);
+  const auto* symbol = checked_symbol_ref(state, 2, SymbolKind::state);
+  if (symbol == nullptr) return 0;
   const auto value = luaL_checkinteger(state, 3);
   try {
-    context(state).commands->add_integer(key, value);
+    context(state).commands->add_integer(symbol->key, value);
   } catch (...) {
     return luaL_error(state, "unable to allocate state command");
   }
@@ -150,13 +286,14 @@ int commands_add(lua_State* state) {
 /// Starts or restarts a timer measured in logical ticks. Zero ticks is refused:
 /// an immediate expiry is a call, not a timer.
 int timers_start(lua_State* state) {
-  const auto key = resolved_symbol(state, 2, SymbolKind::timer);
+  const auto* symbol = checked_symbol_ref(state, 2, SymbolKind::timer);
+  if (symbol == nullptr) return 0;
   const auto ticks = luaL_checkinteger(state, 3);
   if (ticks <= 0) {
     return luaL_argerror(state, 3, "timer ticks must be positive");
   }
   try {
-    context(state).commands->start_timer(key, static_cast<std::uint64_t>(ticks));
+    context(state).commands->start_timer(symbol->key, static_cast<std::uint64_t>(ticks));
   } catch (...) {
     return luaL_error(state, "unable to allocate timer command");
   }
@@ -164,9 +301,10 @@ int timers_start(lua_State* state) {
 }
 
 int timers_cancel(lua_State* state) {
-  const auto key = resolved_symbol(state, 2, SymbolKind::timer);
+  const auto* symbol = checked_symbol_ref(state, 2, SymbolKind::timer);
+  if (symbol == nullptr) return 0;
   try {
-    context(state).commands->cancel_timer(key);
+    context(state).commands->cancel_timer(symbol->key);
   } catch (...) {
     return luaL_error(state, "unable to allocate timer command");
   }
@@ -176,8 +314,9 @@ int timers_cancel(lua_State* state) {
 /// Remaining ticks, or nil when the timer is not running. Cancellation and expiry
 /// are therefore observable from the script itself.
 int timers_remaining(lua_State* state) {
-  const auto key = resolved_symbol(state, 2, SymbolKind::timer);
-  const auto remaining = context(state).timers->remaining(key);
+  const auto* symbol = checked_symbol_ref(state, 2, SymbolKind::timer);
+  if (symbol == nullptr) return 0;
+  const auto remaining = context(state).timers->remaining(symbol->key);
   if (!remaining.has_value()) {
     lua_pushnil(state);
     return 1;
@@ -236,6 +375,15 @@ int random_unit_milli(lua_State* state) {
   return 1;
 }
 
+int time_tick(lua_State* state) {
+  const auto tick = context(state).logical_tick;
+  if (tick > static_cast<std::uint64_t>(std::numeric_limits<lua_Integer>::max())) {
+    return luaL_error(state, "SDK_TIMER_LOGICAL_TIME_REQUIRED: logical tick exceeds Lua integer range");
+  }
+  lua_pushinteger(state, static_cast<lua_Integer>(tick));
+  return 1;
+}
+
 int fixed_multiply_binding(lua_State* state) {
   const auto left = luaL_checkinteger(state, 2);
   const auto right = luaL_checkinteger(state, 3);
@@ -271,16 +419,16 @@ void set_context(lua_State* state, ExecutionContext* value) {
 }
 
 void push_context_table(lua_State* state) {
-  lua_createtable(state, 0, 2);
-  lua_createtable(state, 0, 1);
+  lua_createtable(state, 0, 6);
+  lua_createtable(state, 0, 3);
   lua_pushcfunction(state, query_get_i64);
   lua_setfield(state, -2, "get_i64");
+  lua_pushcfunction(state, query_read);
+  lua_setfield(state, -2, "read");
+  lua_pushcfunction(state, query_cost);
+  lua_setfield(state, -2, "cost");
   lua_setfield(state, -2, "query");
-  lua_createtable(state, 0, 1);
-  lua_pushcfunction(state, state_get);
-  lua_setfield(state, -2, "get");
-  lua_setfield(state, -2, "state");
-  lua_createtable(state, 0, 4);
+  lua_createtable(state, 0, 5);
   lua_pushcfunction(state, commands_add_i64);
   lua_setfield(state, -2, "add_i64");
   lua_pushcfunction(state, commands_add);
@@ -314,6 +462,30 @@ void push_context_table(lua_State* state) {
   lua_pushcfunction(state, timers_remaining);
   lua_setfield(state, -2, "remaining");
   lua_setfield(state, -2, "timers");
+  lua_createtable(state, 0, 1);
+  lua_pushcfunction(state, time_tick);
+  lua_setfield(state, -2, "tick");
+  lua_setfield(state, -2, "time");
+}
+
+void push_sdk_table(lua_State* state) {
+  lua_createtable(state, 0, 4);
+  lua_pushinteger(state, static_cast<lua_Integer>(contract::lua_sdk_version));
+  lua_setfield(state, -2, "sdkVersion");
+  lua_createtable(state, 0, 2);
+  lua_pushcfunction(state, sdk_bind_state);
+  lua_setfield(state, -2, "state");
+  lua_pushcfunction(state, sdk_bind_timer);
+  lua_setfield(state, -2, "timer");
+  lua_setfield(state, -2, "symbol");
+  lua_createtable(state, 0, 1);
+  lua_pushcfunction(state, sdk_query_declare);
+  lua_setfield(state, -2, "declare");
+  lua_setfield(state, -2, "query");
+  lua_createtable(state, 0, 1);
+  lua_pushcfunction(state, sdk_content_get);
+  lua_setfield(state, -2, "get");
+  lua_setfield(state, -2, "content");
 }
 
 void push_input_table(lua_State* state, const ScriptInput& input) {
@@ -322,6 +494,51 @@ void push_input_table(lua_State* state, const ScriptInput& input) {
   lua_setfield(state, -2, "action_id");
   lua_pushinteger(state, input.value_milli);
   lua_setfield(state, -2, "value_milli");
+}
+
+void push_timer_event_table(lua_State* state, const std::string_view timer_name) {
+  lua_createtable(state, 0, 1);
+  lua_pushlstring(state, timer_name.data(), timer_name.size());
+  lua_setfield(state, -2, "timer");
+}
+
+void install_sdk_metatables(lua_State* state) {
+  if (luaL_newmetatable(state, symbol_ref_metatable) != 0) {
+    lua_pushboolean(state, 0);
+    lua_setfield(state, -2, "__metatable");
+  }
+  lua_pop(state, 1);
+  if (luaL_newmetatable(state, query_metatable) != 0) {
+    lua_pushcfunction(state, [](lua_State* inner) {
+      auto* query = static_cast<LuaQuery*>(luaL_checkudata(inner, 1, query_metatable));
+      query->~LuaQuery();
+      return 0;
+    });
+    lua_setfield(state, -2, "__gc");
+    lua_pushboolean(state, 0);
+    lua_setfield(state, -2, "__metatable");
+  }
+  lua_pop(state, 1);
+}
+
+void collect_public_surface(
+    lua_State* state,
+    const int table_index,
+    const std::string& prefix,
+    std::vector<std::string>& output) {
+  const int table = lua_absindex(state, table_index);
+  lua_pushnil(state);
+  while (lua_next(state, table) != 0) {
+    std::size_t length = 0;
+    const char* field = luaL_checklstring(state, -2, &length);
+    const std::string name = prefix + "." + std::string(field, length);
+    if (lua_istable(state, -1)) {
+      collect_public_surface(state, -1, name, output);
+    } else {
+      output.push_back(name);
+    }
+    lua_pop(state, 1);
+  }
 }
 
 }  // namespace
@@ -351,6 +568,7 @@ LuaSandbox::LuaSandbox() : state_(luaL_newstate()) {
     lua_pushnil(state_);
     lua_setglobal(state_, name);
   }
+  install_sdk_metatables(state_);
 }
 
 LuaSandbox::~LuaSandbox() {
@@ -359,16 +577,22 @@ LuaSandbox::~LuaSandbox() {
   }
 }
 
-bool LuaSandbox::load(const std::string_view source) {
+bool LuaSandbox::load(const std::string_view source, const SymbolTables& symbols) {
   last_error_.clear();
+  last_error_code_.clear();
+  push_sdk_table(state_);
+  lua_setglobal(state_, "SDK");
   if (luaL_loadbuffer(state_, source.data(), source.size(), "@gameplay.lua") != LUA_OK) {
     record_error(lua_tostring(state_, -1));
     lua_pop(state_, 1);
     return false;
   }
+  ModuleLoadContext load_context{&symbols};
+  set_module_load_context(state_, &load_context);
   lua_sethook(state_, budget_hook, LUA_MASKCOUNT, instruction_budget);
   const int load_result = lua_pcall(state_, 0, 1, 0);
   lua_sethook(state_, nullptr, 0, 0);
+  set_module_load_context(state_, nullptr);
   if (load_result != LUA_OK) {
     record_error(lua_tostring(state_, -1));
     lua_pop(state_, 1);
@@ -397,6 +621,7 @@ bool LuaSandbox::load(const std::string_view source) {
 
 bool LuaSandbox::on_input(
     const ScriptInput& input,
+    const std::uint64_t logical_tick,
     const IntegerState& state,
     const SymbolTables& symbols,
     const LogicalTimerStore& timers,
@@ -405,7 +630,7 @@ bool LuaSandbox::on_input(
   if (behavior_reference_ == LUA_NOREF) {
     return true;
   }
-  ExecutionContext execution_context{&state, &symbols, &timers, &random_streams, &commands};
+  ExecutionContext execution_context{logical_tick, &state, &symbols, &timers, &random_streams, &commands};
   set_context(state_, &execution_context);
   lua_rawgeti(state_, LUA_REGISTRYINDEX, behavior_reference_);
   lua_getfield(state_, -1, "on_input");
@@ -435,6 +660,7 @@ bool LuaSandbox::load_content_pack(const std::string_view bytes) {
 
 bool LuaSandbox::on_timer(
     const std::string_view timer_name,
+    const std::uint64_t logical_tick,
     const IntegerState& state,
     const SymbolTables& symbols,
     const LogicalTimerStore& timers,
@@ -443,7 +669,7 @@ bool LuaSandbox::on_timer(
   if (behavior_reference_ == LUA_NOREF) {
     return true;
   }
-  ExecutionContext execution_context{&state, &symbols, &timers, &random_streams, &commands};
+  ExecutionContext execution_context{logical_tick, &state, &symbols, &timers, &random_streams, &commands};
   set_context(state_, &execution_context);
   lua_rawgeti(state_, LUA_REGISTRYINDEX, behavior_reference_);
   lua_getfield(state_, -1, "on_timer");
@@ -455,9 +681,7 @@ bool LuaSandbox::on_timer(
   }
   lua_remove(state_, -2);
   push_context_table(state_);
-  lua_createtable(state_, 0, 1);
-  lua_pushlstring(state_, timer_name.data(), timer_name.size());
-  lua_setfield(state_, -2, "timer");
+  push_timer_event_table(state_, timer_name);
   lua_sethook(state_, budget_hook, LUA_MASKCOUNT, instruction_budget);
   const int result = lua_pcall(state_, 2, 0, 0);
   lua_sethook(state_, nullptr, 0, 0);
@@ -504,6 +728,30 @@ const std::string& LuaSandbox::last_error() const noexcept {
 
 const std::string& LuaSandbox::last_error_code() const noexcept {
   return last_error_code_;
+}
+
+bool LuaSandbox::sdk_contract_boundary_valid() {
+  LuaSandbox sandbox;
+  std::vector<std::string> actual;
+  push_sdk_table(sandbox.state_);
+  collect_public_surface(sandbox.state_, -1, "SDK", actual);
+  lua_pop(sandbox.state_, 1);
+  push_context_table(sandbox.state_);
+  collect_public_surface(sandbox.state_, -1, "ctx", actual);
+  lua_pop(sandbox.state_, 1);
+  push_input_table(sandbox.state_, {0, 0, 0});
+  collect_public_surface(sandbox.state_, -1, "event", actual);
+  lua_pop(sandbox.state_, 1);
+  push_timer_event_table(sandbox.state_, "timer");
+  collect_public_surface(sandbox.state_, -1, "event", actual);
+  lua_pop(sandbox.state_, 1);
+
+  std::vector<std::string> expected;
+  expected.reserve(contract::lua_sdk_symbols.size());
+  for (const auto& symbol : contract::lua_sdk_symbols) expected.emplace_back(symbol.name);
+  std::sort(actual.begin(), actual.end());
+  std::sort(expected.begin(), expected.end());
+  return actual == expected;
 }
 
 }  // namespace ludivra::kernel

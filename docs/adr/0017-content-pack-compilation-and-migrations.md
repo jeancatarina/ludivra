@@ -45,7 +45,7 @@ Símbolo ausente é `CONTENT_SYMBOL_UNKNOWN` no carregamento, nunca `nil` silenc
 
 Quando o pack existir, BrowserHost, ElectronHost e worker de controle carregam o **mesmo** pack, identificado por hash, e o gameplay Lua deixa de receber dados por tabela anexada ao seu chunk. A regra do ADR 0011 é preservada em forma mais forte: hosts não podem preparar conteúdo diferente, agora verificável por hash em vez de por inspeção de texto.
 
-A ponte `composeGameplaySource` permanece válida somente até o pack carregar em todos os hosts, e então é removida no mesmo change set que ativa o pack. Isso ocorreu: o kernel instala o pack como o global read-only `CONTENT`, e a função deixou de existir. Compatibilidade paralela entre os dois caminhos é proibida por prazo indeterminado: ela criaria duas autoridades de conteúdo, exatamente o que o ADR 0011 recusou.
+A ponte `composeGameplaySource` permanece válida somente até o pack carregar em todos os hosts, e então é removida no mesmo change set que ativa o pack. Isso ocorreu: o kernel instala os documentos somente no registry da VM e `SDK.content.get(id)` devolve a visão read-only por ID compilado; a função deixou de existir. Compatibilidade paralela entre os dois caminhos é proibida por prazo indeterminado: ela criaria duas autoridades de conteúdo, exatamente o que o ADR 0011 recusou.
 
 ### Versão e migrations
 

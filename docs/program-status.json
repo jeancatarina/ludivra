@@ -4,7 +4,7 @@
   "currentFocus": {
     "phase": 4,
     "summary": "Fechar o contrato versionado da camada 1 do SDK Lua, queries e projectors.",
-    "next": "Implementar migrations explícitas do content pack e suas fixtures."
+    "next": "Declarar e medir projectors read-only antes de avançar para migrations de conteúdo."
   },
   "phases": [
     {
@@ -276,7 +276,7 @@
     {
       "id": "SDK-001",
       "priority": "high",
-      "status": "planned",
+      "status": "in_progress",
       "phase": 4,
       "work": "Fechar o contrato versionado da camada 1 do SDK Lua, queries e projectors.",
       "adrs": ["0016"]

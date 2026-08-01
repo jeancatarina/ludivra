@@ -56,7 +56,7 @@ std::uint64_t Runtime::state_hash() const noexcept {
 
 RuntimeError Runtime::load_gameplay(const std::string_view source) {
   std::string next_source(source);
-  if (!lua_.load(source)) {
+  if (!lua_.load(source, symbols_)) {
     return RuntimeError::script_failure;
   }
   gameplay_source_.swap(next_source);
@@ -207,7 +207,7 @@ RuntimeError Runtime::fire_expired_timers() {
   for (const auto key : expired) {
     const auto name = timer_name(key);
     if (name.empty()) continue;
-    if (!lua_.on_timer(name, integer_state_, symbols_, timers_, random_streams_, commands_)) {
+    if (!lua_.on_timer(name, tick_ + 1U, integer_state_, symbols_, timers_, random_streams_, commands_)) {
       commands_.clear();
       return RuntimeError::script_failure;
     }
@@ -232,6 +232,7 @@ RuntimeError Runtime::commit_tick() {
   for (const auto& input : pending_inputs_) {
     if (!lua_.on_input(
             {input.action_id, input.value_milli, input.sequence},
+            tick_ + 1U,
             integer_state_,
             symbols_,
             timers_,

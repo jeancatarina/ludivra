@@ -1,13 +1,21 @@
 {
   "id": "runtime.lua-gameplay",
   "status": "experimental",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "owner": "kernel",
   "targets": ["native-headless", "browser", "electron"],
-  "contracts": ["runtime-c-api/include/ludivra/runtime.h"],
-  "examples": ["examples/first-game"],
+  "contracts": [
+    "runtime-c-api/include/ludivra/runtime.h",
+    "contracts/lua-sdk-v1.json"
+  ],
+  "examples": ["examples/first-game", "examples/card-roguelite"],
   "dependencies": [],
-  "verification": ["pnpm test:native", "pnpm test:wasm-equivalence"],
+  "verification": [
+    "pnpm contracts",
+    "pnpm test:native",
+    "pnpm test:wasm-equivalence",
+    "pnpm test:card-roguelite"
+  ],
   "limitations": [
     {
       "code": "LUA_API_EXPERIMENTAL",

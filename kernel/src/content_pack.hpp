@@ -18,11 +18,14 @@ namespace ludivra::kernel {
 class ContentPack final {
  public:
   /**
-   * Parses the pack and installs its documents as a read-only `CONTENT` global.
-   * Gameplay then reads content the same way at load time and during a tick,
-   * without the data ever travelling inside the script chunk.
+ * Parses the pack and stores its documents in the Lua registry. The public SDK
+ * reaches a document only through `SDK.content.get(id)`, so the backing table
+ * never becomes an accidental global API.
    */
   [[nodiscard]] static bool install(lua_State* state, std::string_view bytes, std::string& error);
+  /// Leaves the requested read-only document on the Lua stack. False leaves the
+  /// stack unchanged and returns a stable diagnostic code in `error`.
+  [[nodiscard]] static bool push_document(lua_State* state, std::string_view id, std::string& error);
 };
 
 }  // namespace ludivra::kernel

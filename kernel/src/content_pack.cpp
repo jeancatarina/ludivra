@@ -12,6 +12,7 @@ namespace ludivra::kernel {
 namespace {
 
 constexpr int maximum_depth = 32;
+constexpr char content_pack_registry_key = 0;
 
 /// Cursor over the pack bytes. Every read is bounded; running past the end is a
 /// parse failure, never undefined behaviour.
@@ -314,8 +315,31 @@ bool ContentPack::install(lua_State* state, const std::string_view bytes, std::s
 
   wrap_recursive(state, 0);
   wrap_read_only(state);
-  lua_setglobal(state, "CONTENT");
+  lua_pushlightuserdata(state, const_cast<char*>(&content_pack_registry_key));
+  lua_pushvalue(state, -2);
+  lua_settable(state, LUA_REGISTRYINDEX);
+  lua_pop(state, 1);
   lua_settop(state, base);
+  return true;
+}
+
+bool ContentPack::push_document(lua_State* state, const std::string_view id, std::string& error) {
+  const int base = lua_gettop(state);
+  lua_pushlightuserdata(state, const_cast<char*>(&content_pack_registry_key));
+  lua_gettable(state, LUA_REGISTRYINDEX);
+  if (lua_type(state, -1) != LUA_TTABLE) {
+    error = "SDK_CONTENT_NOT_LOADED";
+    lua_settop(state, base);
+    return false;
+  }
+  lua_pushlstring(state, id.data(), id.size());
+  lua_gettable(state, -2);
+  if (lua_isnil(state, -1)) {
+    error = "SDK_CONTENT_UNKNOWN";
+    lua_settop(state, base);
+    return false;
+  }
+  lua_remove(state, -2);
   return true;
 }
 

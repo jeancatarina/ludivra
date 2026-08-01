@@ -1,5 +1,7 @@
 #include "ludivra/runtime.h"
 
+#include "lua_sandbox.hpp"
+
 #include <cinttypes>
 #include <cstdio>
 #include <fstream>
@@ -77,12 +79,20 @@ std::string symbol_gameplay() {
   return fixture("symbols.lua");
 }
 
+std::string unknown_symbol_gameplay() {
+  return fixture("unknown-symbol.lua");
+}
+
 std::string timer_gameplay() {
   return fixture("timers.lua");
 }
 
 std::string content_gameplay() {
   return fixture("content.lua");
+}
+
+std::string time_gameplay() {
+  return fixture("time.lua");
 }
 
 std::vector<uint8_t> save_archive(TestContext& context, ludivra_runtime* runtime) {
@@ -111,6 +121,9 @@ std::vector<uint8_t> replay_archive(TestContext& context, ludivra_runtime* runti
 
 int main() {
   TestContext context;
+  context.expect(
+      ludivra::kernel::LuaSandbox::sdk_contract_boundary_valid(),
+      "the reachable Lua SDK surface matches its versioned contract");
   context.expect(ludivra_runtime_abi_version() == 3U, "ABI version is stable");
   context.expect(
       ludivra_runtime_create(nullptr, nullptr) == LUDIVRA_ERROR_INVALID_ARGUMENT,
@@ -155,8 +168,8 @@ int main() {
   std::printf("wasm_equivalence_hash=%016" PRIx64 "\n", state_hash(context, scripted));
 
   {
-    // ADR 0016 layer 1: state reached by declared name, and an undeclared name
-    // failing the tick instead of silently reading key zero.
+    // ADR 0016 layer 1: state and queries bind once during module loading. The
+    // callback only carries opaque references, never manifest names.
     auto* named = create_runtime(context);
     context.expect(
         ludivra_runtime_declare_symbol(named, LUDIVRA_SYMBOL_STATE, "score", 5U, 1U) == LUDIVRA_OK,
@@ -174,15 +187,38 @@ int main() {
         "symbol gameplay loads");
     submit(context, named, 1U, 1000, 1U);
     context.expect(ludivra_runtime_step(named, 1U) == LUDIVRA_OK, "named state tick advances");
-    context.expect(integer_state(context, named, 1U) == 5, "state written by name reaches the key");
-    submit(context, named, 2U, 1000, 2U);
     context.expect(
-        ludivra_runtime_step(named, 1U) == LUDIVRA_ERROR_SCRIPT,
-        "an undeclared symbol fails the tick");
+        integer_state(context, named, 1U) == 1,
+        "declared query reads state and exposes its one-read cost");
+
+    auto* missing = create_runtime(context);
     context.expect(
-        std::string(ludivra_runtime_last_error_code(named)) == "SDK_SYMBOL_UNKNOWN",
-        "the script failure carries a stable code");
+        ludivra_runtime_declare_symbol(missing, LUDIVRA_SYMBOL_STATE, "score", 5U, 1U) == LUDIVRA_OK,
+        "unknown-symbol scenario declares its known state");
+    const auto missing_source = unknown_symbol_gameplay();
+    context.expect(
+        ludivra_runtime_load_gameplay(
+            missing, missing_source.data(), static_cast<uint32_t>(missing_source.size())) == LUDIVRA_ERROR_SCRIPT,
+        "an undeclared symbol fails while the module loads");
+    context.expect(
+        std::string(ludivra_runtime_last_error_code(missing)) == "SDK_SYMBOL_UNKNOWN",
+        "the load failure carries a stable code");
+    ludivra_runtime_destroy(missing);
     ludivra_runtime_destroy(named);
+  }
+
+  {
+    // Logical time is the simulation tick, not a host clock. The first callback
+    // sees tick one because it is executing the first commit.
+    auto* timed = create_runtime(context);
+    const auto source = time_gameplay();
+    context.expect(
+        ludivra_runtime_load_gameplay(timed, source.data(), static_cast<uint32_t>(source.size())) == LUDIVRA_OK,
+        "logical-time gameplay loads");
+    submit(context, timed, 1U, 0, 1U);
+    context.expect(ludivra_runtime_step(timed, 1U) == LUDIVRA_OK, "logical-time callback advances");
+    context.expect(integer_state(context, timed, 20U) == 1, "script reads the confirmed logical tick");
+    ludivra_runtime_destroy(timed);
   }
 
   {

@@ -6,7 +6,7 @@
 |---|---|
 | Release atual | 0.7.0 |
 | Foco atual | Fase 4 — Fechar o contrato versionado da camada 1 do SDK Lua, queries e projectors. |
-| Próxima entrega | Implementar migrations explícitas do content pack e suas fixtures. |
+| Próxima entrega | Declarar e medir projectors read-only antes de avançar para migrations de conteúdo. |
 | Fonte editável de progresso | [docs/program-status.json](docs/program-status.json) |
 | Decisão do modelo documental | [ADR 0046](docs/adr/0046-generated-program-documentation.md) |
 

@@ -1,6 +1,6 @@
 # ADR 0016 — Camadas do SDK Lua público e escape hatches
 
-- Status: provisório
+- Status: aceito
 - Data: 2026-07-24
 - Revisão: antes de abrir a camada 2 do SDK ou de promover qualquer símbolo a `stable`
 - Complementa: [ADR 0004](0004-lua-sandbox.md) e [ADR 0011](0011-card-roguelite-content-and-authority.md)
@@ -20,7 +20,7 @@ Ao mesmo tempo, o gate da Fase 4 é real: uma sessão nova deve criar regra, con
 
 ### O SDK é um contrato versionado, não o que o kernel expõe
 
-A superfície pública Lua passa a ser declarada como contrato versionado, com `sdkVersion` próprio, e verificada por teste de boundary. Um símbolo alcançável do script sem estar declarado é defeito, não recurso. Cada símbolo declara nome, camada, maturidade — `experimental`, `stable` ou `deprecated` — e o consumidor que o exige.
+A superfície pública Lua passa a ser declarada em [`contracts/lua-sdk-v1.json`](../../contracts/lua-sdk-v1.json), com `sdkVersion` próprio, bindings C++/TypeScript/Lua gerados e teste de boundary. Um símbolo alcançável do script sem estar declarado é defeito, não recurso. Cada símbolo declara nome, camada, maturidade — `experimental`, `stable` ou `deprecated` — e o consumidor que o exige.
 
 Símbolo sem consumidor atual é proibido. Depreciação exige condição objetiva de remoção e migração documentada.
 
@@ -37,7 +37,7 @@ Símbolo sem consumidor atual é proibido. Depreciação exige condição objeti
 - acesso somente leitura ao conteúdo compilado por ID;
 - diagnósticos estruturados a partir de erro de script, com código estável, nunca falha silenciosa.
 
-Símbolo desconhecido falha no carregamento com `SDK_SYMBOL_UNKNOWN`; resolução tardia por string é proibida.
+Símbolo desconhecido falha no carregamento com `SDK_SYMBOL_UNKNOWN`; resolução tardia por string é proibida. `SDK.symbol.state(name)` e `SDK.symbol.timer(name)` só podem rodar durante a carga do módulo e devolvem referências opacas. Callbacks usam essas referências em `ctx.commands`, `ctx.timers` e em queries declaradas por `SDK.query.declare`; `ctx.query:cost(query)` expõe o custo em leituras de estado.
 
 **Camada 2 — entidades, componentes, tags, relações e recursos.** Fica explicitamente fora da Fase 4 e é decidida pelo [ADR 0039](0039-entity-component-layer.md), cujos consumidores são o runtime espacial e o Mass Runtime — são esses requisitos que determinam identidade, armazenamento, iteração e persistência. Até lá, um jogo que precise de estruturas semelhantes as mantém no próprio jogo, conforme a regra de extração após segundo uso.
 

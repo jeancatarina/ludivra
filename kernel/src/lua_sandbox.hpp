@@ -48,13 +48,14 @@ class LuaSandbox final {
   LuaSandbox(const LuaSandbox&) = delete;
   LuaSandbox& operator=(const LuaSandbox&) = delete;
 
-  [[nodiscard]] bool load(std::string_view source);
-  /// Installs the compiled content pack as the read-only `CONTENT` global. It must
+  [[nodiscard]] bool load(std::string_view source, const SymbolTables& symbols);
+  /// Installs the compiled content pack for `SDK.content.get`. It must
   /// happen before the gameplay module loads, because a module reads content at
   /// load time as well as during a tick.
   [[nodiscard]] bool load_content_pack(std::string_view bytes);
   [[nodiscard]] bool on_input(
       const ScriptInput& input,
+      std::uint64_t logical_tick,
       const IntegerState& state,
       const SymbolTables& symbols,
       const LogicalTimerStore& timers,
@@ -65,6 +66,7 @@ class LuaSandbox final {
   /// simply ignores expirations; a module with it receives the timer name.
   [[nodiscard]] bool on_timer(
       std::string_view timer_name,
+      std::uint64_t logical_tick,
       const IntegerState& state,
       const SymbolTables& symbols,
       const LogicalTimerStore& timers,
@@ -74,6 +76,9 @@ class LuaSandbox final {
   /// Stable code extracted from the script failure, empty when the error carries
   /// none. It is what lets a diagnostic be reported by code instead of by prose.
   [[nodiscard]] const std::string& last_error_code() const noexcept;
+  /// Boundary test for the versioned public SDK. It enumerates the actual Lua
+  /// tables that scripts can reach and compares them to the generated contract.
+  [[nodiscard]] static bool sdk_contract_boundary_valid();
 
  private:
   void record_error(std::string message);
