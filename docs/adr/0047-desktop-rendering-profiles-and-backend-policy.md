@@ -26,7 +26,7 @@ Técnicas gráficas reutilizadas devem vir de Three.js, bibliotecas upstream, es
 
 Perfil é parte do manifest, do run e da baseline. O jogo declara features obrigatórias e opcionais; o validator cruza essa declaração com a matriz do método efetivo antes do build.
 
-O primeiro corte publica `RendererProfileRequest` no manifest v4 e resolve a matriz no `renderer-three` antes de construir o renderer. O BrowserHost expõe pedido/efetivo/método/adapter/motivo no inspection surface. Nesta build, o backend Three.js implementado é WebGL2: um pedido `desktop-high` só prossegue em `desktop-compatible` quando esse fallback está declarado, emitindo `RENDER_METHOD_FALLBACK`; sem fallback ou com feature obrigatória ausente, a inicialização falha com código estável. A inicialização real de WebGPU e métricas de adapter continua o próximo incremento, não uma alegação antecipada do perfil high.
+O primeiro corte publica `RendererProfileRequest` no manifest v4 e resolve a matriz no `renderer-three` antes de construir o renderer. O BrowserHost expõe pedido/efetivo/método/adapter/motivo no inspection surface. `desktop-high` carrega `WebGPURenderer` sob demanda e o inicializa antes de aceitar o perfil; erro de API ou de init só prossegue em `desktop-compatible` quando esse fallback está declarado, emitindo `RENDER_METHOD_FALLBACK`; sem fallback ou com feature obrigatória ausente, a inicialização falha com código estável. O caminho WebGPU usa o render direto e tone mapping inicial; nome físico do adapter, timestamps GPU e pós-processamento WebGPU por tier continuam pendentes de smoke/benchmark, não uma alegação antecipada de cobertura completa.
 
 ### Fallback nunca é silencioso
 

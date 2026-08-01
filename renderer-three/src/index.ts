@@ -33,6 +33,7 @@ import {
   WebGLRenderer,
   SRGBColorSpace
 } from "three";
+import type { WebGPURenderer } from "three/webgpu";
 import { createCinematicPipeline } from "./cinematic-pipeline.js";
 import {
   RendererFailure,
@@ -173,18 +174,52 @@ function rendererOperation<T>(code: RendererDiagnosticCode, source: string, oper
   }
 }
 
-export function createThreeRenderer(
+export async function createThreeRenderer(
   canvas: HTMLCanvasElement,
   options: ThreeRendererOptions = {}
-): PresentationRenderer {
-  const selection = options.profile === undefined
+): Promise<PresentationRenderer> {
+  let selection = options.profile === undefined
     ? undefined
     : selectRendererProfile(options.profile, options.backends ?? { webgl2: true, webgpu: false, adapter: null });
+  let renderer: WebGLRenderer | WebGPURenderer;
+  if (selection?.effectiveMethod === "webgpu") {
+    try {
+      const { WebGPURenderer: WebGpuRenderer } = await import("three/webgpu");
+      const webgpu = new WebGpuRenderer({ canvas, antialias: true, alpha: true, powerPreference: "high-performance" });
+      await webgpu.init();
+      renderer = webgpu;
+      if (selection !== undefined) selection = { ...selection, adapter: "Three.js WebGPU renderer" };
+    } catch (error) {
+      if (options.profile === undefined) throw rendererFailure("RENDER_INITIALIZATION_FAILED", "renderer-three:webgpu", error);
+      selection = selectRendererProfile(options.profile, {
+        ...(options.backends ?? { webgl2: true, webgpu: false, adapter: null }),
+        webgpu: false
+      });
+      if (selection.effectiveMethod !== "webgl2") throw rendererFailure("RENDER_INITIALIZATION_FAILED", "renderer-three:webgpu", error);
+      const detail = error instanceof Error ? error.message : String(error);
+      selection = {
+        ...selection,
+        adapter: "Three.js WebGL2",
+        fallbackReason: `WebGPU initialization failed (${detail}); ${selection.fallbackReason ?? "no declared fallback"}`
+      };
+      renderer = rendererOperation("RENDER_INITIALIZATION_FAILED", "renderer-three:initialization", () => new WebGLRenderer({
+        canvas, antialias: true, alpha: true, powerPreference: "high-performance"
+      }));
+    }
+  } else {
+    renderer = rendererOperation("RENDER_INITIALIZATION_FAILED", "renderer-three:initialization", () => new WebGLRenderer({
+      canvas, antialias: true, alpha: true, powerPreference: "high-performance"
+    }));
+  }
+  if (renderer instanceof WebGLRenderer) {
+    const defaultShaderError = renderer.debug.onShaderError;
+    renderer.debug.onShaderError = (gl, program, vertexShader, fragmentShader) => {
+      reportShaderFailure(options.reportDiagnostic, gl, program, vertexShader, fragmentShader);
+      defaultShaderError?.(gl, program, vertexShader, fragmentShader);
+    };
+  }
   if (selection?.fallbackReason !== undefined) {
     options.reportDiagnostic?.("RENDER_METHOD_FALLBACK", selection.fallbackReason, "renderer-three:profile");
-  }
-  if (selection?.requestedProfile === "desktop-high" && selection.effectiveProfile === "desktop-high") {
-    options.reportDiagnostic?.("RENDER_GPU_PROFILE_UNVERIFIED", "desktop-high selected; adapter metrics remain pending renderer initialization", "renderer-three:profile");
   }
   options.onProfileSelected?.(selection ?? {
     requestedProfile: "web-compatible",
@@ -196,17 +231,6 @@ export function createThreeRenderer(
     optionalFeatures: [],
     unavailableOptionalFeatures: []
   });
-  const renderer = rendererOperation("RENDER_INITIALIZATION_FAILED", "renderer-three:initialization", () => new WebGLRenderer({
-    canvas,
-    antialias: true,
-    alpha: true,
-    powerPreference: "high-performance"
-  }));
-  const defaultShaderError = renderer.debug.onShaderError;
-  renderer.debug.onShaderError = (gl, program, vertexShader, fragmentShader) => {
-    reportShaderFailure(options.reportDiagnostic, gl, program, vertexShader, fragmentShader);
-    defaultShaderError?.(gl, program, vertexShader, fragmentShader);
-  };
   renderer.outputColorSpace = SRGBColorSpace;
   renderer.toneMapping = ACESFilmicToneMapping;
   renderer.toneMappingExposure = 1.12;
@@ -238,11 +262,13 @@ export function createThreeRenderer(
   scene.add(rimLight);
   const visuals = new Map<string, Mesh>();
   const bursts: ActiveBurst[] = [];
-  const cinematicPipeline = rendererOperation(
-    "RENDER_INITIALIZATION_FAILED",
-    "renderer-three:cinematic-pipeline",
-    () => createCinematicPipeline(renderer, scene, camera)
-  );
+  const cinematicPipeline = renderer instanceof WebGLRenderer
+    ? rendererOperation(
+      "RENDER_INITIALIZATION_FAILED",
+      "renderer-three:cinematic-pipeline",
+      () => createCinematicPipeline(renderer, scene, camera)
+    )
+    : null;
   let previousRenderTime = performance.now();
 
   function updateParticles(): void {
@@ -373,7 +399,8 @@ export function createThreeRenderer(
     render() {
       rendererOperation("RENDER_FRAME_FAILED", "renderer-three:frame", () => {
         updateParticles();
-        cinematicPipeline.render();
+        if (cinematicPipeline === null) renderer.render(scene, camera);
+        else cinematicPipeline.render();
       });
     },
     resize(width, height, pixelRatio) {
@@ -381,7 +408,10 @@ export function createThreeRenderer(
         const cappedPixelRatio = Math.min(pixelRatio, 2);
         renderer.setPixelRatio(cappedPixelRatio);
         renderer.setSize(width, height, false);
-        cinematicPipeline.resize(width, height, cappedPixelRatio);
+        if (cinematicPipeline === null) {
+          renderer.setPixelRatio(cappedPixelRatio);
+          renderer.setSize(width, height);
+        } else cinematicPipeline.resize(width, height, cappedPixelRatio);
         camera.aspect = width / Math.max(height, 1);
         camera.updateProjectionMatrix();
       });
@@ -401,7 +431,7 @@ export function createThreeRenderer(
           burst.points.material.dispose();
         }
         bursts.length = 0;
-        cinematicPipeline.destroy();
+        cinematicPipeline?.destroy();
         renderer.dispose();
       });
     }

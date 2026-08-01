@@ -30,7 +30,7 @@
 | 5 | Runtime espacial e mundo procedural | `CONCLUÍDA` | nenhuma no gate atual |
 | 6 | Motion, física e Mass Simulation | `CONCLUÍDA` | nenhuma no gate atual |
 | 7 | Persistência, replays e multiplayer player-hosted | `CONCLUÍDA` | nenhuma no gate atual |
-| 8 | Renderer, UI, áudio e apresentação escalável | `EM ANDAMENTO` | Inicializar pipeline WebGPU, adapter real e métricas GPU para promover desktop-high sem fallback; manter fallback observado quando o método não existir. |
+| 8 | Renderer, UI, áudio e apresentação escalável | `EM ANDAMENTO` | Adicionar adapter físico, timestamps/benchmarks GPU e pós-processamento WebGPU por tier para promover desktop-high com evidência além do render direto; manter fallback observado quando o método não existir. |
 | 9 | Procedural Construction Runtime | `PLANEJADA` | Construction Graph, comandos semânticos, undo/redo e replay. |
 | 10 | Procedural Forges | `PARCIAL` | Completar música, stems, previews gráficos e runtime/cooker do Audio Forge. |
 | 11 | Diagnose, Repair, Verify e performance gates | `PARCIAL` | Fluxo real de diagnose, explain, fix dry-run/apply e verify com classes de reparo. |
@@ -213,11 +213,11 @@ Apresentar jogos pequenos e massivos com observabilidade e degradação sem alte
 ### Entregue
 
 - Renderer Three.js experimental, UI DOM acessível, Web Audio e partículas simples. Capabilities: `presentation.three`, `feedback.audio-effects`. Evidência: [renderer-three/src](renderer-three/src), [hosts/browser/src/ui-renderer.ts](hosts/browser/src/ui-renderer.ts), [hosts/browser/src/audio-feedback.ts](hosts/browser/src/audio-feedback.ts).
-- Manifest v4 declara perfis e features por Browser/Desktop; renderer resolve método efetivo, registra pedido/efetivo/adapter/fallback na inspeção e só reduz desktop-high para desktop-compatible quando o fallback foi declarado. Capabilities: `presentation.renderer-profiles`. Evidência: [schemas/game.schema.json](schemas/game.schema.json), [renderer-three/src/profiles.ts](renderer-three/src/profiles.ts), [hosts/browser/src/main.ts](hosts/browser/src/main.ts), [renderer-three/test/diagnostics.test.mjs](renderer-three/test/diagnostics.test.mjs), [examples/card-roguelite/game.jsonc](examples/card-roguelite/game.jsonc).
+- Manifest v4 declara perfis e features por Browser/Desktop; renderer inicializa WebGPURenderer sob demanda para desktop-high, resolve método efetivo, registra pedido/efetivo/adapter/fallback na inspeção e só reduz para desktop-compatible quando o fallback foi declarado. Capabilities: `presentation.renderer-profiles`. Evidência: [schemas/game.schema.json](schemas/game.schema.json), [renderer-three/src/profiles.ts](renderer-three/src/profiles.ts), [renderer-three/src/index.ts](renderer-three/src/index.ts), [hosts/browser/src/main.ts](hosts/browser/src/main.ts), [renderer-three/test/diagnostics.test.mjs](renderer-three/test/diagnostics.test.mjs), [examples/card-roguelite/game.jsonc](examples/card-roguelite/game.jsonc).
 
 ### Falta
 
-- Inicializar pipeline WebGPU, adapter real e métricas GPU para promover desktop-high sem fallback; manter fallback observado quando o método não existir.
+- Adicionar adapter físico, timestamps/benchmarks GPU e pós-processamento WebGPU por tier para promover desktop-high com evidência além do render direto; manter fallback observado quando o método não existir.
 - Ingestão glTF/GLB, cooking, LOD, compressão, residência e streaming por target.
 - Materiais e ambientes por tiers, shader warmup, cache e fallback verificável.
 - Grafos de animação com blend, layers, masks, retarget, IK e root motion controlado.

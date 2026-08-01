@@ -151,13 +151,14 @@ const rendererProfileReport: {
   unavailableOptionalFeatures: []
 };
 
-const recording = createRecordingRenderer(createThreeRenderer(gameCanvas, {
+const recording = createRecordingRenderer(await createThreeRenderer(gameCanvas, {
   reportDiagnostic: hostDiagnostics.report,
   profile: requestedRendererProfile,
-  // This production build currently owns a WebGL2 renderer. WebGPU may be
-  // visible to the OS, but is not claimed as available until a Three WebGPU
-  // pipeline and metrics are actually initialized.
-  backends: { webgl2: true, webgpu: false, adapter: "Three.js WebGL2" },
+  backends: {
+    webgl2: true,
+    webgpu: "gpu" in navigator,
+    adapter: "gpu" in navigator ? "WebGPU adapter pending initialization" : "Three.js WebGL2"
+  },
   onProfileSelected: (selection) => {
     rendererProfileReport.effectiveProfile = selection.effectiveProfile;
     rendererProfileReport.requestedMethod = selection.requestedMethod;

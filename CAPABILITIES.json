@@ -663,8 +663,8 @@
       ],
       "limitations": [
         {
-          "code": "RENDER_WEBGPU_BACKEND_UNAVAILABLE",
-          "message": "desktop-high é validado e só faz fallback quando declarado, mas esta build ainda possui pipeline Three.js WebGL2; WebGPU, adapter real e métricas GPU precisam ser inicializados antes de promover o perfil high."
+          "code": "RENDER_GPU_PROFILE_METRICS_PENDING",
+          "message": "desktop-high inicializa o WebGPURenderer sob demanda e faz fallback apenas quando declarado; nome do adapter físico, timestamps GPU e pós-processamento WebGPU por tier ainda precisam de smoke/benchmark aprovado."
         }
       ]
     },
