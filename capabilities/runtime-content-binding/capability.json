@@ -1,17 +1,20 @@
 {
   "id": "runtime.content-binding",
   "status": "experimental",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "owner": "content-compiler",
   "targets": ["native-headless", "browser", "electron"],
   "contracts": [
     "contracts/content-migrations-v1.json",
     "schemas/game.schema.json",
     "schemas/card-roguelite-v1.schema.json",
-    "schemas/card-roguelite.schema.json"
+    "schemas/card-roguelite.schema.json",
+    "schemas/scene.schema.json",
+    "schemas/prefab.schema.json"
   ],
   "examples": [
-    "examples/card-roguelite/content/run.jsonc"
+    "examples/card-roguelite/content/run.jsonc",
+    "examples/card-roguelite/scenes/ember-vault.scene.jsonc"
   ],
   "dependencies": ["runtime.lua-gameplay"],
   "verification": [

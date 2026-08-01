@@ -1,0 +1,13 @@
+{
+  "$schema": "https://ludivra.dev/schemas/prefab/v1",
+  "schemaVersion": 1,
+  "id": "prefab.ember-spark",
+  "root": "root",
+  "resources": [],
+  "parameters": [],
+  "overrides": [],
+  "slots": [],
+  "nodes": [
+    { "id": "root", "components": { "vfxEmitter": { "resource": "vfx.ember-spark" } } }
+  ]
+}

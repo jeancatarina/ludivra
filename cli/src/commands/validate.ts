@@ -6,7 +6,13 @@ import type { Diagnostic } from "../generated/cli-result.js";
 import { optionValue } from "../arguments.js";
 import { sha256 } from "../artifact-hash.js";
 import { createContractValidator } from "../contract-validator.js";
-import { migrateContentDocument } from "@ludivra/content-compiler";
+import {
+  compileSceneGraph,
+  migrateContentDocument,
+  PREFAB_SCHEMA_ID,
+  SCENE_SCHEMA_ID,
+  type SceneGraphSource
+} from "@ludivra/content-compiler";
 import type { ProjectState } from "../generated/operability.js";
 import { findEngineRoot } from "../repository.js";
 import { repositoriesMatch, repositoryFingerprint } from "../repository-state.js";
@@ -37,7 +43,9 @@ const requiredFiles = [
   "schemas/card-roguelite.schema.json",
   "schemas/card-roguelite-v1.schema.json",
   "schemas/character-spec.schema.json",
+  "schemas/prefab.schema.json",
   "schemas/scenario.schema.json",
+  "schemas/scene.schema.json",
   "schemas/texture-request.schema.json",
   "schemas/visual-forge-manifest.schema.json",
   "schemas/visual-style.schema.json",
@@ -66,7 +74,9 @@ const jsonFiles = [
   "schemas/card-roguelite-v1.schema.json",
   "schemas/character-spec.schema.json",
   "schemas/game.schema.json",
+  "schemas/prefab.schema.json",
   "schemas/scenario.schema.json",
+  "schemas/scene.schema.json",
   "schemas/texture-request.schema.json",
   "schemas/visual-forge-manifest.schema.json",
   "schemas/visual-style.schema.json",
@@ -89,7 +99,9 @@ const contractSchemaFiles = [
   "schemas/texture-request.schema.json",
   "schemas/character-spec.schema.json",
   "schemas/game.schema.json",
+  "schemas/prefab.schema.json",
   "schemas/scenario.schema.json",
+  "schemas/scene.schema.json",
   "schemas/visual-forge-manifest.schema.json",
   "schemas/visual-style.schema.json"
 ] as const;
@@ -541,6 +553,10 @@ export async function runValidate(arguments_: string[] = []): Promise<CommandOut
             id: string;
             name: string;
             content?: Array<{ id: string; schema: string; source: string }>;
+            composition?: {
+              scenes: Array<{ id: string; source: string }>;
+              prefabs: Array<{ id: string; source: string }>;
+            };
             inputs: Array<{ id: string; actionId: number }>;
             inspection: { integerStates: Array<{ id: string; key: number }> };
             projectors: Array<{ id: string; states: string[]; inputs: string[] }>;
@@ -651,6 +667,62 @@ export async function runValidate(arguments_: string[] = []): Promise<CommandOut
               }
             } catch (error) {
               diagnostics.push({ code: "CONTENT_UNREADABLE", severity: "error", message: error instanceof Error ? error.message : `Unable to read ${descriptor.source}`, file: contentPath });
+            }
+          }
+          if (manifest.composition !== undefined) {
+            const sources: { scenes: SceneGraphSource[]; prefabs: SceneGraphSource[] } = { scenes: [], prefabs: [] };
+            const declaredIds = new Set<string>();
+            for (const [kind, descriptors, schema] of [
+              ["scene", manifest.composition.scenes, SCENE_SCHEMA_ID],
+              ["prefab", manifest.composition.prefabs, PREFAB_SCHEMA_ID]
+            ] as const) {
+              for (const descriptor of descriptors) {
+                if (declaredIds.has(descriptor.id)) {
+                  diagnostics.push({ code: "SCENE_ID_UNSTABLE", severity: "error", message: `Composition ID is duplicated: ${descriptor.id}`, file: gamePath });
+                  continue;
+                }
+                declaredIds.add(descriptor.id);
+                const sourcePath = resolve(project, descriptor.source);
+                const relation = relative(project, sourcePath);
+                if (relation.startsWith("..") || isAbsolute(relation)) {
+                  diagnostics.push({ code: "SCENE_SCHEMA_INVALID", severity: "error", message: `Composition source escapes the game project: ${descriptor.source}`, file: gamePath });
+                  continue;
+                }
+                const errors: ParseError[] = [];
+                try {
+                  const [actualProject, actualSource] = await Promise.all([realpath(project), realpath(sourcePath)]);
+                  const actualRelation = relative(actualProject, actualSource);
+                  if (actualRelation.startsWith("..") || isAbsolute(actualRelation)) {
+                    diagnostics.push({ code: "SCENE_SCHEMA_INVALID", severity: "error", message: `Composition source symlink escapes the game project: ${descriptor.source}`, file: sourcePath });
+                    continue;
+                  }
+                  const document = parse(await readFile(actualSource, "utf8"), errors) as unknown;
+                  const validator = schemaValidator.getSchema(schema);
+                  if (errors.length > 0 || validator === undefined || !validator(document)) {
+                    diagnostics.push({
+                      code: "SCENE_SCHEMA_INVALID",
+                      severity: "error",
+                      message: errors.length > 0
+                        ? "Composition source is not valid JSONC"
+                        : validator?.errors?.map((error) => `${error.instancePath} ${error.message}`).join("; ") ?? "Composition schema is unavailable",
+                      file: sourcePath
+                    });
+                    continue;
+                  }
+                  sources[`${kind}s` as "scenes" | "prefabs"].push({ id: descriptor.id, file: descriptor.source, value: document });
+                } catch (error) {
+                  diagnostics.push({ code: "SCENE_SCHEMA_INVALID", severity: "error", message: error instanceof Error ? error.message : `Unable to read ${descriptor.source}`, file: sourcePath });
+                }
+              }
+            }
+            if (sources.scenes.length === manifest.composition.scenes.length && sources.prefabs.length === manifest.composition.prefabs.length) {
+              try {
+                compileSceneGraph(sources);
+              } catch (error) {
+                const message = error instanceof Error ? error.message : "Scene graph compilation failed";
+                const code = message.match(/^(?:SCENE|PREFAB)_[A-Z_]+/)?.[0] ?? "SCENE_SCHEMA_INVALID";
+                diagnostics.push({ code, severity: "error", message, file: gamePath });
+              }
             }
           }
           for (const [collection, entries] of [

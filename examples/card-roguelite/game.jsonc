@@ -15,6 +15,16 @@
       "source": "content/run.jsonc"
     }
   ],
+  "composition": {
+    "scenes": [
+      { "id": "scene.ember-vault", "source": "scenes/ember-vault.scene.jsonc" }
+    ],
+    "prefabs": [
+      { "id": "prefab.ember-hero", "source": "prefabs/ember-hero.prefab.jsonc" },
+      { "id": "prefab.ember-enemy", "source": "prefabs/ember-enemy.prefab.jsonc" },
+      { "id": "prefab.ember-spark", "source": "prefabs/ember-spark.prefab.jsonc" }
+    ]
+  },
   "inputs": [
     { "id": "start-run", "label": "Iniciar expedição", "actionId": 1, "keys": ["Enter"] },
     { "id": "play-strike", "label": "Golpe · 1 energia", "actionId": 2, "keys": ["Digit1"] },

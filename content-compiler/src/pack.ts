@@ -180,7 +180,9 @@ function emptyPack(): ContentPack {
 export function contentPackCacheKey(input: ContentPackInput): string {
   const hasher = createHash("sha256").update(`${PACK_FORMAT_VERSION}\0${CONTENT_GENERATOR_VERSION}`);
   for (const document of [...input.documents].sort((left, right) => (left.id < right.id ? -1 : 1))) {
-    hasher.update(`\0${document.id}\0${document.file}\0${document.source}`);
+    // The target schema can change the derived value through a declared migration,
+    // even when the authored JSONC bytes are identical.
+    hasher.update(`\0${document.id}\0${document.schema ?? ""}\0${document.file}\0${document.source}`);
   }
   for (const table of input.strings ?? []) {
     hasher.update(`\0${table.locale}\0${canonicalJson(table.entries)}`);

@@ -1,6 +1,6 @@
 # ADR 0048 — Scene, prefab e resource graph text-first
 
-- Status: provisório
+- Status: aceito
 - Data: 2026-07-26
 - Revisão: antes de estabilizar o primeiro schema de scene ou permitir herança além de uma base
 - Complementa: [ADR 0017](0017-content-pack-compilation-and-migrations.md), [ADR 0039](0039-entity-component-layer.md) e [ADR 0047](0047-desktop-rendering-profiles-and-backend-policy.md)
@@ -45,6 +45,12 @@ Códigos: `SCENE_SCHEMA_INVALID`, `SCENE_ID_UNSTABLE`, `SCENE_REFERENCE_NOT_FOUN
 - prefabs eliminam código repetido sem expor ECS ou scene graph interno;
 - o cooker pode carregar e descartar recursos por dependência real;
 - os jogos de prova ganham uma unidade comum de composição sem uma API genérica de gênero.
+
+## Implementação inicial
+
+Os schemas `scene/v1` e `prefab/v1` declaram IDs explícitos, componentes públicos fechados, recursos semânticos, uma base opcional, parâmetros, overrides permitidos e slots. `content-compiler/src/scene-graph.ts` valida referências, ciclos, tipos de parâmetros, overrides e slots antes de normalizar o grafo por ID e adicioná-lo ao content pack como `ludivra.scene-graph`.
+
+`game content inspect --scene <id>` expõe a cena compilada, enquanto `game content explain --symbol <scene>.<node>` aponta para a origem JSONC. Hosts ainda não instanciam esse grafo: o contrato de spawn, lifecycle e traces permanece uma entrega posterior.
 
 ## Alternativas rejeitadas
 

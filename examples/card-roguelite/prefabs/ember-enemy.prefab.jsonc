@@ -1,0 +1,14 @@
+{
+  "$schema": "https://ludivra.dev/schemas/prefab/v1",
+  "schemaVersion": 1,
+  "id": "prefab.ember-enemy",
+  "root": "root",
+  "resources": [],
+  "parameters": [],
+  "overrides": [],
+  "slots": [],
+  "nodes": [
+    { "id": "root", "components": { "transform": { "position": [1.5, 0, 0] } } },
+    { "id": "body", "parent": "root", "components": { "visual": { "resource": "visual.ember-enemy" } } }
+  ]
+}

@@ -6,6 +6,7 @@ import { fileURLToPath } from "node:url";
 import {
   CONTENT_MIGRATIONS,
   canonicalJson,
+  compileSceneGraph,
   compileContentPack,
   contentPackCacheKey,
   collectOrigins,
@@ -56,6 +57,10 @@ test("a pack compiles to identical bytes for identical inputs", () => {
   assert.equal(first.sha256, second.sha256);
   assert.deepEqual(Buffer.from(first.bytes), Buffer.from(second.bytes));
   assert.equal(contentPackCacheKey(input()), contentPackCacheKey(input()));
+
+  const anotherTargetSchema = input();
+  anotherTargetSchema.documents[0].schema = "https://ludivra.dev/schemas/card-roguelite/v2";
+  assert.notEqual(contentPackCacheKey(anotherTargetSchema), contentPackCacheKey(input()));
 
   // Editing the source changes the identity of the artifact.
   const edited = input();
@@ -142,6 +147,88 @@ test("declared migrations are ordered, idempotent and recorded in the derived pa
     () => migrateContentDocument({ ...legacy, schemaVersion: 0 }, migration.to.schema),
     /CONTENT_MIGRATION_REQUIRED/
   );
+});
+
+test("scene graphs keep explicit identities stable and reject unresolved prefab bindings", () => {
+  const prefab = {
+    $schema: "https://ludivra.dev/schemas/prefab/v1",
+    schemaVersion: 1,
+    id: "prefab.hero",
+    root: "root",
+    resources: [],
+    parameters: [{ id: "team", type: "string", default: "hero" }],
+    overrides: [{ id: "appearance", target: "body", path: "/components/visual/resource", type: "string" }],
+    slots: [{ id: "weapon", required: true }],
+    nodes: [
+      { id: "body", parent: "root", components: { visual: { resource: "visual.hero" } } },
+      { id: "root" }
+    ]
+  };
+  const spark = {
+    $schema: "https://ludivra.dev/schemas/prefab/v1",
+    schemaVersion: 1,
+    id: "prefab.spark",
+    root: "root",
+    resources: [],
+    parameters: [],
+    overrides: [],
+    slots: [],
+    nodes: [{ id: "root", components: { vfxEmitter: { resource: "vfx.spark" } } }]
+  };
+  const scene = {
+    $schema: "https://ludivra.dev/schemas/scene/v1",
+    schemaVersion: 1,
+    id: "scene.arena",
+    root: "arena",
+    resources: [
+      { id: "visual.hero", kind: "visual", source: "visual.hero.production" },
+      { id: "visual.hero.alt", kind: "visual", source: "visual.hero.production.alt" },
+      { id: "vfx.spark", kind: "vfx", source: "effect.spark" }
+    ],
+    nodes: [
+      {
+        id: "hero",
+        parent: "arena",
+        prefab: "prefab.hero",
+        parameters: { team: "player" },
+        overrides: [{ id: "appearance", value: "visual.hero.alt" }],
+        slots: [{ id: "weapon", prefab: "prefab.spark" }]
+      },
+      { id: "arena", components: { camera: { projection: "orthographic" } } }
+    ]
+  };
+  const input = {
+    scenes: [{ id: scene.id, file: "scenes/arena.scene.jsonc", value: scene }],
+    prefabs: [
+      { id: prefab.id, file: "prefabs/hero.prefab.jsonc", value: prefab },
+      { id: spark.id, file: "prefabs/spark.prefab.jsonc", value: spark }
+    ]
+  };
+  const first = compileSceneGraph(input);
+  const reordered = structuredClone(input);
+  reordered.scenes[0].value.nodes.reverse();
+  reordered.prefabs.reverse();
+  reordered.prefabs[1].value.nodes.reverse();
+  assert.equal(compileSceneGraph(reordered).sha256, first.sha256);
+  assert.deepEqual(first.graph.scenes[0].nodes.map(({ id }) => id), ["arena", "hero"]);
+  assert.deepEqual(first.graph.prefabs.map(({ id }) => id), ["prefab.hero", "prefab.spark"]);
+
+  const forbiddenOverride = structuredClone(input);
+  forbiddenOverride.scenes[0].value.nodes[0].overrides[0].id = "forbidden";
+  assert.throws(() => compileSceneGraph(forbiddenOverride), /PREFAB_OVERRIDE_FORBIDDEN/);
+
+  const missingSlot = structuredClone(input);
+  delete missingSlot.scenes[0].value.nodes[0].slots;
+  assert.throws(() => compileSceneGraph(missingSlot), /PREFAB_SLOT_UNRESOLVED/);
+
+  const nonexistentOverrideField = structuredClone(input);
+  nonexistentOverrideField.prefabs[0].value.overrides[0].path = "/components/visual/missing";
+  assert.throws(() => compileSceneGraph(nonexistentOverrideField), /PREFAB_OVERRIDE_FORBIDDEN/);
+
+  const cycle = structuredClone(input);
+  cycle.prefabs[0].value.base = "prefab.spark";
+  cycle.prefabs[1].value.base = "prefab.hero";
+  assert.throws(() => compileSceneGraph(cycle), /SCENE_REFERENCE_CYCLE/);
 });
 
 test("duplicate symbols are refused instead of overwriting each other", () => {

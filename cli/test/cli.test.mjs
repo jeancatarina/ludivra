@@ -238,6 +238,30 @@ test("content validation and pack compilation migrate declared legacy content", 
   }
 });
 
+test("scene validation rejects an unresolved required prefab slot", () => {
+  const temporaryRoot = mkdtempSync(resolve(tmpdir(), "ludivra-scene-graph-"));
+  const project = resolve(temporaryRoot, "card-game");
+  try {
+    cpSync(resolve(fileURLToPath(new URL("../..", import.meta.url)), "examples/card-roguelite"), project, {
+      recursive: true,
+      filter: (source) => {
+        const normalized = source.replaceAll("\\", "/");
+        return !normalized.includes("/.ludivra") && !normalized.includes("/reports/runs/run_");
+      }
+    });
+    assert.equal(runCli(["status", "--project", project, "--format", "json"]).execution.status, 0);
+    const scenePath = resolve(project, "scenes/ember-vault.scene.jsonc");
+    const scene = parseJsonc(readFileSync(scenePath, "utf8"));
+    scene.nodes.find(({ id }) => id === "hero").slots = [];
+    writeFileSync(scenePath, `${JSON.stringify(scene, null, 2)}\n`);
+    const validated = runCli(["validate", "--scope", "project", "--project", project, "--format", "json"]);
+    assert.equal(validated.execution.status, 2);
+    assert.ok(validated.result.diagnostics.some(({ code }) => code === "PREFAB_SLOT_UNRESOLVED"));
+  } finally {
+    rmSync(temporaryRoot, { recursive: true, force: true });
+  }
+});
+
 test("declared UI projector validates the view model and reports deterministic reads", async () => {
   const root = fileURLToPath(new URL("../..", import.meta.url));
   const { BASE_LOCALE, createUiInspectionProjector, resolveUiLabel } = await import(
@@ -740,6 +764,8 @@ test("game content compiles a pack and traces a value to the line that authored 
     assert.match(built.result.data.sha256, /^[a-f0-9]{64}$/);
     assert.ok(existsSync(resolve(project, ".ludivra/content-pack.json")));
     assert.ok(built.result.artifacts.some(({ kind }) => kind === "content-pack"));
+    const graph = JSON.parse(readFileSync(resolve(project, ".ludivra/content-pack.json"), "utf8"));
+    assert.ok(graph.sections.documents.value["ludivra.scene-graph"]);
 
     // The stored file is exactly the canonical bytes the hash covers, so the hosts
     // compare the same identity the compiler produced.
@@ -756,6 +782,13 @@ test("game content compiles a pack and traces a value to the line that authored 
     assert.ok(inspected.result.data.symbols.includes("ember-vault.run.card.strike"));
     assert.ok(!inspected.result.data.symbols.some((symbol) => symbol.includes("run.ember-vault.run")));
 
+    const scene = runCli([
+      "content", "inspect", "--scene", "scene.ember-vault", "--project", project, "--format", "json"
+    ]);
+    assert.equal(scene.execution.status, 0, scene.execution.stdout);
+    assert.equal(scene.result.data.scene.root, "vault");
+    assert.deepEqual(scene.result.data.scene.nodes.map(({ id }) => id), ["enemy", "hero", "vault"]);
+
     const explained = runCli([
       "content", "explain", "--symbol", "ember-vault.run.card.strike", "--project", project, "--format", "json"
     ]);
@@ -763,6 +796,12 @@ test("game content compiles a pack and traces a value to the line that authored 
     assert.equal(explained.result.data.origin.file, "content/run.jsonc");
     assert.equal(explained.result.data.origin.pointer, "/cards/0");
     assert.ok(explained.result.data.origin.line > 1);
+
+    const explainedScene = runCli([
+      "content", "explain", "--symbol", "scene.ember-vault.hero", "--project", project, "--format", "json"
+    ]);
+    assert.equal(explainedScene.execution.status, 0);
+    assert.equal(explainedScene.result.data.origin.file, "scenes/ember-vault.scene.jsonc");
 
     const missing = runCli([
       "content", "explain", "--symbol", "absent.symbol", "--project", project, "--format", "json"

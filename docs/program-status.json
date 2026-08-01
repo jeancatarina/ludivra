@@ -3,8 +3,8 @@
   "release": "0.7.0",
   "currentFocus": {
     "phase": 4,
-    "summary": "Implementar schemas, compilação e inspeção do grafo textual de cenas e prefabs.",
-    "next": "Definir o schema do grafo de cenas e prefabs, compilar referências estáveis e expor inspeção por cenário."
+    "summary": "Implementar statecharts determinísticas de gameplay com save, hash, replay e diagnóstico.",
+    "next": "Definir o schema de statecharts, registrar guards/actions e validar save, hash e replay determinísticos."
   },
   "phases": [
     {
@@ -95,10 +95,14 @@
           "summary": "Migrations de conteúdo ordenadas, idempotentes e registradas no pack v2, com fixture de entrada/saída e recusa de container legado no kernel.",
           "capabilities": ["runtime.content-binding"],
           "evidence": ["contracts/content-migrations-v1.json", "content-compiler/src/migrations.ts", "content-compiler/test/fixtures/migrations/card-roguelite-v1.input.json"]
+        },
+        {
+          "summary": "Grafo text-first de scenes, prefabs e recursos compilado por IDs explícitos, com ciclos, overrides e slots rejeitados antes do build e inspeção rastreável pelo CLI.",
+          "capabilities": ["authoring.scene-graph"],
+          "evidence": ["schemas/scene.schema.json", "schemas/prefab.schema.json", "content-compiler/src/scene-graph.ts", "examples/card-roguelite/scenes/ember-vault.scene.jsonc"]
         }
       ],
       "remaining": [
-        "Grafo textual compilado de cenas, prefabs e recursos com IDs estáveis.",
         "Statecharts determinísticas com guards/actions registrados, save, hash e replay.",
         "Gate integrado de UI, localização, navegação, foco, touch targets e breakpoints."
       ],
@@ -281,17 +285,9 @@
   ],
   "tasks": [
     {
-      "id": "SCN-001",
-      "priority": "high",
-      "status": "in_progress",
-      "phase": 4,
-      "work": "Implementar schemas, compilação e inspeção do grafo textual de cenas e prefabs.",
-      "adrs": ["0048"]
-    },
-    {
       "id": "FSM-001",
       "priority": "high",
-      "status": "planned",
+      "status": "in_progress",
       "phase": 4,
       "work": "Implementar statecharts determinísticas de gameplay com save, hash, replay e diagnóstico.",
       "adrs": ["0053"]

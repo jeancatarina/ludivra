@@ -38,6 +38,41 @@
       ]
     },
     {
+      "id": "authoring.scene-graph",
+      "status": "experimental",
+      "version": "0.1.0",
+      "owner": "content-compiler",
+      "targets": [
+        "native-headless",
+        "browser",
+        "electron"
+      ],
+      "contracts": [
+        "schemas/game.schema.json",
+        "schemas/scene.schema.json",
+        "schemas/prefab.schema.json",
+        "content-compiler/src/scene-graph.ts"
+      ],
+      "examples": [
+        "examples/card-roguelite/scenes/ember-vault.scene.jsonc",
+        "examples/card-roguelite/prefabs/ember-hero.prefab.jsonc"
+      ],
+      "dependencies": [
+        "runtime.content-binding"
+      ],
+      "verification": [
+        "pnpm test:content",
+        "pnpm test:cli",
+        "pnpm game -- content inspect --scene scene.ember-vault --project examples/card-roguelite --format json"
+      ],
+      "limitations": [
+        {
+          "code": "SCENE_RUNTIME_SPAWN_NOT_IMPLEMENTED",
+          "message": "The graph is schema-validated, compiled and inspectable in the content pack; host-side scene spawning and lifecycle traces remain future work."
+        }
+      ]
+    },
+    {
       "id": "authoring.visual-forge",
       "status": "experimental",
       "version": "0.4.0",
@@ -304,7 +339,7 @@
     {
       "id": "runtime.content-binding",
       "status": "experimental",
-      "version": "0.3.0",
+      "version": "0.4.0",
       "owner": "content-compiler",
       "targets": [
         "native-headless",
@@ -315,10 +350,13 @@
         "contracts/content-migrations-v1.json",
         "schemas/game.schema.json",
         "schemas/card-roguelite-v1.schema.json",
-        "schemas/card-roguelite.schema.json"
+        "schemas/card-roguelite.schema.json",
+        "schemas/scene.schema.json",
+        "schemas/prefab.schema.json"
       ],
       "examples": [
-        "examples/card-roguelite/content/run.jsonc"
+        "examples/card-roguelite/content/run.jsonc",
+        "examples/card-roguelite/scenes/ember-vault.scene.jsonc"
       ],
       "dependencies": [
         "runtime.lua-gameplay"

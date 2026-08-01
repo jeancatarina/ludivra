@@ -1,0 +1,36 @@
+{
+  "$schema": "https://ludivra.dev/schemas/scene/v1",
+  "schemaVersion": 1,
+  "id": "scene.ember-vault",
+  "root": "vault",
+  "resources": [
+    { "id": "visual.ember-hero", "kind": "visual", "source": "visual.ember-hero.production" },
+    { "id": "visual.ember-hero.alt", "kind": "visual", "source": "visual.ember-hero.production.alt" },
+    { "id": "visual.ember-enemy", "kind": "visual", "source": "visual.ember-enemy.production" },
+    { "id": "vfx.ember-spark", "kind": "vfx", "source": "effect.card.impact" }
+  ],
+  "nodes": [
+    {
+      "id": "vault",
+      "components": {
+        "camera": { "projection": "orthographic" },
+        "light": { "kind": "ambient", "color": 16739638, "intensity": 0.6 }
+      }
+    },
+    {
+      "id": "hero",
+      "parent": "vault",
+      "prefab": "prefab.ember-hero",
+      "parameters": { "faction": "vault" },
+      "overrides": [{ "id": "appearance", "value": "visual.ember-hero.alt" }],
+      "slots": [{ "id": "weapon", "prefab": "prefab.ember-spark" }],
+      "components": { "spawnBinding": { "id": "player" } }
+    },
+    {
+      "id": "enemy",
+      "parent": "vault",
+      "prefab": "prefab.ember-enemy",
+      "components": { "spawnBinding": { "id": "enemy" } }
+    }
+  ]
+}

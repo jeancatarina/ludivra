@@ -51,7 +51,7 @@
 | [0045](docs/adr/0045-wasm-threads-and-shared-memory.md) | provisório | Threads e memória compartilhada no WebAssembly | 2026-07-24 |
 | [0046](docs/adr/0046-generated-program-documentation.md) | aceito | Estado do programa estruturado e documentação derivada | 2026-07-25 |
 | [0047](docs/adr/0047-desktop-rendering-profiles-and-backend-policy.md) | provisório | Perfis gráficos desktop e política de backend | 2026-07-26 |
-| [0048](docs/adr/0048-textual-scene-prefab-and-resource-graph.md) | provisório | Scene, prefab e resource graph text-first | 2026-07-26 |
+| [0048](docs/adr/0048-textual-scene-prefab-and-resource-graph.md) | aceito | Scene, prefab e resource graph text-first | 2026-07-26 |
 | [0049](docs/adr/0049-asset-ingest-cooking-and-residency.md) | provisório | Ingestão, cooking e residência de assets | 2026-07-26 |
 | [0050](docs/adr/0050-material-shader-environment-and-render-feature-tiers.md) | provisório | Materiais, shaders, ambiente e tiers de renderização | 2026-07-26 |
 | [0051](docs/adr/0051-animation-graph-and-skeletal-runtime.md) | provisório | Animation Graph e runtime esquelético | 2026-07-26 |
