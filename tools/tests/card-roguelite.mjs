@@ -49,7 +49,7 @@ for (const [scenario, state] of expected) {
 const built = game(["content", "build", "--project", project]);
 assert.equal(built.status, "passed");
 const pack = JSON.parse(readFileSync(resolve(project, ".ludivra/content-pack.json"), "utf8"));
-assert.equal(pack.packFormatVersion, 1);
+assert.equal(pack.packFormatVersion, 2);
 const documents = pack.sections.documents.value;
 assert.ok(documents["ember-vault.run"].cards.length >= 3, "the run document travels in the pack");
 assert.ok(documents["ludivra.game"].inputs.length >= 1, "the manifest binding travels in the pack");

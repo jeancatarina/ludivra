@@ -5,8 +5,8 @@
 | Campo | Valor |
 |---|---|
 | Release atual | 0.7.0 |
-| Foco atual | Fase 4 — Implementar migrations explícitas do content pack e suas fixtures. |
-| Próxima entrega | Definir uma cadeia de migrations do content pack, rejeitar saltos ambíguos e cobrir cada versão com fixtures. |
+| Foco atual | Fase 4 — Implementar schemas, compilação e inspeção do grafo textual de cenas e prefabs. |
+| Próxima entrega | Definir o schema do grafo de cenas e prefabs, compilar referências estáveis e expor inspeção por cenário. |
 | Fonte editável de progresso | [docs/program-status.json](docs/program-status.json) |
 | Decisão do modelo documental | [ADR 0046](docs/adr/0046-generated-program-documentation.md) |
 
@@ -26,7 +26,7 @@
 | 1 | Estado canônico e catálogo de capacidades | `CONCLUÍDA` | nenhuma no gate atual |
 | 2 | Context Engine, CLI e Development Runner | `CONCLUÍDA` | nenhuma no gate atual |
 | 3 | AI Control Plane e observabilidade causal | `CONCLUÍDA` | nenhuma no gate atual |
-| 4 | Autoria text-first de gameplay, UI e conteúdo | `EM ANDAMENTO` | Migrations explícitas de schema e conteúdo com fixtures. |
+| 4 | Autoria text-first de gameplay, UI e conteúdo | `EM ANDAMENTO` | Grafo textual compilado de cenas, prefabs e recursos com IDs estáveis. |
 | 5 | Runtime espacial e mundo procedural | `PARCIAL` | Jobs assíncronos reais sem alterar a ordem de commit. |
 | 6 | Motion, física e Mass Simulation | `PLANEJADA` | Motion por tempo declarado e comandos semânticos. |
 | 7 | Persistência, replays e multiplayer player-hosted | `PARCIAL` | Region storage atômico com journal, compactação, recovery e migrations. |
@@ -123,10 +123,10 @@ Permitir que jogos sejam criados por APIs públicas textuais sem alterar interna
 - SDK Lua v1 versionado com símbolos semânticos, queries declarativas medidas, tempo lógico, timers, RNG, conteúdo compilado e diagnósticos estáveis. Capabilities: `runtime.lua-gameplay`. Evidência: [contracts/lua-sdk-v1.json](contracts/lua-sdk-v1.json), [kernel/src/lua_sandbox.cpp](kernel/src/lua_sandbox.cpp), [tests/runtime/runtime_test.cpp](tests/runtime/runtime_test.cpp).
 - Projector de UI read-only declarado no manifesto, executado após commit e medido por leituras de estado e nós emitidos. Capabilities: `presentation.readonly-projectors`. Evidência: [contracts/ui-inspection-projector.schema.json](contracts/ui-inspection-projector.schema.json), [presentation-protocol/src/ui-inspection-projector.ts](presentation-protocol/src/ui-inspection-projector.ts), [cli/test/cli.test.mjs](cli/test/cli.test.mjs).
 - Content pack versionado, determinístico, rastreável e carregado pelo kernel em todos os hosts. Capabilities: `runtime.content-binding`. Evidência: [content-compiler/src/pack.ts](content-compiler/src/pack.ts), [kernel/src/content_pack.cpp](kernel/src/content_pack.cpp), [tools/tests/card-roguelite.mjs](tools/tests/card-roguelite.mjs).
+- Migrations de conteúdo ordenadas, idempotentes e registradas no pack v2, com fixture de entrada/saída e recusa de container legado no kernel. Capabilities: `runtime.content-binding`. Evidência: [contracts/content-migrations-v1.json](contracts/content-migrations-v1.json), [content-compiler/src/migrations.ts](content-compiler/src/migrations.ts), [content-compiler/test/fixtures/migrations/card-roguelite-v1.input.json](content-compiler/test/fixtures/migrations/card-roguelite-v1.input.json).
 
 ### Falta
 
-- Migrations explícitas de schema e conteúdo com fixtures.
 - Grafo textual compilado de cenas, prefabs e recursos com IDs estáveis.
 - Statecharts determinísticas com guards/actions registrados, save, hash e replay.
 - Gate integrado de UI, localização, navegação, foco, touch targets e breakpoints.

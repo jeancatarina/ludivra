@@ -11,7 +11,7 @@
   "content": [
     {
       "id": "ember-vault.run",
-      "schema": "https://ludivra.dev/schemas/card-roguelite/v1",
+      "schema": "https://ludivra.dev/schemas/card-roguelite/v2",
       "source": "content/run.jsonc"
     }
   ],

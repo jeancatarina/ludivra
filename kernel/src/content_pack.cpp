@@ -291,6 +291,15 @@ bool ContentPack::install(lua_State* state, const std::string_view bytes, std::s
     lua_settop(state, base);
     return false;
   }
+  lua_getfield(state, -1, "packFormatVersion");
+  const bool supported_version = lua_isinteger(state, -1) != 0 &&
+      lua_tointeger(state, -1) == ContentPack::format_version;
+  lua_pop(state, 1);
+  if (!supported_version) {
+    error = "CONTENT_PACK_FORMAT_UNSUPPORTED";
+    lua_settop(state, base);
+    return false;
+  }
 
   // Only the documents section reaches gameplay; symbols, origin and strings are
   // authoring evidence, consumed by tools rather than by the game.
@@ -300,6 +309,19 @@ bool ContentPack::install(lua_State* state, const std::string_view bytes, std::s
     lua_settop(state, base);
     return false;
   }
+  lua_getfield(state, -1, "migrations");
+  if (lua_type(state, -1) != LUA_TTABLE) {
+    error = "CONTENT_PACK_FORMAT_UNSUPPORTED";
+    lua_settop(state, base);
+    return false;
+  }
+  lua_getfield(state, -1, "value");
+  if (lua_type(state, -1) != LUA_TTABLE) {
+    error = "CONTENT_PACK_FORMAT_UNSUPPORTED";
+    lua_settop(state, base);
+    return false;
+  }
+  lua_pop(state, 2);
   lua_getfield(state, -1, "documents");
   if (lua_type(state, -1) != LUA_TTABLE) {
     error = "CONTENT_PACK_FORMAT_UNSUPPORTED";

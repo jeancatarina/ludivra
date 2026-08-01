@@ -210,6 +210,34 @@ test("validate rejects card content that references an absent manifest action", 
   }
 });
 
+test("content validation and pack compilation migrate declared legacy content", () => {
+  const temporaryRoot = mkdtempSync(resolve(tmpdir(), "ludivra-content-migration-"));
+  const project = resolve(temporaryRoot, "card-game");
+  const root = fileURLToPath(new URL("../..", import.meta.url));
+  try {
+    cpSync(resolve(root, "examples/card-roguelite"), project, {
+      recursive: true,
+      filter: (source) => {
+        const normalized = source.replaceAll("\\", "/");
+        return !normalized.includes("/.ludivra") && !normalized.includes("/reports/runs/run_");
+      }
+    });
+    const fixture = readFileSync(resolve(root, "content-compiler/test/fixtures/migrations/card-roguelite-v1.input.json"), "utf8");
+    writeFileSync(resolve(project, "content/run.jsonc"), fixture);
+    assert.equal(runCli(["status", "--project", project, "--format", "json"]).execution.status, 0);
+    const validated = runCli(["validate", "--scope", "project", "--project", project, "--format", "json"]);
+    assert.equal(validated.execution.status, 0, JSON.stringify(validated.result.diagnostics));
+    const built = runCli(["content", "build", "--project", project, "--format", "json"]);
+    assert.equal(built.execution.status, 0, JSON.stringify(built.result.diagnostics));
+    const pack = JSON.parse(readFileSync(resolve(project, ".ludivra/content-pack.json"), "utf8"));
+    assert.equal(pack.packFormatVersion, 2);
+    assert.deepEqual(pack.sections.migrations.value[0].applied.map(({ id }) => id), ["card-roguelite-v1-to-v2"]);
+    assert.equal(pack.sections.documents.value["ember-vault.run"].run.rewardHealAmount, 3);
+  } finally {
+    rmSync(temporaryRoot, { recursive: true, force: true });
+  }
+});
+
 test("declared UI projector validates the view model and reports deterministic reads", async () => {
   const root = fileURLToPath(new URL("../..", import.meta.url));
   const { BASE_LOCALE, createUiInspectionProjector, resolveUiLabel } = await import(

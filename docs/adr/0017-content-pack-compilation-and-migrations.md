@@ -1,10 +1,10 @@
 # ADR 0017 — Content pack compilado, mapa de símbolos e migrations
 
-- Status: provisório
+- Status: aceito
 - Data: 2026-07-24
 - Revisão: antes de codificar qualquer seção em binário ou de aceitar um segundo formato autoritativo de conteúdo
 - Complementa: [ADR 0011](0011-card-roguelite-content-and-authority.md) e [ADR 0016](0016-public-lua-sdk-layers-and-escape-hatches.md)
-- Fecha: item "formato de content pack" da seção 36 de [architecture.md](../../architecture.md), com encoding JSON canônico na versão 1
+- Fecha: item "formato de content pack" da seção 36 de [architecture.md](../../architecture.md), com encoding JSON canônico na versão 2
 - Fase: 4
 
 ## Contexto
@@ -29,7 +29,7 @@ O formato é um container com `packFormatVersion`, cabeçalho, índice de seçõ
 
 Cada seção declara seu encoding. O encoding inicial de todas é JSON canônico — ordem de chaves determinada, sem espaço redundante, sem número em ponto flutuante quando o valor é lógico, sem timestamp, sem caminho absoluto e sem dependência de locale.
 
-O encoding da versão 1 fica decidido aqui: **JSON canônico em todas as seções**. Não há decisão pendente — trocar uma seção para binário exige benchmark que demonstre custo de parse relevante e revisão deste ADR, que é a condição declarada no cabeçalho. Buffers de apresentação são problema separado e não compartilham este formato.
+O encoding da versão 2 fica decidido aqui: **JSON canônico em todas as seções**. Além das seções iniciais, a versão 2 inclui `migrations`, que registra a cadeia aplicada a cada documento antes de ele entrar no pack. Não há decisão pendente — trocar uma seção para binário exige benchmark que demonstre custo de parse relevante e revisão deste ADR, que é a condição declarada no cabeçalho. Buffers de apresentação são problema separado e não compartilham este formato.
 
 ### Determinismo de bytes
 
@@ -49,15 +49,15 @@ A ponte `composeGameplaySource` permanece válida somente até o pack carregar e
 
 ### Versão e migrations
 
-`packFormatVersion` versiona o container; cada documento mantém a versão do seu schema. Migrations são explícitas, ordenadas, idempotentes e cobertas por fixture de entrada e saída. Um pack de versão não suportada é `CONTENT_PACK_FORMAT_UNSUPPORTED`; um pack válido mas defasado em relação às fontes é `CONTENT_PACK_STALE`.
+`packFormatVersion` versiona o container; cada documento mantém a versão do seu schema. O registro versionado em `contracts/content-migrations-v1.json` é a única cadeia autorizada: cada transição declara origem, destino, operação e fixture de entrada/saída. A ferramenta aplica a cadeia antes da validação final e grava a evidência na seção `migrations`; aplicar novamente um documento já no destino não o altera. Duas saídas para a mesma origem são `CONTENT_MIGRATION_AMBIGUOUS`; ausência de caminho é `CONTENT_MIGRATION_REQUIRED`.
 
-Migração silenciosa no carregamento é proibida: o pack é regenerado pela ferramenta, com diagnóstico, e nunca reinterpretado por tentativa.
+Migração silenciosa no carregamento é proibida: o pack é regenerado pela ferramenta, com diagnóstico, e nunca reinterpretado por tentativa. O kernel aceita somente `packFormatVersion: 2` e recusa o container v1 com `CONTENT_PACK_FORMAT_UNSUPPORTED`.
 
 ### Fora do escopo
 
 Este ADR não decide formato de asset produzido pelos Forges, buffers de apresentação, streaming de conteúdo por região nem compressão. Localização resolve texto no host, conforme o ADR 0014; o pack transporta apenas chaves e parâmetros.
 
-Códigos: `CONTENT_PACK_STALE`, `CONTENT_PACK_FORMAT_UNSUPPORTED`, `CONTENT_PACK_HASH_MISMATCH`, `CONTENT_PACK_NONDETERMINISTIC`, `CONTENT_SYMBOL_UNKNOWN`, `CONTENT_MIGRATION_REQUIRED`.
+Códigos: `CONTENT_PACK_STALE`, `CONTENT_PACK_FORMAT_UNSUPPORTED`, `CONTENT_PACK_HASH_MISMATCH`, `CONTENT_PACK_NONDETERMINISTIC`, `CONTENT_SYMBOL_UNKNOWN`, `CONTENT_MIGRATION_REQUIRED`, `CONTENT_MIGRATION_AMBIGUOUS`.
 
 ## Consequências
 

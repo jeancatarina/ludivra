@@ -58,7 +58,7 @@ export async function ensureContentPack(project: string): Promise<ContentPackRes
       });
       continue;
     }
-    documents.push({ id: descriptor.id, file: descriptor.source, source, value });
+    documents.push({ id: descriptor.id, schema: descriptor.schema, file: descriptor.source, source, value });
   }
 
   // The manifest binding is a document like any other: it is how gameplay reaches

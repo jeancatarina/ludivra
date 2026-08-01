@@ -20,7 +20,7 @@
 | [0014](docs/adr/0014-declarative-ui-contracts-and-initial-renderer.md) | aceito | Contratos de UI declarativa e renderer inicial | 2026-07-24 |
 | [0015](docs/adr/0015-raster-capture-and-visual-baselines.md) | aceito | Captura raster, baselines visuais e evidência de pixels | 2026-07-24 |
 | [0016](docs/adr/0016-public-lua-sdk-layers-and-escape-hatches.md) | aceito | Camadas do SDK Lua público e escape hatches | 2026-07-24 |
-| [0017](docs/adr/0017-content-pack-compilation-and-migrations.md) | provisório | Content pack compilado, mapa de símbolos e migrations | 2026-07-24 |
+| [0017](docs/adr/0017-content-pack-compilation-and-migrations.md) | aceito | Content pack compilado, mapa de símbolos e migrations | 2026-07-24 |
 | [0018](docs/adr/0018-numeric-determinism-and-rng-streams.md) | provisório | Determinismo numérico: fixed-point e streams de PRNG | 2026-07-24 |
 | [0019](docs/adr/0019-spatial-model-chunk-lifecycle-and-job-commit.md) | provisório | Modelo espacial, lifecycle de chunk e commit de jobs | 2026-07-24 |
 | [0020](docs/adr/0020-presentation-buffers-and-wasm-memory.md) | provisório | Buffers de apresentação e memória WebAssembly | 2026-07-24 |

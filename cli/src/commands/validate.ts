@@ -6,6 +6,7 @@ import type { Diagnostic } from "../generated/cli-result.js";
 import { optionValue } from "../arguments.js";
 import { sha256 } from "../artifact-hash.js";
 import { createContractValidator } from "../contract-validator.js";
+import { migrateContentDocument } from "@ludivra/content-compiler";
 import type { ProjectState } from "../generated/operability.js";
 import { findEngineRoot } from "../repository.js";
 import { repositoriesMatch, repositoryFingerprint } from "../repository-state.js";
@@ -24,6 +25,7 @@ const requiredFiles = [
   "contracts/cli-result.schema.json",
   "contracts/capability-catalog.schema.json",
   "contracts/capability-manifest.schema.json",
+  "contracts/content-migrations-v1.json",
   "contracts/control-protocol.schema.json",
   "contracts/desktop-host.schema.json",
   "contracts/project-state.schema.json",
@@ -33,6 +35,7 @@ const requiredFiles = [
   "contracts/ui-inspection-projector.schema.json",
   "docs/program-status.json",
   "schemas/card-roguelite.schema.json",
+  "schemas/card-roguelite-v1.schema.json",
   "schemas/character-spec.schema.json",
   "schemas/scenario.schema.json",
   "schemas/texture-request.schema.json",
@@ -49,6 +52,7 @@ const jsonFiles = [
   "contracts/capability-catalog.source.json",
   "contracts/capability-catalog.schema.json",
   "contracts/capability-manifest.schema.json",
+  "contracts/content-migrations-v1.json",
   "contracts/cli-result.schema.json",
   "contracts/control-protocol.schema.json",
   "contracts/desktop-host.schema.json",
@@ -59,6 +63,7 @@ const jsonFiles = [
   "contracts/ui-inspection-projector.schema.json",
   "docs/program-status.json",
   "schemas/card-roguelite.schema.json",
+  "schemas/card-roguelite-v1.schema.json",
   "schemas/character-spec.schema.json",
   "schemas/game.schema.json",
   "schemas/scenario.schema.json",
@@ -80,6 +85,7 @@ const contractSchemaFiles = [
   "contracts/run-manifest.schema.json",
   "contracts/ui-inspection-projector.schema.json",
   "schemas/card-roguelite.schema.json",
+  "schemas/card-roguelite-v1.schema.json",
   "schemas/texture-request.schema.json",
   "schemas/character-spec.schema.json",
   "schemas/game.schema.json",
@@ -603,27 +609,43 @@ export async function runValidate(arguments_: string[] = []): Promise<CommandOut
                 diagnostics.push({ code: "CONTENT_SCHEMA_UNKNOWN", severity: "error", message: `No registered schema for content: ${descriptor.schema}`, file: contentPath });
                 continue;
               }
-              if (contentErrors.length > 0 || !contentValidator(document)) {
+              if (contentErrors.length > 0) {
                 diagnostics.push({
                   code: "CONTENT_SCHEMA_INVALID",
                   severity: "error",
-                  message: contentErrors.length > 0
-                    ? "Content is not valid JSONC"
-                    : contentValidator.errors?.map((error) => `${error.instancePath} ${error.message}`).join("; ") ?? "Content is invalid",
+                  message: "Content is not valid JSONC",
+                  file: contentPath
+                });
+                continue;
+              }
+              let migratedDocument: typeof document;
+              try {
+                migratedDocument = migrateContentDocument(document, descriptor.schema).value as typeof document;
+              } catch (error) {
+                const message = error instanceof Error ? error.message : "Content migration failed";
+                const code = message.match(/^CONTENT_MIGRATION_[A-Z_]+/)?.[0] ?? "CONTENT_MIGRATION_REQUIRED";
+                diagnostics.push({ code, severity: "error", message, file: contentPath });
+                continue;
+              }
+              if (!contentValidator(migratedDocument)) {
+                diagnostics.push({
+                  code: "CONTENT_SCHEMA_INVALID",
+                  severity: "error",
+                  message: contentValidator.errors?.map((error) => `${error.instancePath} ${error.message}`).join("; ") ?? "Content is invalid",
                   file: contentPath
                 });
                 continue;
               }
               contentFilesChecked += 1;
-              if (document.id !== descriptor.id || document.$schema !== descriptor.schema) {
+              if (migratedDocument.id !== descriptor.id || migratedDocument.$schema !== descriptor.schema) {
                 diagnostics.push({ code: "CONTENT_DESCRIPTOR_MISMATCH", severity: "error", message: `Content descriptor does not match document ${descriptor.id}`, file: contentPath });
               }
-              const cardIds = (document.cards ?? []).map(({ id }) => id);
-              const cardActions = (document.cards ?? []).map(({ action }) => action);
+              const cardIds = (migratedDocument.cards ?? []).map(({ id }) => id);
+              const cardActions = (migratedDocument.cards ?? []).map(({ action }) => action);
               if (new Set(cardIds).size !== cardIds.length || new Set(cardActions).size !== cardActions.length || cardActions.some((action) => !manifestActions.has(action))) {
                 diagnostics.push({ code: "CONTENT_CARD_CONTRACT_INVALID", severity: "error", message: "Card IDs/actions must be unique and reference declared content actions", file: contentPath });
               }
-              const roomIds = (document.rooms ?? []).map(({ id }) => id);
+              const roomIds = (migratedDocument.rooms ?? []).map(({ id }) => id);
               if (new Set(roomIds).size !== roomIds.length) {
                 diagnostics.push({ code: "CONTENT_ROOM_ID_DUPLICATE", severity: "error", message: "Room IDs must be unique", file: contentPath });
               }

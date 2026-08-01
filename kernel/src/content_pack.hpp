@@ -17,6 +17,8 @@ namespace ludivra::kernel {
  */
 class ContentPack final {
  public:
+  static constexpr int format_version = 2;
+
   /**
  * Parses the pack and stores its documents in the Lua registry. The public SDK
  * reaches a document only through `SDK.content.get(id)`, so the backing table

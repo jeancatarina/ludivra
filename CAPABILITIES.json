@@ -304,7 +304,7 @@
     {
       "id": "runtime.content-binding",
       "status": "experimental",
-      "version": "0.2.0",
+      "version": "0.3.0",
       "owner": "content-compiler",
       "targets": [
         "native-headless",
@@ -312,7 +312,9 @@
         "electron"
       ],
       "contracts": [
+        "contracts/content-migrations-v1.json",
         "schemas/game.schema.json",
+        "schemas/card-roguelite-v1.schema.json",
         "schemas/card-roguelite.schema.json"
       ],
       "examples": [
@@ -324,13 +326,10 @@
       "verification": [
         "pnpm test:content",
         "pnpm test:native",
+        "pnpm test:cli",
         "pnpm test:card-roguelite"
       ],
       "limitations": [
-        {
-          "code": "CONTENT_MIGRATIONS_NOT_IMPLEMENTED",
-          "message": "The versioned content pack is compiled and loaded by the kernel, but explicit schema migration chains and their fixtures are not implemented."
-        },
         {
           "code": "CONTENT_NULL_NOT_SUPPORTED",
           "message": "The experimental Lua content binding rejects JSON null instead of assigning it ambiguous Lua nil semantics."

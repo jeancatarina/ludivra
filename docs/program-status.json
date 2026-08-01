@@ -3,8 +3,8 @@
   "release": "0.7.0",
   "currentFocus": {
     "phase": 4,
-    "summary": "Implementar migrations explícitas do content pack e suas fixtures.",
-    "next": "Definir uma cadeia de migrations do content pack, rejeitar saltos ambíguos e cobrir cada versão com fixtures."
+    "summary": "Implementar schemas, compilação e inspeção do grafo textual de cenas e prefabs.",
+    "next": "Definir o schema do grafo de cenas e prefabs, compilar referências estáveis e expor inspeção por cenário."
   },
   "phases": [
     {
@@ -90,10 +90,14 @@
           "summary": "Content pack versionado, determinístico, rastreável e carregado pelo kernel em todos os hosts.",
           "capabilities": ["runtime.content-binding"],
           "evidence": ["content-compiler/src/pack.ts", "kernel/src/content_pack.cpp", "tools/tests/card-roguelite.mjs"]
+        },
+        {
+          "summary": "Migrations de conteúdo ordenadas, idempotentes e registradas no pack v2, com fixture de entrada/saída e recusa de container legado no kernel.",
+          "capabilities": ["runtime.content-binding"],
+          "evidence": ["contracts/content-migrations-v1.json", "content-compiler/src/migrations.ts", "content-compiler/test/fixtures/migrations/card-roguelite-v1.input.json"]
         }
       ],
       "remaining": [
-        "Migrations explícitas de schema e conteúdo com fixtures.",
         "Grafo textual compilado de cenas, prefabs e recursos com IDs estáveis.",
         "Statecharts determinísticas com guards/actions registrados, save, hash e replay.",
         "Gate integrado de UI, localização, navegação, foco, touch targets e breakpoints."
@@ -277,17 +281,9 @@
   ],
   "tasks": [
     {
-      "id": "CNT-001",
-      "priority": "high",
-      "status": "in_progress",
-      "phase": 4,
-      "work": "Implementar migrations explícitas do content pack e suas fixtures.",
-      "adrs": ["0017"]
-    },
-    {
       "id": "SCN-001",
       "priority": "high",
-      "status": "planned",
+      "status": "in_progress",
       "phase": 4,
       "work": "Implementar schemas, compilação e inspeção do grafo textual de cenas e prefabs.",
       "adrs": ["0048"]

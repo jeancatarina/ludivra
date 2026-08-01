@@ -1,6 +1,6 @@
 {
-  "$schema": "https://ludivra.dev/schemas/card-roguelite/v1",
-  "schemaVersion": 1,
+  "$schema": "https://ludivra.dev/schemas/card-roguelite/v2",
+  "schemaVersion": 2,
   "id": "ember-vault.run",
   "phases": {
     "idle": 0,
@@ -12,7 +12,7 @@
   "run": {
     "maxHealth": 20,
     "startingEnergy": 3,
-    "rewardHeal": 3
+    "rewardHealAmount": 3
   },
   "cards": [
     {

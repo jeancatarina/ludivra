@@ -2,13 +2,12 @@
 
 > Gerado de `docs/program-status.json` por `tools/program-status/generate.mjs`. Não edite manualmente.
 
-Foco atual: **Fase 4 — Implementar migrations explícitas do content pack e suas fixtures.**
+Foco atual: **Fase 4 — Implementar schemas, compilação e inspeção do grafo textual de cenas e prefabs.**
 
 | ID | Prioridade | Estado | Fase | Trabalho | ADRs |
 |---|---|---|---:|---|---|
-| CNT-001 | alta | em andamento | 4 | Implementar migrations explícitas do content pack e suas fixtures. | [ADR 0017](docs/adr/0017-content-pack-compilation-and-migrations.md) |
+| SCN-001 | alta | em andamento | 4 | Implementar schemas, compilação e inspeção do grafo textual de cenas e prefabs. | [ADR 0048](docs/adr/0048-textual-scene-prefab-and-resource-graph.md) |
 | FSM-001 | alta | planejado | 4 | Implementar statecharts determinísticas de gameplay com save, hash, replay e diagnóstico. | [ADR 0053](docs/adr/0053-deterministic-gameplay-statecharts.md) |
-| SCN-001 | alta | planejado | 4 | Implementar schemas, compilação e inspeção do grafo textual de cenas e prefabs. | [ADR 0048](docs/adr/0048-textual-scene-prefab-and-resource-graph.md) |
 | NAV-001 | alta | planejado | 5 | Implementar contratos de regiões, pathfinding, links, obstacles, agents e avoidance com fixture de benchmark. | [ADR 0054](docs/adr/0054-navigation-regions-pathfinding-and-avoidance.md) |
 | WORLD-001 | alta | planejado | 5 | Adicionar jobs assíncronos, Simulation LOD e inspeção espacial após o gate da Fase 4. | [ADR 0019](docs/adr/0019-spatial-model-chunk-lifecycle-and-job-commit.md), [ADR 0045](docs/adr/0045-wasm-threads-and-shared-memory.md) |
 | ANM-001 | alta | planejado | 8 | Implementar grafo de animação, retarget, IK, layers, masks e root motion controlado. | [ADR 0051](docs/adr/0051-animation-graph-and-skeletal-runtime.md) |

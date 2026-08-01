@@ -144,7 +144,7 @@ export class LudivraRuntime {
 
   /**
    * Installs the compiled content pack. It must precede `loadGameplay`, because a
-   * gameplay module reads `CONTENT` at load time as well as during a tick.
+   * gameplay module may resolve `SDK.content` at load time as well as during a tick.
    */
   loadContentPack(bytes: Uint8Array): void {
     const pointer = this.module._malloc(bytes.length);

@@ -225,9 +225,9 @@ int main() {
     // ADR 0017: content reaches gameplay from the pack, read-only, and a pack that
     // does not parse is refused instead of partially installed.
     const std::string pack =
-        R"({"packFormatVersion":1,"generatorVersion":1,"sections":{"documents":{"sha256":"x","value":)"
+        R"({"packFormatVersion":2,"generatorVersion":2,"sections":{"documents":{"sha256":"x","value":)"
         R"({"ember-vault.run":{"cards":[{"damage":6,"id":"card.strike"}]}}},"origin":{"sha256":"x","value":{}},)"
-        R"("strings":{"sha256":"x","value":{}},"symbols":{"sha256":"x","value":{}}}})";
+        R"("strings":{"sha256":"x","value":{}},"symbols":{"sha256":"x","value":{}},"migrations":{"sha256":"x","value":[]}}})";
     auto* content = create_runtime(context);
     context.expect(
         ludivra_runtime_declare_symbol(content, LUDIVRA_SYMBOL_STATE, "score", 5U, 1U) == LUDIVRA_OK,
@@ -252,8 +252,25 @@ int main() {
         "the read-only failure carries its code");
     ludivra_runtime_destroy(content);
 
+    const std::string legacy = R"({"packFormatVersion":1,"sections":{"documents":{"value":{}}}})";
+    auto* outdated = create_runtime(context);
+    context.expect(
+        ludivra_runtime_load_content_pack(outdated, legacy.data(), static_cast<uint32_t>(legacy.size())) ==
+            LUDIVRA_ERROR_CONTENT_PACK_INVALID,
+        "an outdated content pack is refused");
+    ludivra_runtime_destroy(outdated);
+
+    const std::string incomplete = R"({"packFormatVersion":2,"sections":{"documents":{"value":{}}}})";
+    auto* missing_migrations = create_runtime(context);
+    context.expect(
+        ludivra_runtime_load_content_pack(
+            missing_migrations, incomplete.data(), static_cast<uint32_t>(incomplete.size())) ==
+            LUDIVRA_ERROR_CONTENT_PACK_INVALID,
+        "a v2 pack without its migration section is refused");
+    ludivra_runtime_destroy(missing_migrations);
+
     auto* broken = create_runtime(context);
-    const std::string malformed = R"({"packFormatVersion":1,"sections":)";
+    const std::string malformed = R"({"packFormatVersion":2,"sections":)";
     context.expect(
         ludivra_runtime_load_content_pack(broken, malformed.data(), static_cast<uint32_t>(malformed.size())) ==
             LUDIVRA_ERROR_CONTENT_PACK_INVALID,

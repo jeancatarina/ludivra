@@ -133,7 +133,7 @@ local function choose_reward(ctx)
   local room = RUN.rooms[next_room]
   local health = get_value(ctx, S.player_health)
   set_value(ctx, S.phase, P.combat)
-  set_value(ctx, S.player_health, math.min(RUN.run.maxHealth, health + RUN.run.rewardHeal))
+  set_value(ctx, S.player_health, math.min(RUN.run.maxHealth, health + RUN.run.rewardHealAmount))
   set_value(ctx, S.enemy_health, room.enemy.health)
   set_value(ctx, S.energy, RUN.run.startingEnergy)
   set_value(ctx, S.block, 0)

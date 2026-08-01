@@ -1,12 +1,19 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
 import test from "node:test";
+import { fileURLToPath } from "node:url";
 import {
+  CONTENT_MIGRATIONS,
   canonicalJson,
   compileContentPack,
   contentPackCacheKey,
   collectOrigins,
+  migrateContentDocument,
   readContentPack
 } from "../dist/index.js";
+
+const root = fileURLToPath(new URL("../..", import.meta.url));
 
 const runSource = `{
   // Conteúdo do vertical slice. O documento declara seu próprio id na raiz,
@@ -98,6 +105,43 @@ test("a pack is refused when its version or its section hash does not match", ()
     "CONTENT_PACK_FORMAT_UNSUPPORTED"
   );
   assert.equal(readContentPack(new TextEncoder().encode("not json")).failure, "CONTENT_PACK_FORMAT_UNSUPPORTED");
+});
+
+test("declared migrations are ordered, idempotent and recorded in the derived pack", () => {
+  const migration = CONTENT_MIGRATIONS[0];
+  assert.ok(migration);
+  const legacy = JSON.parse(readFileSync(resolve(root, migration.fixtures.input), "utf8"));
+  const expected = JSON.parse(readFileSync(resolve(root, migration.fixtures.output), "utf8"));
+  const migrated = migrateContentDocument(legacy, migration.to.schema);
+  assert.deepEqual(migrated.value, expected);
+  assert.deepEqual(migrated.applied.map(({ id }) => id), [migration.id]);
+  assert.deepEqual(migrateContentDocument(migrated.value, migration.to.schema).value, expected);
+
+  const compiled = compileContentPack({
+    documents: [{
+      id: "ember-vault.run",
+      schema: migration.to.schema,
+      file: migration.fixtures.input,
+      source: JSON.stringify(legacy),
+      value: legacy
+    }]
+  });
+  assert.deepEqual(compiled.pack.sections.documents.value["ember-vault.run"], expected);
+  assert.deepEqual(compiled.pack.sections.migrations.value, [{
+    document: "ember-vault.run",
+    source: migration.from,
+    target: migration.to,
+    applied: [{ id: migration.id, from: migration.from, to: migration.to }]
+  }]);
+
+  assert.throws(
+    () => migrateContentDocument(legacy, migration.to.schema, [...CONTENT_MIGRATIONS, { ...migration, id: "duplicate-path" }]),
+    /CONTENT_MIGRATION_AMBIGUOUS/
+  );
+  assert.throws(
+    () => migrateContentDocument({ ...legacy, schemaVersion: 0 }, migration.to.schema),
+    /CONTENT_MIGRATION_REQUIRED/
+  );
 });
 
 test("duplicate symbols are refused instead of overwriting each other", () => {
