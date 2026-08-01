@@ -3,6 +3,7 @@
 #include "command_buffer.hpp"
 #include "lua_sandbox.hpp"
 #include "random_streams.hpp"
+#include "statechart_runtime.hpp"
 
 #include <cstdint>
 #include <span>
@@ -52,6 +53,8 @@ enum class RuntimeError : std::uint8_t {
   replay_mismatch,
   pending_inputs,
   presentation_limit
+  , statechart_invalid
+  , statechart_event_unhandled
 };
 
 class Runtime final {
@@ -68,6 +71,8 @@ class Runtime final {
   /// the numeric keys the manifest already owns. Declaring twice with different
   /// keys is a defect, not a redefinition.
   [[nodiscard]] RuntimeError declare_symbol(SymbolKind kind, std::string_view name, std::uint32_t key);
+  [[nodiscard]] RuntimeError install_statechart(std::vector<StatechartState> states, std::vector<StatechartTransition> transitions, std::uint32_t initial);
+  [[nodiscard]] std::uint32_t statechart_active() const noexcept;
   [[nodiscard]] std::int64_t integer_state(std::uint32_t key) const noexcept;
   [[nodiscard]] std::vector<std::uint8_t> save() const;
   [[nodiscard]] RuntimeError load_save(std::span<const std::uint8_t> bytes);
@@ -97,6 +102,10 @@ class Runtime final {
   LogicalTimerStore timers_;
   RandomStreamRegistry random_streams_;
   CommandBuffer commands_;
+  StatechartRuntime statechart_;
+  std::vector<StatechartState> statechart_states_;
+  std::vector<StatechartTransition> statechart_transitions_;
+  std::uint32_t statechart_initial_{0};
   LuaSandbox lua_;
   std::string gameplay_source_;
   std::string content_pack_source_;

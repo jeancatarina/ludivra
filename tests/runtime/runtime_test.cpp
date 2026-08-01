@@ -124,7 +124,7 @@ int main() {
   context.expect(
       ludivra::kernel::LuaSandbox::sdk_contract_boundary_valid(),
       "the reachable Lua SDK surface matches its versioned contract");
-  context.expect(ludivra_runtime_abi_version() == 3U, "ABI version is stable");
+  context.expect(ludivra_runtime_abi_version() == 4U, "ABI version is stable");
   context.expect(
       ludivra_runtime_create(nullptr, nullptr) == LUDIVRA_ERROR_INVALID_ARGUMENT,
       "invalid creation arguments are rejected");
@@ -154,6 +154,32 @@ int main() {
   context.expect(
       state_hash(context, first) == expected_state_hash,
       "state hash matches the golden vector");
+
+  {
+    auto* charted = create_runtime(context);
+    const ludivra_statechart_state states[] = {{1U, 0U, 0U, 0U}, {2U, 1U, 1U, 1U}};
+    const ludivra_statechart_transition transitions[] = {{9U, 1U, 7U, 2U, 0U, 0U}};
+    context.expect(ludivra_runtime_install_statechart(charted, states, 2U, transitions, 1U, 1U) == LUDIVRA_OK,
+        "statechart installs through the public runtime API");
+    submit(context, charted, 7U, 0, 1U);
+    context.expect(ludivra_runtime_step(charted, 1U) == LUDIVRA_OK, "statechart event commits with its logical input");
+    uint32_t active_state = 0;
+    context.expect(ludivra_runtime_statechart_active(charted, &active_state) == LUDIVRA_OK && active_state == 2U,
+        "statechart exposes the committed active state");
+    const auto saved_chart = save_archive(context, charted);
+    auto* restored_chart = create_runtime(context);
+    context.expect(ludivra_runtime_install_statechart(restored_chart, states, 2U, transitions, 1U, 1U) == LUDIVRA_OK,
+        "restored runtime installs the same statechart definition");
+    context.expect(ludivra_runtime_load_save(restored_chart, saved_chart.data(), static_cast<uint32_t>(saved_chart.size())) == LUDIVRA_OK,
+        "save restores the statechart snapshot");
+    context.expect(ludivra_runtime_statechart_active(restored_chart, &active_state) == LUDIVRA_OK && active_state == 2U,
+        "restored statechart keeps its active state");
+    const auto replay = replay_archive(context, charted);
+    context.expect(ludivra_runtime_verify_replay(charted, replay.data(), static_cast<uint32_t>(replay.size())) == LUDIVRA_OK,
+        "replay re-executes statechart transitions deterministically");
+    ludivra_runtime_destroy(restored_chart);
+    ludivra_runtime_destroy(charted);
+  }
 
   auto* scripted = create_runtime(context);
   const auto gameplay_source = counter_gameplay();

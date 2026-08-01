@@ -7,6 +7,7 @@
 #include <limits>
 #include <new>
 #include <type_traits>
+#include <vector>
 
 struct ludivra_runtime final {
   explicit ludivra_runtime(const ludivra::kernel::RuntimeConfig config) : value(config) {}
@@ -40,6 +41,10 @@ ludivra_result to_public_result(const ludivra::kernel::RuntimeError error) noexc
       return LUDIVRA_ERROR_SYMBOL_CONFLICT;
     case ludivra::kernel::RuntimeError::content_pack_invalid:
       return LUDIVRA_ERROR_CONTENT_PACK_INVALID;
+    case ludivra::kernel::RuntimeError::statechart_invalid:
+      return LUDIVRA_ERROR_STATECHART_INVALID;
+    case ludivra::kernel::RuntimeError::statechart_event_unhandled:
+      return LUDIVRA_ERROR_STATECHART_EVENT_UNHANDLED;
   }
   return LUDIVRA_ERROR_INTERNAL;
 }
@@ -139,6 +144,10 @@ const char* ludivra_result_message(const ludivra_result result) {
       return "state symbol already declared with a different key";
     case LUDIVRA_ERROR_CONTENT_PACK_INVALID:
       return "content pack is invalid or uses an unsupported format";
+    case LUDIVRA_ERROR_STATECHART_INVALID:
+      return "statechart definition or snapshot is invalid";
+    case LUDIVRA_ERROR_STATECHART_EVENT_UNHANDLED:
+      return "statechart event has no transition";
   }
   return "unknown result";
 }
@@ -198,6 +207,34 @@ ludivra_result ludivra_runtime_step(ludivra_runtime* runtime, const uint32_t tic
   } catch (...) {
     return LUDIVRA_ERROR_INTERNAL;
   }
+}
+
+ludivra_result ludivra_runtime_install_statechart(
+    ludivra_runtime* runtime,
+    const ludivra_statechart_state* states,
+    const uint32_t state_count,
+    const ludivra_statechart_transition* transitions,
+    const uint32_t transition_count,
+    const uint32_t initial_state) {
+  if (runtime == nullptr || states == nullptr || state_count == 0U || (transition_count > 0U && transitions == nullptr)) return LUDIVRA_ERROR_INVALID_ARGUMENT;
+  try {
+    std::vector<ludivra::kernel::StatechartState> native_states;
+    std::vector<ludivra::kernel::StatechartTransition> native_transitions;
+    native_states.reserve(state_count); native_transitions.reserve(transition_count);
+    for (uint32_t index = 0; index < state_count; ++index) native_states.push_back({states[index].id, states[index].has_parent == 0U ? std::nullopt : std::optional{states[index].parent_id}, states[index].shallow_history != 0U});
+    for (uint32_t index = 0; index < transition_count; ++index) {
+      if (transitions[index].kind > 1U) return LUDIVRA_ERROR_INVALID_ARGUMENT;
+      native_transitions.push_back({transitions[index].id, transitions[index].from_state, transitions[index].event_action_id, transitions[index].to_state, transitions[index].priority, transitions[index].kind == 0U ? ludivra::kernel::StatechartTransitionKind::external : ludivra::kernel::StatechartTransitionKind::internal});
+    }
+    return to_public_result(runtime->value.install_statechart(std::move(native_states), std::move(native_transitions), initial_state));
+  } catch (const std::bad_alloc&) { return LUDIVRA_ERROR_ALLOCATION; }
+  catch (...) { return LUDIVRA_ERROR_INTERNAL; }
+}
+
+ludivra_result ludivra_runtime_statechart_active(const ludivra_runtime* runtime, uint32_t* out_state) {
+  if (runtime == nullptr || out_state == nullptr) return LUDIVRA_ERROR_INVALID_ARGUMENT;
+  *out_state = runtime->value.statechart_active();
+  return LUDIVRA_OK;
 }
 
 ludivra_result ludivra_runtime_tick(const ludivra_runtime* runtime, uint64_t* out_tick) {

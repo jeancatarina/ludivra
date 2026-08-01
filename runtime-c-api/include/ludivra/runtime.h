@@ -8,7 +8,7 @@
 extern "C" {
 #endif
 
-#define LUDIVRA_RUNTIME_ABI_VERSION 3U
+#define LUDIVRA_RUNTIME_ABI_VERSION 4U
 
 typedef struct ludivra_runtime ludivra_runtime;
 
@@ -27,7 +27,9 @@ typedef enum ludivra_result {
   LUDIVRA_ERROR_BUFFER_TOO_SMALL = 11,
   LUDIVRA_ERROR_PRESENTATION_LIMIT = 12,
   LUDIVRA_ERROR_SYMBOL_CONFLICT = 13,
-  LUDIVRA_ERROR_CONTENT_PACK_INVALID = 14
+  LUDIVRA_ERROR_CONTENT_PACK_INVALID = 14,
+  LUDIVRA_ERROR_STATECHART_INVALID = 15,
+  LUDIVRA_ERROR_STATECHART_EVENT_UNHANDLED = 16
 } ludivra_result;
 
 typedef struct ludivra_runtime_config {
@@ -52,6 +54,22 @@ typedef struct ludivra_logical_input {
   uint64_t sequence;
 } ludivra_logical_input;
 
+typedef struct ludivra_statechart_state {
+  uint32_t id;
+  uint32_t parent_id;
+  uint8_t has_parent;
+  uint8_t shallow_history;
+} ludivra_statechart_state;
+
+typedef struct ludivra_statechart_transition {
+  uint32_t id;
+  uint32_t from_state;
+  uint32_t event_action_id;
+  uint32_t to_state;
+  uint32_t priority;
+  uint8_t kind; /* 0 external, 1 internal */
+} ludivra_statechart_transition;
+
 uint32_t ludivra_runtime_abi_version(void);
 const char* ludivra_result_message(ludivra_result result);
 
@@ -70,6 +88,20 @@ ludivra_result ludivra_runtime_submit_input(
 ludivra_result ludivra_runtime_step(
     ludivra_runtime* runtime,
     uint32_t tick_count);
+
+/* Installs one deterministic gameplay statechart. Its event ids are logical
+   input action ids, so transitions are included in the existing replay stream. */
+ludivra_result ludivra_runtime_install_statechart(
+    ludivra_runtime* runtime,
+    const ludivra_statechart_state* states,
+    uint32_t state_count,
+    const ludivra_statechart_transition* transitions,
+    uint32_t transition_count,
+    uint32_t initial_state);
+
+ludivra_result ludivra_runtime_statechart_active(
+    const ludivra_runtime* runtime,
+    uint32_t* out_state);
 
 /* Inspection functions never mutate the runtime. */
 ludivra_result ludivra_runtime_tick(

@@ -21,7 +21,7 @@ Runtime::Runtime(const RuntimeConfig config)
   mix_u32(state_hash_, config.tick_rate_hz);
   mix_u32(state_hash_, config.max_pending_inputs);
   mix_u64(state_hash_, config.seed);
-  replay_initial_state_ = {tick_, state_hash_, integer_state_, random_streams_.snapshot(), timers_.snapshot()};
+  replay_initial_state_ = {tick_, state_hash_, integer_state_, random_streams_.snapshot(), timers_.snapshot(), std::nullopt};
 }
 
 RuntimeError Runtime::submit_input(const LogicalInput input) {
@@ -84,6 +84,18 @@ RuntimeError Runtime::declare_symbol(
   return RuntimeError::none;
 }
 
+RuntimeError Runtime::install_statechart(
+    std::vector<StatechartState> states, std::vector<StatechartTransition> transitions, const std::uint32_t initial) {
+  const auto result = statechart_.install(states, transitions, initial);
+  if (result == StatechartError::transition_ambiguous || result == StatechartError::invalid_definition) return RuntimeError::statechart_invalid;
+  statechart_states_ = std::move(states);
+  statechart_transitions_ = std::move(transitions);
+  statechart_initial_ = initial;
+  return RuntimeError::none;
+}
+
+std::uint32_t Runtime::statechart_active() const noexcept { return statechart_initial_ == 0U ? 0U : statechart_.active(); }
+
 std::string Runtime::timer_name(const std::uint32_t key) const {
   for (const auto& [name, declared] : symbols_.timer) {
     if (declared == key) return name;
@@ -113,7 +125,8 @@ void Runtime::clear_presentation_events() noexcept {
 }
 
 std::vector<std::uint8_t> Runtime::save() const {
-  return encode_save({tick_, state_hash_, integer_state_, random_streams_.snapshot(), timers_.snapshot()});
+  return encode_save({tick_, state_hash_, integer_state_, random_streams_.snapshot(), timers_.snapshot(),
+      statechart_initial_ == 0U ? std::nullopt : std::optional{statechart_.snapshot()}});
 }
 
 RuntimeError Runtime::load_save(const std::span<const std::uint8_t> bytes) {
@@ -124,6 +137,11 @@ RuntimeError Runtime::load_save(const std::span<const std::uint8_t> bytes) {
   if (!decode_save(bytes, decoded)) {
     return RuntimeError::archive_invalid;
   }
+  StatechartRuntime restored_statechart = statechart_;
+  if (decoded.statechart.has_value() &&
+      (statechart_initial_ == 0U || restored_statechart.restore(*decoded.statechart) != StatechartError::none)) {
+    return RuntimeError::statechart_invalid;
+  }
   SavedState next_replay_state = decoded;
   tick_ = decoded.tick;
   state_hash_ = decoded.state_hash;
@@ -132,6 +150,7 @@ RuntimeError Runtime::load_save(const std::span<const std::uint8_t> bytes) {
   if (decoded.streams.empty()) random_streams_.reset(config_.seed);
   else random_streams_.restore(decoded.streams);
   timers_.restore(decoded.timers);
+  if (decoded.statechart.has_value()) statechart_ = std::move(restored_statechart);
   replay_initial_state_ = std::move(next_replay_state);
   replay_frames_.clear();
   commands_.clear();
@@ -151,6 +170,7 @@ RuntimeError Runtime::verify_replay(const std::span<const std::uint8_t> bytes) c
   }
   Runtime verification({decoded.tick_rate_hz, decoded.max_pending_inputs, decoded.seed});
   verification.symbols_ = symbols_;
+  if (statechart_initial_ != 0U && verification.install_statechart(statechart_states_, statechart_transitions_, statechart_initial_) != RuntimeError::none) return RuntimeError::statechart_invalid;
   if (!content_pack_source_.empty() &&
       verification.load_content_pack(content_pack_source_) != RuntimeError::none) {
     return RuntimeError::content_pack_invalid;
@@ -164,6 +184,7 @@ RuntimeError Runtime::verify_replay(const std::span<const std::uint8_t> bytes) c
   if (decoded.initial_state.streams.empty()) verification.random_streams_.reset(decoded.seed);
   else verification.random_streams_.restore(decoded.initial_state.streams);
   verification.timers_.restore(decoded.initial_state.timers);
+  if (decoded.initial_state.statechart.has_value() && verification.statechart_.restore(*decoded.initial_state.statechart) != StatechartError::none) return RuntimeError::replay_mismatch;
   verification.replay_initial_state_ = decoded.initial_state;
   for (const auto& frame : decoded.frames) {
     for (const auto& input : frame.inputs) {
@@ -230,6 +251,15 @@ RuntimeError Runtime::commit_tick() {
 
   commands_.clear();
   for (const auto& input : pending_inputs_) {
+    if (statechart_initial_ != 0U) {
+      const auto transition = statechart_.dispatch(input.action_id);
+      if (transition.error == StatechartError::event_unhandled) { commands_.clear(); return RuntimeError::statechart_event_unhandled; }
+      if (transition.error != StatechartError::none || !transition.chosen.has_value()) { commands_.clear(); return RuntimeError::statechart_invalid; }
+      mix_byte(state_hash_, 0xF1U);
+      mix_u32(state_hash_, transition.chosen->id);
+      mix_u32(state_hash_, transition.previous);
+      mix_u32(state_hash_, transition.active);
+    }
     if (!lua_.on_input(
             {input.action_id, input.value_milli, input.sequence},
             tick_ + 1U,

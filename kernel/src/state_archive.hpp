@@ -2,8 +2,10 @@
 
 #include "logical_timers.hpp"
 #include "random_streams.hpp"
+#include "statechart_runtime.hpp"
 
 #include <cstdint>
+#include <optional>
 #include <span>
 #include <unordered_map>
 #include <vector>
@@ -32,6 +34,8 @@ struct SavedState final {
   /// Timers are authoritative too: restoring without them would drop a pending
   /// expiry that the original run was counting on.
   std::vector<LogicalTimer> timers;
+  /// Present only when a statechart has been installed for this runtime.
+  std::optional<StatechartSnapshot> statechart;
 };
 
 struct ReplayState final {

@@ -11,7 +11,8 @@ namespace {
 
 constexpr std::array<std::uint8_t, 4> save_magic{'L', 'D', 'S', 'V'};
 constexpr std::array<std::uint8_t, 4> replay_magic{'L', 'D', 'R', 'P'};
-constexpr std::uint32_t archive_version = 3;
+constexpr std::uint32_t archive_version = 4;
+constexpr std::uint32_t archive_version_without_statechart = 3;
 /// Version 2 predates logical timers and migrates to an empty timer set.
 constexpr std::uint32_t archive_version_without_timers = 2;
 /// Version 1 predates PRNG streams. It is still readable and migrates to an empty
@@ -145,7 +146,7 @@ class ArchiveReader final {
 
 bool read_header(ArchiveReader& reader, const std::array<std::uint8_t, 4>& magic, std::uint32_t& version) {
   return reader.verify_checksum() && reader.magic(magic) && reader.u32(version) &&
-      (version == archive_version || version == archive_version_without_timers ||
+      (version == archive_version || version == archive_version_without_statechart || version == archive_version_without_timers ||
        version == archive_version_without_streams);
 }
 
@@ -158,7 +159,7 @@ void write_timers(ArchiveWriter& writer, const std::vector<LogicalTimer>& timers
 }
 
 bool read_timers(ArchiveReader& reader, const std::uint32_t version, std::vector<LogicalTimer>& timers) {
-  if (version != archive_version) return true;
+  if (version < archive_version_without_statechart) return true;
   std::uint32_t count = 0;
   if (!reader.u32(count) || count > maximum_stream_entries) return false;
   for (std::uint32_t index = 0; index < count; ++index) {
@@ -166,6 +167,28 @@ bool read_timers(ArchiveReader& reader, const std::uint32_t version, std::vector
     if (!reader.u32(timer.key) || !reader.u64(timer.remaining_ticks)) return false;
     timers.push_back(timer);
   }
+  return true;
+}
+
+void write_statechart(ArchiveWriter& writer, const std::optional<StatechartSnapshot>& statechart) {
+  writer.u32(statechart.has_value() ? 1U : 0U);
+  if (!statechart.has_value()) return;
+  writer.u32(statechart->active);
+  writer.u32(static_cast<std::uint32_t>(statechart->shallow_history.size()));
+  for (const auto& [parent, child] : statechart->shallow_history) { writer.u32(parent); writer.u32(child); }
+}
+
+bool read_statechart(ArchiveReader& reader, const std::uint32_t version, std::optional<StatechartSnapshot>& statechart) {
+  if (version < archive_version) return true;
+  std::uint32_t present = 0;
+  if (!reader.u32(present) || present > 1U) return false;
+  if (present == 0U) return true;
+  StatechartSnapshot snapshot{};
+  std::uint32_t count = 0;
+  if (!reader.u32(snapshot.active) || !reader.u32(count) || count > maximum_archive_entries) return false;
+  snapshot.shallow_history.reserve(count);
+  for (std::uint32_t index = 0; index < count; ++index) { std::uint32_t parent = 0; std::uint32_t child = 0; if (!reader.u32(parent) || !reader.u32(child)) return false; snapshot.shallow_history.emplace_back(parent, child); }
+  statechart = std::move(snapshot);
   return true;
 }
 
@@ -218,6 +241,7 @@ std::vector<std::uint8_t> encode_save(const SavedState& state) {
   }
   write_streams(writer, state.streams);
   write_timers(writer, state.timers);
+  write_statechart(writer, state.statechart);
   return writer.finish();
 }
 
@@ -242,7 +266,7 @@ bool decode_save(const std::span<const std::uint8_t> bytes, SavedState& state) {
     decoded.integers.emplace(key, static_cast<std::int64_t>(value));
   }
   if (!read_streams(reader, version, decoded.streams) ||
-      !read_timers(reader, version, decoded.timers) || !reader.complete()) {
+      !read_timers(reader, version, decoded.timers) || !read_statechart(reader, version, decoded.statechart) || !reader.complete()) {
     return false;
   }
   state = std::move(decoded);
@@ -270,6 +294,7 @@ std::vector<std::uint8_t> encode_replay(const ReplayState& replay) {
   }
   write_streams(writer, replay.initial_state.streams);
   write_timers(writer, replay.initial_state.timers);
+  write_statechart(writer, replay.initial_state.statechart);
   writer.u64(replay.expected_tick);
   writer.u64(replay.expected_hash);
   writer.u32(static_cast<std::uint32_t>(replay.frames.size()));
@@ -312,6 +337,7 @@ bool decode_replay(const std::span<const std::uint8_t> bytes, ReplayState& repla
   }
   if (!read_streams(reader, version, decoded.initial_state.streams) ||
       !read_timers(reader, version, decoded.initial_state.timers) ||
+      !read_statechart(reader, version, decoded.initial_state.statechart) ||
       !reader.u64(decoded.expected_tick) ||
       !reader.u64(decoded.expected_hash) || !reader.u32(frame_count) ||
       frame_count > maximum_archive_entries) {
