@@ -5,7 +5,7 @@ import {
   type UiInspectionProjection
 } from "@ludivra/presentation-protocol";
 import { createThreeRenderer } from "@ludivra/renderer-three";
-import { LudivraRuntime } from "@ludivra/runtime-web";
+import { installCompiledStatechart, LudivraRuntime, type CompiledStatechartDocument } from "@ludivra/runtime-web";
 import { createGamePresenter } from "@game/presentation";
 import createLudivraModule from "@ludivra/runtime-module";
 import { audioSources, contentPackSource, gameplaySource, manifest } from "virtual:ludivra-game";
@@ -53,6 +53,9 @@ const runtime = await LudivraRuntime.create(
   { tickRateHz: 60, maxPendingInputs: 4096, seed: 42n }
 );
 runtimeStarted = true;
+const packDocuments = (JSON.parse(contentPackSource) as {
+  sections: { documents: { value: Record<string, unknown> } };
+}).sections.documents.value;
 // The manifest owns the numeric keys; declaring them here is what lets gameplay
 // read state by name.
 for (const definition of manifest.inspection.integerStates) {
@@ -64,6 +67,11 @@ for (const definition of manifest.timers ?? []) {
 // Content comes from the compiled pack, never from the script chunk.
 const contentPackBytes = new TextEncoder().encode(contentPackSource);
 runtime.loadContentPack(contentPackBytes);
+installCompiledStatechart(
+  runtime,
+  manifest.statecharts,
+  packDocuments["ludivra.statecharts"] as CompiledStatechartDocument | undefined
+);
 runtime.loadGameplay(gameplaySource);
 const presentationState: PresentationState = {
   get tick() { return runtime.tick(); },
@@ -90,9 +98,6 @@ const recording = createRecordingRenderer(createThreeRenderer(canvas, {
   reportDiagnostic: hostDiagnostics.report
 }));
 const renderer = recording.renderer;
-const packDocuments = (JSON.parse(contentPackSource) as {
-  sections: { documents: { value: Record<string, unknown> } };
-}).sections.documents.value;
 const contentById = new Map(Object.entries(packDocuments));
 const presenter = createGamePresenter(renderer, {
   content<T>(id: string): T {

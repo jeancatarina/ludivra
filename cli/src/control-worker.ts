@@ -16,7 +16,14 @@ import {
   type UiLocaleTable,
   type UiViewModel
 } from "@ludivra/presentation-protocol";
-import { LudivraRuntime, RuntimeFailure, type PresentationEvent, type RuntimeModuleFactory } from "@ludivra/runtime-web";
+import {
+  installCompiledStatechart,
+  LudivraRuntime,
+  RuntimeFailure,
+  type CompiledStatechartDocument,
+  type PresentationEvent,
+  type RuntimeModuleFactory
+} from "@ludivra/runtime-web";
 import { parse, type ParseError } from "jsonc-parser";
 import { createContractValidator } from "./contract-validator.js";
 import {
@@ -95,57 +102,15 @@ let statechartGuardNames = new Map<number, string>();
 let statechartActionNames = new Map<number, string>();
 
 function installDeclaredStatechart(target: LudivraRuntime): void {
-  const declaration = manifest.statecharts;
-  if (declaration === undefined) return;
-  const graph = compiledDocuments["ludivra.statecharts"] as { charts?: Array<Record<string, unknown>> } | undefined;
-  const chart = graph?.charts?.[0];
-  if (graph?.charts?.length !== 1 || chart === undefined) throw new Error("STATECHART_SCHEMA_INVALID");
-  const states = chart.states as Array<{ id: string; parent?: string; history: boolean; entryActions: string[]; exitActions: string[] }>;
-  const transitions = chart.transitions as Array<{
-    id: string; from: string; to: string; event?: string; afterTicks?: number; priority: number;
-    kind: "external" | "internal"; guard?: string; actions: string[];
-  }>;
-  const stateIds = new Map(states.map(({ id }, index) => [id, index + 1]));
-  statechartStateNames = new Map([...stateIds.entries()].map(([id, numeric]) => [numeric, id]));
-  statechartTransitionNames = new Map(transitions.map(({ id }, index) => [index + 1, id]));
-  const eventIds = new Map(declaration.events.map(({ id, actionId }) => [id, actionId]));
-  const guardIds = new Map([...declaration.guards].sort((left, right) => left.id.localeCompare(right.id)).map(({ id }, index) => [id, index + 1]));
-  const actionIds = new Map([...declaration.actions].sort((left, right) => left.id.localeCompare(right.id)).map(({ id }, index) => [id, index + 1]));
-  statechartGuardNames = new Map([...guardIds.entries()].map(([id, numeric]) => [numeric, id]));
-  statechartActionNames = new Map([...actionIds.entries()].map(([id, numeric]) => [numeric, id]));
-  const actionBindings = [
-    ...states.flatMap((state) => state.entryActions.map((action) => ({ ownerId: stateIds.get(state.id)!, actionId: actionIds.get(action), phase: "entry" as const }))),
-    ...states.flatMap((state) => state.exitActions.map((action) => ({ ownerId: stateIds.get(state.id)!, actionId: actionIds.get(action), phase: "exit" as const }))),
-    ...transitions.flatMap((transition, index) => transition.actions.map((action) => ({ ownerId: index + 1, actionId: actionIds.get(action), phase: "transition" as const })))
-  ];
-  if (actionBindings.some(({ actionId }) => actionId === undefined)) throw new Error("STATECHART_ACTION_UNREGISTERED");
-  target.installStatechart(
-    states.map((state) => state.parent === undefined
-      ? { id: stateIds.get(state.id)!, shallowHistory: state.history }
-      : { id: stateIds.get(state.id)!, parentId: stateIds.get(state.parent)!, shallowHistory: state.history }),
-    transitions.map((transition, index) => {
-      const eventActionId = transition.event === undefined ? undefined : eventIds.get(transition.event);
-      const guardId = transition.guard === undefined ? undefined : guardIds.get(transition.guard);
-      if ((eventActionId === undefined) === (transition.afterTicks === undefined) || guardId === undefined && transition.guard !== undefined ||
-          stateIds.get(transition.from) === undefined || stateIds.get(transition.to) === undefined) throw new Error("STATECHART_SCHEMA_INVALID");
-      return {
-        id: index + 1,
-        fromState: stateIds.get(transition.from)!,
-        ...(eventActionId === undefined ? {} : { eventActionId }),
-        ...(transition.afterTicks === undefined ? {} : { afterTicks: transition.afterTicks }),
-        toState: stateIds.get(transition.to)!,
-        priority: transition.priority,
-        kind: transition.kind,
-        ...(guardId === undefined ? {} : { guardId })
-      };
-    }),
-    stateIds.get(chart.initial as string)!,
-    {
-      guards: [...guardIds.entries()].map(([name, id]) => ({ id, name })),
-      actions: [...actionIds.entries()].map(([name, id]) => ({ id, name })),
-      bindings: actionBindings as Array<{ ownerId: number; actionId: number; phase: "entry" | "exit" | "transition" }>
-    }
+  const installed = installCompiledStatechart(
+    target,
+    manifest.statecharts,
+    compiledDocuments["ludivra.statecharts"] as CompiledStatechartDocument | undefined
   );
+  statechartStateNames = installed?.states ?? new Map();
+  statechartTransitionNames = installed?.transitions ?? new Map();
+  statechartGuardNames = installed?.guards ?? new Map();
+  statechartActionNames = installed?.actions ?? new Map();
 }
 
 function logicalState(): LogicalStateSnapshot {

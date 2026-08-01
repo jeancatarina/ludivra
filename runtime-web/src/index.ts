@@ -10,6 +10,13 @@ export type {
   EffectSpawnEvent,
   PresentationEvent
 } from "./generated/presentation-events.js";
+export {
+  installCompiledStatechart,
+  type CompiledStatechartDocument,
+  type InstalledStatechartNames,
+  type StatechartManifestDeclaration,
+  type StatechartRuntimeInstaller
+} from "./statechart.js";
 
 export interface RuntimeModule {
   HEAPU8: Uint8Array;

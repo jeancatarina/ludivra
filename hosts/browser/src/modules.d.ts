@@ -12,6 +12,12 @@ declare module "virtual:ludivra-game" {
       states: string[];
       inputs: string[];
     }>;
+    statecharts?: {
+      charts: Array<{ id: string; source: string }>;
+      events: Array<{ id: string; actionId: number }>;
+      guards: Array<{ id: string }>;
+      actions: Array<{ id: string }>;
+    };
     timers?: Array<{ id: string; key: number }>;
     inputs: Array<{
       id: string;
