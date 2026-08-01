@@ -1,5 +1,6 @@
 #include "fixed_point.hpp"
 #include "random_streams.hpp"
+#include "statechart_runtime.hpp"
 #include "world_chunks.hpp"
 #include "world_generator.hpp"
 #include "world_jobs.hpp"
@@ -41,6 +42,11 @@ using ludivra::kernel::JobQueue;
 using ludivra::kernel::JobResult;
 using ludivra::kernel::normalize;
 using ludivra::kernel::RandomStream;
+using ludivra::kernel::StatechartError;
+using ludivra::kernel::StatechartRuntime;
+using ludivra::kernel::StatechartState;
+using ludivra::kernel::StatechartTransition;
+using ludivra::kernel::StatechartTransitionKind;
 using ludivra::kernel::same_place;
 using ludivra::kernel::translate;
 using ludivra::kernel::WorldOffset;
@@ -437,6 +443,30 @@ void check_streaming(TestContext& context) {
   context.expect(revisited.world_hash() == before, "coming back regenerates the same chunks");
 }
 
+void check_statechart_runtime(TestContext& context) {
+  StatechartRuntime chart;
+  context.expect(chart.install({{1U, std::nullopt, false}, {2U, 1U, true}, {3U, 2U, false}}, {
+      {10U, 3U, 7U, 1U, 0U, StatechartTransitionKind::external},
+      {11U, 2U, 7U, 3U, 1U, StatechartTransitionKind::external}}, 3U) == StatechartError::none,
+      "statechart installs with explicit precedence");
+  const auto transition = chart.dispatch(7U);
+  context.expect(transition.error == StatechartError::none && transition.chosen->id == 10U,
+      "the active leaf transition wins before an ancestor");
+  context.expect(chart.active() == 1U, "external transition commits the target");
+  context.expect(chart.dispatch(99U).error == StatechartError::event_unhandled, "unhandled events stay explicit");
+
+  StatechartRuntime restored;
+  context.expect(restored.install({{1U, std::nullopt, false}, {2U, 1U, true}, {3U, 2U, false}}, {}, 1U) == StatechartError::none,
+      "the restore chart installs");
+  context.expect(restored.restore(chart.snapshot()) == StatechartError::none && restored.active() == 1U,
+      "snapshot restores active state and shallow history");
+  StatechartRuntime ambiguous;
+  context.expect(ambiguous.install({{1U, std::nullopt, false}}, {
+      {1U, 1U, 1U, 1U, 0U, StatechartTransitionKind::external},
+      {2U, 1U, 1U, 1U, 0U, StatechartTransitionKind::external}}, 1U) == StatechartError::transition_ambiguous,
+      "equal precedence is rejected at installation");
+}
+
 }  // namespace
 
 int main() {
@@ -449,6 +479,7 @@ int main() {
   check_job_commit_order(context);
   check_generation(context);
   check_streaming(context);
+  check_statechart_runtime(context);
   if (context.failures > 0) {
     std::fprintf(stderr, "%d kernel determinism checks failed\n", context.failures);
     return 1;

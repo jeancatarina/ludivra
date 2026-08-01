@@ -7,6 +7,7 @@ add_library(ludivra_kernel STATIC
   src/random_streams.cpp
   src/runtime.cpp
   src/state_archive.cpp
+  src/statechart_runtime.cpp
   src/world_chunks.cpp
   src/world_generator.cpp
   src/world_jobs.cpp
