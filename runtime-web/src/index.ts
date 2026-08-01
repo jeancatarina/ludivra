@@ -48,6 +48,20 @@ export interface LogicalInput {
   sequence: bigint;
 }
 
+/** Authored overlay emitted by the most recent committed runtime tick. The
+ * procedural base remains implicit in the negotiated world identity. */
+export interface RuntimeRegionDelta {
+  dimension: number;
+  regionX: number;
+  regionY: number;
+  regionZ: number;
+  chunkX: number;
+  chunkY: number;
+  chunkZ: number;
+  revision: bigint;
+  payload: Uint8Array;
+}
+
 export interface StatechartState { id: number; parentId?: number; shallowHistory?: boolean; }
 export interface StatechartTransition {
   id: number;
@@ -85,6 +99,7 @@ export interface StatechartTrace {
 }
 
 const ok = 0;
+const bufferTooSmall = 11;
 const configSize = 24;
 const inputSize = 24;
 const statechartStateSize = 12;
@@ -98,6 +113,7 @@ const spatialLocationSize = 48;
 const networkRoomConfigurationSize = 56;
 const networkPeerHelloSize = 40;
 const networkInputSize = 24;
+const runtimeRegionDeltaSize = 48;
 // `ludivra_statechart_trace` contains a uint64_t and is therefore padded to the
 // public C ABI record size. Reading 36 bytes desynchronizes every trace after
 // the first record.
@@ -593,6 +609,52 @@ export class LudivraRuntime {
       call(this.module, "ludivra_runtime_step", [this.liveHandle(), tickCount]),
       this.handle
     );
+  }
+
+  /** Copies every authored region/chunk overlay confirmed by the latest tick,
+   * then clears the transient runtime list. Call only after the host has put
+   * the copied deltas into its reliable, bounded network queue. */
+  drainRegionDeltas(): RuntimeRegionDelta[] {
+    const countPointer = this.module._malloc(4);
+    try {
+      requireOk(this.module, "region delta count", call(this.module, "ludivra_runtime_region_delta_count", [this.liveHandle(), countPointer]), this.handle);
+      const count = new DataView(this.module.HEAPU8.buffer).getUint32(countPointer, true);
+      const output: RuntimeRegionDelta[] = [];
+      for (let index = 0; index < count; index += 1) {
+        const metadataPointer = this.module._malloc(runtimeRegionDeltaSize);
+        try {
+          this.module.HEAPU8.fill(0, metadataPointer, metadataPointer + runtimeRegionDeltaSize);
+          const probe = call(this.module, "ludivra_runtime_region_delta_write", [this.liveHandle(), index, metadataPointer, 0, 0]);
+          if (probe !== ok && probe !== bufferTooSmall) requireOk(this.module, "region delta probe", probe, this.handle);
+          const metadata = new DataView(this.module.HEAPU8.buffer);
+          if (metadata.getUint32(metadataPointer, true) !== runtimeRegionDeltaSize) throw new RuntimeFailure("region delta metadata ABI size is invalid");
+          const payloadBytes = metadata.getUint32(metadataPointer + 40, true);
+          const delta = {
+            dimension: metadata.getUint16(metadataPointer + 4, true),
+            regionX: metadata.getInt32(metadataPointer + 8, true),
+            regionY: metadata.getInt32(metadataPointer + 12, true),
+            regionZ: metadata.getInt32(metadataPointer + 16, true),
+            chunkX: metadata.getInt32(metadataPointer + 20, true),
+            chunkY: metadata.getInt32(metadataPointer + 24, true),
+            chunkZ: metadata.getInt32(metadataPointer + 28, true),
+            revision: metadata.getBigUint64(metadataPointer + 32, true),
+            payload: new Uint8Array(payloadBytes)
+          };
+          if (payloadBytes > 0) {
+            const payloadPointer = this.module._malloc(payloadBytes);
+            try {
+              requireOk(this.module, "region delta read", call(this.module, "ludivra_runtime_region_delta_write", [
+                this.liveHandle(), index, metadataPointer, payloadPointer, payloadBytes
+              ]), this.handle);
+              delta.payload = this.module.HEAPU8.slice(payloadPointer, payloadPointer + payloadBytes);
+            } finally { this.module._free(payloadPointer); }
+          }
+          output.push(delta);
+        } finally { this.module._free(metadataPointer); }
+      }
+      requireOk(this.module, "region delta clear", call(this.module, "ludivra_runtime_region_deltas_clear", [this.liveHandle()]), this.handle);
+      return output;
+    } finally { this.module._free(countPointer); }
   }
 
   private declareStatechartHandler(kind: "guard" | "action", handler: StatechartHandler): void {

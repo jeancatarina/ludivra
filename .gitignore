@@ -9,6 +9,7 @@
 /renderer-three/dist/
 /runtime-wasm/generated/
 /hosts/browser/dist/
+/hosts/browser/.test-build/
 /hosts/browser/public/runtime/
 /hosts/electron/out/
 node_modules/

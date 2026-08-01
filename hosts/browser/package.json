@@ -5,7 +5,8 @@
   "type": "module",
   "scripts": {
     "build": "vite build",
-    "dev": "vite"
+    "dev": "vite",
+    "test:network": "tsc --project tsconfig.network-test.json && node --test .test-build/test/network-room-bridge.test.js"
   },
   "dependencies": {
     "@ludivra/platform-contracts": "workspace:*",

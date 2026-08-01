@@ -238,6 +238,23 @@ void check_runtime_region_storage(TestContext& context) {
   submit(context, persisted, 91U, 0, 1U);
   context.expect(ludivra_runtime_step(persisted, 1U) == LUDIVRA_OK,
       "Lua region delta is committed through the runtime boundary");
+  uint32_t committed_delta_count = 0U;
+  context.expect(ludivra_runtime_region_delta_count(persisted, &committed_delta_count) == LUDIVRA_OK && committed_delta_count == 1U,
+      "runtime exposes the committed authored chunk delta for the host network boundary");
+  ludivra_runtime_region_delta committed_delta{};
+  context.expect(ludivra_runtime_region_delta_write(persisted, 0U, &committed_delta, nullptr, 0U) == LUDIVRA_ERROR_BUFFER_TOO_SMALL &&
+      committed_delta.struct_size == sizeof(ludivra_runtime_region_delta) && committed_delta.dimension == 7U &&
+      committed_delta.region_x == -2 && committed_delta.region_y == 0 && committed_delta.region_z == 4 &&
+      committed_delta.chunk_x == 3 && committed_delta.chunk_y == 1 && committed_delta.chunk_z == -5 && committed_delta.revision == 1U,
+      "region delta probe returns semantic coordinates and authoritative revision without exposing a generated base");
+  std::vector<uint8_t> committed_payload(committed_delta.payload_bytes);
+  context.expect(ludivra_runtime_region_delta_write(persisted, 0U, &committed_delta, committed_payload.data(),
+      static_cast<uint32_t>(committed_payload.size())) == LUDIVRA_OK &&
+      std::string(committed_payload.begin(), committed_payload.end()) == "placed-by-lua",
+      "region delta C boundary copies the opaque authored payload only");
+  context.expect(ludivra_runtime_region_deltas_clear(persisted) == LUDIVRA_OK &&
+      ludivra_runtime_region_delta_count(persisted, &committed_delta_count) == LUDIVRA_OK && committed_delta_count == 0U,
+      "region deltas clear only after the host has copied them into its own reliable queue");
   const auto saved = save_archive(context, persisted);
   context.expect(saved.size() > 8U && saved[4] == 6U,
       "logical save version 6 references external regional data without embedding generated base chunks");
@@ -313,7 +330,7 @@ int main() {
   context.expect(
       ludivra::kernel::LuaSandbox::sdk_contract_boundary_valid(),
       "the reachable Lua SDK surface matches its versioned contract");
-  context.expect(ludivra_runtime_abi_version() == 6U, "ABI version is stable");
+  context.expect(ludivra_runtime_abi_version() == 7U, "ABI version is stable");
   check_regional_world(context);
   check_region_storage_c_api(context);
   check_runtime_region_storage(context);

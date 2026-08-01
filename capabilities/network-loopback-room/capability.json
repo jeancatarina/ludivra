@@ -23,8 +23,8 @@
   ],
   "limitations": [
     {
-      "code": "NETWORK_DIVERGENCE_LOCALIZATION_PENDING",
-      "message": "A sala publica snapshots canônicos e valida identidade, mas ainda não produz a primeira localização remota de divergência por tick/chunk."
+      "code": "NETWORK_INTEREST_POLICY_GAME_OWNED",
+      "message": "A sala publica toda a autoridade e os deltas confirmados; cada jogo ainda declara seu interesse espacial e UX de reconexão."
     }
   ]
 }

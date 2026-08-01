@@ -17,12 +17,24 @@ import { createDomUiRenderer } from "./ui-renderer";
 export { WebRtcDataChannelTransport, decodeNetworkPacket, decodeSignalingDescription, encodeNetworkPacket, encodeSignalingDescription } from "./network/webrtc-transport";
 export { SteamP2PTransport } from "./network/steam-transport";
 export {
+  HostedChunkSync,
+  NetworkChunkSyncFailure,
+  RemoteChunkSync,
+  createNetworkChunkDelta,
+  encodeNetworkChunkDelta,
+  networkChunkDeltaFromRuntime,
+  networkChunkContentHash
+} from "./network/chunk-sync";
+export {
   HostedRoomBridge,
   HostedRoomBridgeFailure,
+  RemoteRoomClientBridge,
+  decodeNetworkHashReport,
   decodeNetworkHello,
   decodeNetworkInput,
   decodeNetworkSnapshot,
   encodeNetworkHello,
+  encodeNetworkHashReport,
   encodeNetworkInput,
   encodeNetworkSnapshot
 } from "./network/room-bridge";

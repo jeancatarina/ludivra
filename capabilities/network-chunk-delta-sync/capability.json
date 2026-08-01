@@ -1,0 +1,30 @@
+{
+  "id": "network.chunk-delta-sync",
+  "status": "experimental",
+  "version": "0.1.0",
+  "owner": "kernel",
+  "targets": ["native-headless", "browser", "electron"],
+  "contracts": [
+    "kernel/src/runtime.hpp",
+    "runtime-c-api/include/ludivra/runtime.h",
+    "runtime-web/src/index.ts",
+    "hosts/browser/src/network/chunk-sync.ts",
+    "docs/adr/0024-player-hosted-multiplayer-and-protocol-compatibility.md"
+  ],
+  "examples": [
+    "tests/runtime/runtime_test.cpp",
+    "hosts/browser/test/network-room-bridge.test.ts"
+  ],
+  "dependencies": ["spatial.region-storage", "network.host-room-bridge"],
+  "verification": [
+    "pnpm test:native",
+    "pnpm test:network-host",
+    "pnpm test:wasm-equivalence"
+  ],
+  "limitations": [
+    {
+      "code": "NETWORK_CHUNK_INTEREST_GAME_OWNED",
+      "message": "O host escolhe quais deltas confirmados pertencem ao interesse de cada peer; a engine não inventa visibilidade, matchmaking ou transmissão de base procedural."
+    }
+  ]
+}

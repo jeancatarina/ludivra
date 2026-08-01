@@ -5,8 +5,8 @@
 | Campo | Valor |
 |---|---|
 | Release atual | 0.7.0 |
-| Foco atual | Fase 7 — Persistir regiões regeneráveis com journal atômico, recovery e migrations sem duplicar o mundo procedural. |
-| Próxima entrega | Conectar envelopes WebRTC/Steam ao lifecycle de sala nos hosts, mantendo loopback como prova CI obrigatória. |
+| Foco atual | Fase 8 — Escalar renderer, UI, áudio e apresentação sem alterar autoridade de gameplay. |
+| Próxima entrega | Implementar perfis gráficos desktop-compatible e desktop-high, seleção de backend e fallback observável. |
 | Fonte editável de progresso | [docs/program-status.json](docs/program-status.json) |
 | Decisão do modelo documental | [ADR 0046](docs/adr/0046-generated-program-documentation.md) |
 
@@ -29,8 +29,8 @@
 | 4 | Autoria text-first de gameplay, UI e conteúdo | `CONCLUÍDA` | nenhuma no gate atual |
 | 5 | Runtime espacial e mundo procedural | `CONCLUÍDA` | nenhuma no gate atual |
 | 6 | Motion, física e Mass Simulation | `CONCLUÍDA` | nenhuma no gate atual |
-| 7 | Persistência, replays e multiplayer player-hosted | `EM ANDAMENTO` | Localizar a primeira divergência remota por tick/chunk e publicar a recuperação de estado remota sobre os adapters externos. |
-| 8 | Renderer, UI, áudio e apresentação escalável | `PARCIAL` | Perfis web-compatible, desktop-compatible e desktop-high com fallback gráfico observado. |
+| 7 | Persistência, replays e multiplayer player-hosted | `CONCLUÍDA` | nenhuma no gate atual |
+| 8 | Renderer, UI, áudio e apresentação escalável | `EM ANDAMENTO` | Perfis web-compatible, desktop-compatible e desktop-high com fallback gráfico observado. |
 | 9 | Procedural Construction Runtime | `PLANEJADA` | Construction Graph, comandos semânticos, undo/redo e replay. |
 | 10 | Procedural Forges | `PARCIAL` | Completar música, stems, previews gráficos e runtime/cooker do Audio Forge. |
 | 11 | Diagnose, Repair, Verify e performance gates | `PARCIAL` | Fluxo real de diagnose, explain, fix dry-run/apply e verify com classes de reparo. |
@@ -181,7 +181,7 @@ Movimento, física e hordas permanecem observáveis, reproduzíveis e dentro dos
 
 | Campo | Valor |
 |---|---|
-| Estado | `EM ANDAMENTO` |
+| Estado | `CONCLUÍDA` |
 | Owners | kernel, storage, network runtime |
 | Dependências | Fase 5, Fase 6 |
 | ADRs | [ADR 0023](docs/adr/0023-world-persistence-and-region-storage.md), [ADR 0024](docs/adr/0024-player-hosted-multiplayer-and-protocol-compatibility.md), [ADR 0038](docs/adr/0038-network-transport-adapters.md) |
@@ -193,11 +193,7 @@ Preservar mundo e sessões player-hosted com compatibilidade e recuperação exp
 - Saves lógicos versionados, migrations básicas, replays, checkpoints e equivalência native/WASM. Capabilities: `runtime.save-replay`. Evidência: [kernel/src/state_archive.cpp](kernel/src/state_archive.cpp), [kernel/src/runtime.cpp](kernel/src/runtime.cpp), [tools/tests/wasm-equivalence.mjs](tools/tests/wasm-equivalence.mjs).
 - Region storage nativo com blobs de deltas checksummed, substituição temporário+sync+rename, journal multi-região, recovery observável, compactação e migração v0→v1 sem salvar base procedural; ABI C, CLI e Runtime/Lua publicam escrita transacional, restore e referências checksummed em save/replay sem expor o arquivo. Capabilities: `spatial.region-storage`. Evidência: [kernel/src/region_storage.cpp](kernel/src/region_storage.cpp), [kernel/src/runtime.cpp](kernel/src/runtime.cpp), [runtime-c-api/include/ludivra/runtime.h](runtime-c-api/include/ludivra/runtime.h), [cli/src/commands/storage.ts](cli/src/commands/storage.ts), [tests/kernel/kernel_test.cpp](tests/kernel/kernel_test.cpp), [tests/runtime/runtime_test.cpp](tests/runtime/runtime_test.cpp), [tests/fixtures/region-storage.lua](tests/fixtures/region-storage.lua), [cli/test/cli.test.mjs](cli/test/cli.test.mjs).
 - Sala loopback host-authoritative com protocolo N/N-1, identidade procedural no handshake, inputs de cliente ordenados e limitados, snapshots checksummed, late join, reconexão, migração de host verificada por hash e recusa de estado enviado por cliente; a mesma sala é publicada pela ABI C e pelo Runtime WASM. Capabilities: `network.loopback-room`. Evidência: [kernel/src/network_session.cpp](kernel/src/network_session.cpp), [runtime-c-api/include/ludivra/network.h](runtime-c-api/include/ludivra/network.h), [runtime-web/src/index.ts](runtime-web/src/index.ts), [tests/kernel/kernel_test.cpp](tests/kernel/kernel_test.cpp), [tests/runtime/runtime_test.cpp](tests/runtime/runtime_test.cpp), [tools/tests/wasm-equivalence.mjs](tools/tests/wasm-equivalence.mjs).
-- Boundaries WebRTC DataChannel e Steam P2P com envelope binário compartilhado, canais/limites explícitos e signaling player-owned, sem fallback automático; HostedRoomBridge conecta handshake/input à única sala WASM autoritativa e publica snapshots confiáveis, sem duplicar a simulação. Capabilities: `network.webrtc-datachannel`, `network.steam-p2p`, `network.host-room-bridge`. Evidência: [hosts/browser/src/network/webrtc-transport.ts](hosts/browser/src/network/webrtc-transport.ts), [hosts/browser/src/network/steam-transport.ts](hosts/browser/src/network/steam-transport.ts), [hosts/browser/src/network/room-bridge.ts](hosts/browser/src/network/room-bridge.ts), [hosts/electron/src/services/steam.cjs](hosts/electron/src/services/steam.cjs), [hosts/electron/test/services.test.cjs](hosts/electron/test/services.test.cjs).
-
-### Falta
-
-- Localizar a primeira divergência remota por tick/chunk e publicar a recuperação de estado remota sobre os adapters externos.
+- Boundaries WebRTC DataChannel e Steam P2P com envelope binário compartilhado, canais/limites explícitos e signaling player-owned, sem fallback automático; HostedRoomBridge conecta handshake/input à única sala WASM autoritativa e publica snapshots confiáveis, sem duplicar a simulação. O cliente reporta janela de hashes e o host localiza o primeiro tick divergente antes de restaurar o snapshot canônico. Deltas confirmados de chunk saem do Runtime por ABI, seguem em fila confiável limitada com hash/ack e nunca transmitem a base procedural. Capabilities: `network.webrtc-datachannel`, `network.steam-p2p`, `network.host-room-bridge`, `network.chunk-delta-sync`. Evidência: [kernel/src/runtime.cpp](kernel/src/runtime.cpp), [runtime-c-api/include/ludivra/runtime.h](runtime-c-api/include/ludivra/runtime.h), [runtime-web/src/index.ts](runtime-web/src/index.ts), [hosts/browser/src/network/webrtc-transport.ts](hosts/browser/src/network/webrtc-transport.ts), [hosts/browser/src/network/steam-transport.ts](hosts/browser/src/network/steam-transport.ts), [hosts/browser/src/network/room-bridge.ts](hosts/browser/src/network/room-bridge.ts), [hosts/browser/src/network/chunk-sync.ts](hosts/browser/src/network/chunk-sync.ts), [hosts/browser/test/network-room-bridge.test.ts](hosts/browser/test/network-room-bridge.test.ts), [tests/runtime/runtime_test.cpp](tests/runtime/runtime_test.cpp), [hosts/electron/src/services/steam.cjs](hosts/electron/src/services/steam.cjs), [hosts/electron/test/services.test.cjs](hosts/electron/test/services.test.cjs).
 
 ### Gate de saída
 
@@ -207,7 +203,7 @@ Save mundial sobrevive a crash e migration, replay localiza divergência e uma s
 
 | Campo | Valor |
 |---|---|
-| Estado | `PARCIAL` |
+| Estado | `EM ANDAMENTO` |
 | Owners | presentation protocol, renderer-three, UI renderer, hosts |
 | Dependências | Fase 3, Fase 4, Fase 5, Fase 6, Fase 7 |
 | ADRs | [ADR 0014](docs/adr/0014-declarative-ui-contracts-and-initial-renderer.md), [ADR 0015](docs/adr/0015-raster-capture-and-visual-baselines.md), [ADR 0020](docs/adr/0020-presentation-buffers-and-wasm-memory.md), [ADR 0025](docs/adr/0025-audio-backends-voice-budgets-and-fallback.md), [ADR 0040](docs/adr/0040-ui-framework-and-diegetic-ui.md), [ADR 0047](docs/adr/0047-desktop-rendering-profiles-and-backend-policy.md), [ADR 0049](docs/adr/0049-asset-ingest-cooking-and-residency.md), [ADR 0050](docs/adr/0050-material-shader-environment-and-render-feature-tiers.md), [ADR 0051](docs/adr/0051-animation-graph-and-skeletal-runtime.md), [ADR 0052](docs/adr/0052-textual-vfx-and-particle-runtime.md) |

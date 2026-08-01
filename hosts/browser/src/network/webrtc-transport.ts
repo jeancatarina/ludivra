@@ -6,14 +6,15 @@
  * back to reliable delivery.
  */
 export const NETWORK_WIRE_VERSION = 1;
-export type NetworkPacketKind = "handshake" | "input" | "snapshot" | "migration" | "correction";
+export type NetworkPacketKind = "handshake" | "input" | "snapshot" | "migration" | "correction" | "chunk";
 
 const packetCodes: Readonly<Record<NetworkPacketKind, number>> = {
   handshake: 1,
   input: 2,
   snapshot: 3,
   migration: 4,
-  correction: 5
+  correction: 5,
+  chunk: 6
 };
 const packetKinds = new Map<number, NetworkPacketKind>(Object.entries(packetCodes).map(([kind, code]) => [code, kind as NetworkPacketKind]));
 const maximumPacketBytes = 4 * 1024 * 1024;

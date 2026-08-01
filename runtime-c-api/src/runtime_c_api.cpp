@@ -69,6 +69,8 @@ static_assert(sizeof(ludivra_presentation_event) == LUDIVRA_PRESENTATION_EVENT_R
 static_assert(std::is_standard_layout_v<ludivra_presentation_event>);
 static_assert(sizeof(ludivra_statechart_trace) == LUDIVRA_STATECHART_TRACE_RECORD_SIZE);
 static_assert(std::is_standard_layout_v<ludivra_statechart_trace>);
+static_assert(sizeof(ludivra_runtime_region_delta) == 48U);
+static_assert(std::is_standard_layout_v<ludivra_runtime_region_delta>);
 
 template <typename Producer>
 ludivra_result archive_size(const ludivra_runtime* runtime, uint32_t* out_size, Producer producer) {
@@ -380,6 +382,43 @@ ludivra_result ludivra_runtime_configure_region_storage(
   } catch (...) {
     return LUDIVRA_ERROR_INTERNAL;
   }
+}
+
+ludivra_result ludivra_runtime_region_delta_count(
+    const ludivra_runtime* runtime,
+    uint32_t* out_count) {
+  if (runtime == nullptr || out_count == nullptr) return LUDIVRA_ERROR_INVALID_ARGUMENT;
+  const auto& deltas = runtime->value.committed_region_deltas();
+  if (deltas.size() > std::numeric_limits<uint32_t>::max()) return LUDIVRA_ERROR_INTERNAL;
+  *out_count = static_cast<uint32_t>(deltas.size());
+  return LUDIVRA_OK;
+}
+
+ludivra_result ludivra_runtime_region_delta_write(
+    const ludivra_runtime* runtime,
+    const uint32_t index,
+    ludivra_runtime_region_delta* out_delta,
+    uint8_t* payload_buffer,
+    const uint32_t payload_capacity) {
+  if (runtime == nullptr || out_delta == nullptr) return LUDIVRA_ERROR_INVALID_ARGUMENT;
+  const auto& deltas = runtime->value.committed_region_deltas();
+  if (index >= deltas.size()) return LUDIVRA_ERROR_INVALID_ARGUMENT;
+  const auto& delta = deltas[index];
+  if (delta.delta.payload.size() > std::numeric_limits<uint32_t>::max()) return LUDIVRA_ERROR_INTERNAL;
+  const auto bytes = static_cast<uint32_t>(delta.delta.payload.size());
+  *out_delta = {sizeof(ludivra_runtime_region_delta), delta.region.dimension, 0U,
+      delta.region.x, delta.region.y, delta.region.z,
+      delta.delta.chunk_x, delta.delta.chunk_y, delta.delta.chunk_z,
+      delta.revision, bytes, 0U};
+  if (bytes > payload_capacity || (bytes > 0U && payload_buffer == nullptr)) return LUDIVRA_ERROR_BUFFER_TOO_SMALL;
+  if (bytes > 0U) std::memcpy(payload_buffer, delta.delta.payload.data(), bytes);
+  return LUDIVRA_OK;
+}
+
+ludivra_result ludivra_runtime_region_deltas_clear(ludivra_runtime* runtime) {
+  if (runtime == nullptr) return LUDIVRA_ERROR_INVALID_ARGUMENT;
+  runtime->value.clear_committed_region_deltas();
+  return LUDIVRA_OK;
 }
 
 ludivra_result ludivra_runtime_load_gameplay(

@@ -2,9 +2,9 @@
   "schemaVersion": 1,
   "release": "0.7.0",
   "currentFocus": {
-    "phase": 7,
-    "summary": "Persistir regiões regeneráveis com journal atômico, recovery e migrations sem duplicar o mundo procedural.",
-    "next": "Conectar envelopes WebRTC/Steam ao lifecycle de sala nos hosts, mantendo loopback como prova CI obrigatória."
+    "phase": 8,
+    "summary": "Escalar renderer, UI, áudio e apresentação sem alterar autoridade de gameplay.",
+    "next": "Implementar perfis gráficos desktop-compatible e desktop-high, seleção de backend e fallback observável."
   },
   "phases": [
     {
@@ -188,7 +188,7 @@
     {
       "id": 7,
       "title": "Persistência, replays e multiplayer player-hosted",
-      "status": "active",
+      "status": "completed",
       "owners": ["kernel", "storage", "network runtime"],
       "dependencies": [5, 6],
       "adrs": ["0023", "0024", "0038"],
@@ -210,20 +210,18 @@
           "evidence": ["kernel/src/network_session.cpp", "runtime-c-api/include/ludivra/network.h", "runtime-web/src/index.ts", "tests/kernel/kernel_test.cpp", "tests/runtime/runtime_test.cpp", "tools/tests/wasm-equivalence.mjs"]
         },
         {
-          "summary": "Boundaries WebRTC DataChannel e Steam P2P com envelope binário compartilhado, canais/limites explícitos e signaling player-owned, sem fallback automático; HostedRoomBridge conecta handshake/input à única sala WASM autoritativa e publica snapshots confiáveis, sem duplicar a simulação.",
-          "capabilities": ["network.webrtc-datachannel", "network.steam-p2p", "network.host-room-bridge"],
-          "evidence": ["hosts/browser/src/network/webrtc-transport.ts", "hosts/browser/src/network/steam-transport.ts", "hosts/browser/src/network/room-bridge.ts", "hosts/electron/src/services/steam.cjs", "hosts/electron/test/services.test.cjs"]
+          "summary": "Boundaries WebRTC DataChannel e Steam P2P com envelope binário compartilhado, canais/limites explícitos e signaling player-owned, sem fallback automático; HostedRoomBridge conecta handshake/input à única sala WASM autoritativa e publica snapshots confiáveis, sem duplicar a simulação. O cliente reporta janela de hashes e o host localiza o primeiro tick divergente antes de restaurar o snapshot canônico. Deltas confirmados de chunk saem do Runtime por ABI, seguem em fila confiável limitada com hash/ack e nunca transmitem a base procedural.",
+          "capabilities": ["network.webrtc-datachannel", "network.steam-p2p", "network.host-room-bridge", "network.chunk-delta-sync"],
+          "evidence": ["kernel/src/runtime.cpp", "runtime-c-api/include/ludivra/runtime.h", "runtime-web/src/index.ts", "hosts/browser/src/network/webrtc-transport.ts", "hosts/browser/src/network/steam-transport.ts", "hosts/browser/src/network/room-bridge.ts", "hosts/browser/src/network/chunk-sync.ts", "hosts/browser/test/network-room-bridge.test.ts", "tests/runtime/runtime_test.cpp", "hosts/electron/src/services/steam.cjs", "hosts/electron/test/services.test.cjs"]
         }
       ],
-      "remaining": [
-        "Localizar a primeira divergência remota por tick/chunk e publicar a recuperação de estado remota sobre os adapters externos."
-      ],
+      "remaining": [],
       "gate": "Save mundial sobrevive a crash e migration, replay localiza divergência e uma sala casual suporta seu lifecycle completo."
     },
     {
       "id": 8,
       "title": "Renderer, UI, áudio e apresentação escalável",
-      "status": "partial",
+      "status": "active",
       "owners": ["presentation protocol", "renderer-three", "UI renderer", "hosts"],
       "dependencies": [3, 4, 5, 6, 7],
       "adrs": ["0014", "0015", "0020", "0025", "0040", "0047", "0049", "0050", "0051", "0052"],
@@ -331,17 +329,9 @@
   ],
   "tasks": [
     {
-      "id": "NET-005",
-      "priority": "high",
-      "status": "in_progress",
-      "phase": 7,
-      "work": "Localizar a primeira divergência remota por tick/chunk e publicar recuperação de estado sobre WebRTC/Steam, mantendo loopback como prova CI obrigatória.",
-      "adrs": ["0024", "0038"]
-    },
-    {
       "id": "DESK-001",
       "priority": "high",
-      "status": "planned",
+      "status": "in_progress",
       "phase": 8,
       "work": "Implementar perfis gráficos desktop-compatible e desktop-high, seleção de backend e fallback observável.",
       "adrs": ["0047"]

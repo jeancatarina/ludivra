@@ -1,0 +1,15 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "noEmit": false,
+    "rootDir": ".",
+    "outDir": ".test-build",
+    "types": ["node"]
+  },
+  "include": [
+    "src/network/webrtc-transport.ts",
+    "src/network/room-bridge.ts",
+    "src/network/chunk-sync.ts",
+    "test/network-room-bridge.test.ts"
+  ]
+}

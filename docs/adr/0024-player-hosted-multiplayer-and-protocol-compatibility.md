@@ -30,7 +30,7 @@ Física com autoridade `host`, conforme o ADR 0021, é resolvida no host e chega
 
 O mundo não é transmitido: é reproduzido. A sessão sincroniza seed, `generatorId`, `generatorVersion`, hash de conteúdo, hashes de chunk e deltas.
 
-Divergência é detectada por comparação de hash e localizada por cenário até o primeiro tick, evento ou chunk divergente — `NETWORK_WORLD_HASH_MISMATCH`. Backlog de deltas de chunk acima do limite declarado é `NETWORK_CHUNK_DELTA_BACKLOG`, não crescimento indefinido de fila.
+Divergência é detectada por comparação de hash e localizada por cenário até o primeiro tick, evento ou chunk divergente — `NETWORK_WORLD_HASH_MISMATCH`. O bridge mantém uma janela de hashes de tick e confronta o primeiro hash incompatível com o host; para overlays procedurais, cada delta confirmado carrega endereço semântico, revisão e fingerprint de bytes. Backlog de deltas de chunk acima do limite declarado é `NETWORK_CHUNK_DELTA_BACKLOG`, não crescimento indefinido de fila. Base gerada nunca é transmitida.
 
 ### Transporte por adapter
 
@@ -56,7 +56,7 @@ Snapshots de sala, jogadores, latência, perda, correções, interesse e migraç
 
 `LoopbackRoom` é o adapter em processo que torna essas regras executáveis em CI. Ele possui o único `Runtime` autoritativo; peers só enfileiram `actionId`, valor fixo e sequência local. Antes do tick, o host ordena os inputs por sequência, cliente e conteúdo, atribui a sequência autoritativa e publica um `LDSV` checksummed com tick e hash. O handshake aceita somente a versão N ou N-1 e compara seed, `generatorId`, `generatorVersion` e hash de conteúdo. Late join e reconexão recebem o snapshot atual. Uma tentativa de upload de estado por cliente é `NETWORK_CLIENT_SENT_STATE`, sem caminho de decodificação.
 
-Migração é emitida somente quando não há input de peer pendente. O envelope contém a configuração da sala, o snapshot checksummed, lifecycle de peers e as próximas sequências; o candidato decodifica e confronta tick/hash antes de assumir. Metadata divergente, peer duplicado, capacidade inválida ou archive incompatível falha com `HOST_MIGRATION_FAILED` sem promover a autoridade. Adapters WebRTC/Steam continuam fora do loopback; a existência desse adapter não os simula nem oculta sua indisponibilidade.
+Migração é emitida somente quando não há input de peer pendente. O envelope contém a configuração da sala, o snapshot checksummed, lifecycle de peers e as próximas sequências; o candidato decodifica e confronta tick/hash antes de assumir. Metadata divergente, peer duplicado, capacidade inválida ou archive incompatível falha com `HOST_MIGRATION_FAILED` sem promover a autoridade. Adapters WebRTC/Steam passam pelo `HostedRoomBridge`: handshake e input chegam à mesma sala WASM, snapshots retornam pelo carrier confiável e `HostedChunkSync` envia apenas deltas confirmados em fila limitada com ack/fingerprint. A existência do adapter não oculta sua indisponibilidade.
 
 ### Limites declarados
 

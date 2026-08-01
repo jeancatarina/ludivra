@@ -30,6 +30,15 @@ struct RuntimeRegionStorageConfig final {
   std::uint32_t generator_version;
 };
 
+/** A delta confirmed by the current authoritative tick. It contains only an
+ * authored chunk overlay, never the procedural base chunk. Consumers drain the
+ * transient list after publishing it to an approved transport. */
+struct RuntimeRegionDelta final {
+  StoredRegionKey region;
+  StoredChunkDelta delta;
+  std::uint64_t revision;
+};
+
 struct LogicalInput final {
   std::uint32_t action_id;
   std::int32_t value_milli;
@@ -115,6 +124,8 @@ class Runtime final {
   void clear_presentation_events() noexcept;
   [[nodiscard]] const std::vector<StatechartTrace>& statechart_traces() const noexcept;
   void clear_statechart_traces() noexcept;
+  [[nodiscard]] const std::vector<RuntimeRegionDelta>& committed_region_deltas() const noexcept;
+  void clear_committed_region_deltas() noexcept;
   [[nodiscard]] const std::string& last_error() const noexcept;
   [[nodiscard]] const std::string& last_error_code() const noexcept;
 
@@ -156,6 +167,7 @@ class Runtime final {
   std::optional<RegionStorage> region_storage_;
   std::map<StoredRegionKey, StoredRegion> loaded_regions_;
   std::map<StoredRegionKey, RegionSaveReference> region_references_;
+  std::vector<RuntimeRegionDelta> committed_region_deltas_;
   bool region_storage_writable_{true};
   SavedState replay_initial_state_;
   std::vector<ReplayFrame> replay_frames_;

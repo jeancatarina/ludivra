@@ -6,6 +6,7 @@
   "targets": ["browser", "electron"],
   "contracts": [
     "hosts/browser/src/network/room-bridge.ts",
+    "hosts/browser/src/network/chunk-sync.ts",
     "runtime-c-api/include/ludivra/network.h",
     "runtime-web/src/index.ts",
     "docs/adr/0038-network-transport-adapters.md"
@@ -17,12 +18,17 @@
   "dependencies": ["network.loopback-room", "network.webrtc-datachannel", "network.steam-p2p"],
   "verification": [
     "pnpm test:wasm-equivalence",
+    "pnpm test:network-host",
     "pnpm --filter @ludivra/browser-host build"
   ],
   "limitations": [
     {
       "code": "NETWORK_HOST_TICK_DRIVER_REQUIRED",
       "message": "O host chama HostedRoomBridge.advance no seu tick determinístico; o bridge não cria loop, matchmaking, relay nem sinalização."
+    },
+    {
+      "code": "NETWORK_INTEREST_POLICY_GAME_OWNED",
+      "message": "Chunk sync já preserva hash, ack e backlog limitado; seleção de regiões/chunks para cada peer é política explícita do jogo."
     }
   ]
 }

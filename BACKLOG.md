@@ -2,14 +2,13 @@
 
 > Gerado de `docs/program-status.json` por `tools/program-status/generate.mjs`. Não edite manualmente.
 
-Foco atual: **Fase 7 — Persistir regiões regeneráveis com journal atômico, recovery e migrations sem duplicar o mundo procedural.**
+Foco atual: **Fase 8 — Escalar renderer, UI, áudio e apresentação sem alterar autoridade de gameplay.**
 
 | ID | Prioridade | Estado | Fase | Trabalho | ADRs |
 |---|---|---|---:|---|---|
-| NET-005 | alta | em andamento | 7 | Localizar a primeira divergência remota por tick/chunk e publicar recuperação de estado sobre WebRTC/Steam, mantendo loopback como prova CI obrigatória. | [ADR 0024](docs/adr/0024-player-hosted-multiplayer-and-protocol-compatibility.md), [ADR 0038](docs/adr/0038-network-transport-adapters.md) |
+| DESK-001 | alta | em andamento | 8 | Implementar perfis gráficos desktop-compatible e desktop-high, seleção de backend e fallback observável. | [ADR 0047](docs/adr/0047-desktop-rendering-profiles-and-backend-policy.md) |
 | ANM-001 | alta | planejado | 8 | Implementar grafo de animação, retarget, IK, layers, masks e root motion controlado. | [ADR 0051](docs/adr/0051-animation-graph-and-skeletal-runtime.md) |
 | AST-001 | alta | planejado | 8 | Implementar ingestão, cooking, variantes, residência e streaming de assets por target. | [ADR 0049](docs/adr/0049-asset-ingest-cooking-and-residency.md) |
-| DESK-001 | alta | planejado | 8 | Implementar perfis gráficos desktop-compatible e desktop-high, seleção de backend e fallback observável. | [ADR 0047](docs/adr/0047-desktop-rendering-profiles-and-backend-policy.md) |
 | RND-001 | alta | planejado | 8 | Implementar materiais, shaders, ambiente e feature tiers com warmup e fallback. | [ADR 0050](docs/adr/0050-material-shader-environment-and-render-feature-tiers.md) |
 | VFX-001 | alta | planejado | 8 | Implementar VFX e partículas GPU/CPU com pooling, colisão, trails e budgets. | [ADR 0052](docs/adr/0052-textual-vfx-and-particle-runtime.md) |
 | AUD-001 | alta | planejado | 10 | Completar música, stems, previews e integração final do Audio Forge. | [ADR 0032](docs/adr/0032-audio-forge-recipes-and-deterministic-renderer.md) |

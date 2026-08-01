@@ -8,7 +8,7 @@
 extern "C" {
 #endif
 
-#define LUDIVRA_RUNTIME_ABI_VERSION 6U
+#define LUDIVRA_RUNTIME_ABI_VERSION 7U
 #define LUDIVRA_STATECHART_TRACE_RECORD_SIZE 40U
 
 typedef struct ludivra_runtime ludivra_runtime;
@@ -61,6 +61,24 @@ typedef struct ludivra_runtime_region_storage_config {
   uint32_t generator_id_utf8_bytes;
   uint32_t generator_version;
 } ludivra_runtime_region_storage_config;
+
+/* A confirmed authored delta emitted by the last Runtime tick. The region and
+   local chunk coordinates are semantic; bytes are opaque to the engine and no
+   generated terrain travels through this ABI. */
+typedef struct ludivra_runtime_region_delta {
+  uint32_t struct_size;
+  uint16_t dimension;
+  uint16_t reserved0;
+  int32_t region_x;
+  int32_t region_y;
+  int32_t region_z;
+  int32_t chunk_x;
+  int32_t chunk_y;
+  int32_t chunk_z;
+  uint64_t revision;
+  uint32_t payload_bytes;
+  uint32_t reserved1;
+} ludivra_runtime_region_delta;
 
 typedef struct ludivra_logical_input {
   /* Must be sizeof(ludivra_logical_input). */
@@ -214,6 +232,20 @@ ludivra_result ludivra_runtime_load_content_pack(
 ludivra_result ludivra_runtime_configure_region_storage(
     ludivra_runtime* runtime,
     const ludivra_runtime_region_storage_config* config);
+
+/* Query/write/clear the deltas committed in the most recent successful tick.
+   `write` copies opaque bytes and reports BUFFER_TOO_SMALL without clearing the
+   item; hosts clear only after they have queued reliable transport delivery. */
+ludivra_result ludivra_runtime_region_delta_count(
+    const ludivra_runtime* runtime,
+    uint32_t* out_count);
+ludivra_result ludivra_runtime_region_delta_write(
+    const ludivra_runtime* runtime,
+    uint32_t index,
+    ludivra_runtime_region_delta* out_delta,
+    uint8_t* payload_buffer,
+    uint32_t payload_capacity);
+ludivra_result ludivra_runtime_region_deltas_clear(ludivra_runtime* runtime);
 
 /* Replaces the current Lua gameplay module. Source must return a table with on_input(ctx, event). */
 ludivra_result ludivra_runtime_load_gameplay(

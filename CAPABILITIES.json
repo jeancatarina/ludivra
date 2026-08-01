@@ -296,6 +296,43 @@
       ]
     },
     {
+      "id": "network.chunk-delta-sync",
+      "status": "experimental",
+      "version": "0.1.0",
+      "owner": "kernel",
+      "targets": [
+        "native-headless",
+        "browser",
+        "electron"
+      ],
+      "contracts": [
+        "kernel/src/runtime.hpp",
+        "runtime-c-api/include/ludivra/runtime.h",
+        "runtime-web/src/index.ts",
+        "hosts/browser/src/network/chunk-sync.ts",
+        "docs/adr/0024-player-hosted-multiplayer-and-protocol-compatibility.md"
+      ],
+      "examples": [
+        "tests/runtime/runtime_test.cpp",
+        "hosts/browser/test/network-room-bridge.test.ts"
+      ],
+      "dependencies": [
+        "spatial.region-storage",
+        "network.host-room-bridge"
+      ],
+      "verification": [
+        "pnpm test:native",
+        "pnpm test:network-host",
+        "pnpm test:wasm-equivalence"
+      ],
+      "limitations": [
+        {
+          "code": "NETWORK_CHUNK_INTEREST_GAME_OWNED",
+          "message": "O host escolhe quais deltas confirmados pertencem ao interesse de cada peer; a engine não inventa visibilidade, matchmaking ou transmissão de base procedural."
+        }
+      ]
+    },
+    {
       "id": "network.host-room-bridge",
       "status": "experimental",
       "version": "0.1.0",
@@ -306,6 +343,7 @@
       ],
       "contracts": [
         "hosts/browser/src/network/room-bridge.ts",
+        "hosts/browser/src/network/chunk-sync.ts",
         "runtime-c-api/include/ludivra/network.h",
         "runtime-web/src/index.ts",
         "docs/adr/0038-network-transport-adapters.md"
@@ -321,12 +359,17 @@
       ],
       "verification": [
         "pnpm test:wasm-equivalence",
+        "pnpm test:network-host",
         "pnpm --filter @ludivra/browser-host build"
       ],
       "limitations": [
         {
           "code": "NETWORK_HOST_TICK_DRIVER_REQUIRED",
           "message": "O host chama HostedRoomBridge.advance no seu tick determinístico; o bridge não cria loop, matchmaking, relay nem sinalização."
+        },
+        {
+          "code": "NETWORK_INTEREST_POLICY_GAME_OWNED",
+          "message": "Chunk sync já preserva hash, ack e backlog limitado; seleção de regiões/chunks para cada peer é política explícita do jogo."
         }
       ]
     },
@@ -362,8 +405,8 @@
       ],
       "limitations": [
         {
-          "code": "NETWORK_DIVERGENCE_LOCALIZATION_PENDING",
-          "message": "A sala publica snapshots canônicos e valida identidade, mas ainda não produz a primeira localização remota de divergência por tick/chunk."
+          "code": "NETWORK_INTEREST_POLICY_GAME_OWNED",
+          "message": "A sala publica toda a autoridade e os deltas confirmados; cada jogo ainda declara seu interesse espacial e UX de reconexão."
         }
       ]
     },

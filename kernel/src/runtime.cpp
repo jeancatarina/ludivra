@@ -205,6 +205,19 @@ RuntimeError Runtime::apply_region_deltas(std::uint64_t& hash) {
   for (const auto& command : commands_.region_deltas()) mix_region_delta(hash, command);
   loaded_regions_ = std::move(next_regions);
   region_references_ = std::move(next_references);
+  for (const auto& command : commands_.region_deltas()) {
+    const auto existing = std::find_if(committed_region_deltas_.begin(), committed_region_deltas_.end(), [&command](const auto& delta) {
+      return delta.region == command.region && delta.delta.chunk_x == command.delta.chunk_x &&
+          delta.delta.chunk_y == command.delta.chunk_y && delta.delta.chunk_z == command.delta.chunk_z;
+    });
+    const RuntimeRegionDelta committed{command.region, command.delta, tick_ + 1U};
+    if (existing == committed_region_deltas_.end()) committed_region_deltas_.push_back(committed);
+    else *existing = committed;
+  }
+  std::sort(committed_region_deltas_.begin(), committed_region_deltas_.end(), [](const auto& left, const auto& right) {
+    return std::tie(left.region, left.delta.chunk_x, left.delta.chunk_y, left.delta.chunk_z) <
+        std::tie(right.region, right.delta.chunk_x, right.delta.chunk_y, right.delta.chunk_z);
+  });
   return RuntimeError::none;
 }
 
@@ -275,6 +288,14 @@ const std::string& Runtime::last_error_code() const noexcept {
   return lua_.last_error_code();
 }
 
+const std::vector<RuntimeRegionDelta>& Runtime::committed_region_deltas() const noexcept {
+  return committed_region_deltas_;
+}
+
+void Runtime::clear_committed_region_deltas() noexcept {
+  committed_region_deltas_.clear();
+}
+
 const std::vector<PresentationEvent>& Runtime::presentation_events() const noexcept {
   return presentation_events_;
 }
@@ -330,6 +351,7 @@ RuntimeError Runtime::load_save(const std::span<const std::uint8_t> bytes) {
   replay_initial_state_ = std::move(next_replay_state);
   replay_frames_.clear();
   commands_.clear();
+  committed_region_deltas_.clear();
   presentation_events_.clear();
   statechart_traces_.clear();
   return RuntimeError::none;
@@ -482,6 +504,7 @@ void Runtime::record_statechart_result(const std::uint32_t event, const Statecha
 }
 
 RuntimeError Runtime::commit_tick() {
+  committed_region_deltas_.clear();
   // Timers expire before the inputs of the tick they land on, so a script that
   // both receives an expiry and an input sees them in a declared order.
   const auto timer_result = fire_expired_timers();
